@@ -50,7 +50,7 @@ type special_ref_kind =
 and text_element =
   | Raw of string (** Raw text. *)
   | Code of string (** The string is source code. *)
-  | CodePre of string (** The string is pre-formatted source code. *)
+  | PreCode of string (** The string is pre-formatted source code. *)
   | Verbatim of string (** String 'as is'. *)
   | Style of style_kind * text (** Text tagged with a style. *)
   | List of text list (** A list. *)
@@ -59,7 +59,7 @@ and text_element =
   | Block of text (** Like html's block quote. *)
   | Title of int * string option * text
               (** Style number, optional label, and text. *)
-  | Ref of string * ref_kind * text option
+  | Ref of ref_kind * string * text option
     (** A reference to an element. Complete name and kind. An optional
         text can be given to display this text instead of the element name.*)
   | Special_ref of special_ref_kind (** Special kinds of reference *)     

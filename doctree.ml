@@ -28,9 +28,10 @@ and class_signature = class_type_field list
 
 and class_type_field = 
   { dctf_desc: class_type_field_desc;
-    dctf_info: Info.t option; }
+    dctf_info: Info.t option; 
+    dctf_after_info: Info.t option; }
 
-and class_type_field_desc
+and class_type_field_desc =
     Dctf_inher of class_type
   | Dctf_val of string
   | Dctf_meth of string
@@ -41,12 +42,12 @@ and class_type_field_desc
 (* Value expressions for the class language *)
 
 type class_expr =
-    Dcl_ident
+    Dcl_constr
   | Dcl_structure of class_structure
   | Dcl_fun of class_expr
   | Dcl_apply of class_expr
   | Dcl_let of class_expr
-  | Dcl_constraint of class_expr * class_type option
+  | Dcl_constraint of class_expr * class_type
 
 and class_structure = class_field list
 
@@ -55,7 +56,7 @@ and class_field =
     dcf_info: Info.t option; }
 
 and class_field_desc =
-    Dcf_inher of class_type
+    Dcf_inher of class_expr
   | Dcf_val of string
   | Dcf_meth of string
   | Dcf_constr
@@ -76,18 +77,20 @@ and signature = signature_item list
 
 and signature_item =
   { dsig_desc: signature_item_desc;
-    dsig_info: Info.t option }
+    dsig_info: Info.t option;
+    dsig_after_info: Info.t option }
 
 and signature_item_desc =
     Dsig_value of string
   | Dsig_type of string * type_kind
   | Dsig_exception of string
   | Dsig_module of string * module_type
+  | Dsig_recmodule of string * module_type
   | Dsig_modtype of string * module_type option
   | Dsig_open
   | Dsig_include of module_type
-  | Dsig_class of class_type
-  | Dsig_class_type of class_type
+  | Dsig_class of string * class_type
+  | Dsig_class_type of string * class_type
   | Dsig_comment
   | Dsig_stop
 
@@ -109,11 +112,13 @@ and structure_item =
 
 and structure_item_desc =
     Dstr_eval
-  | Dstr_value of string
+  | Dstr_value of string option
   | Dstr_primitive of string
   | Dstr_type of string * type_kind
   | Dstr_exception of string
+  | Dstr_exn_rebind of string
   | Dstr_module of string * module_expr
+  | Dstr_recmodule of string * module_type * module_expr
   | Dstr_modtype of string * module_type
   | Dstr_open
   | Dstr_class of string * class_expr
@@ -121,3 +126,15 @@ and structure_item_desc =
   | Dstr_include of module_expr
   | Dstr_comment
   | Dstr_stop
+
+and interface = 
+  { dintf_items: signature_item list;
+    dintf_info: Info.t option; }
+
+and implementation = 
+  { dimpl_items: structure_item list;
+    dimpl_info: Info.t option; }
+
+and file = 
+  Dfile_intf of interface
+| Dfile_impl of implementation

@@ -45,7 +45,7 @@ type special_ref_kind =
 and text_element =
   | Raw of string
   | Code of string
-  | CodePre of string
+  | PreCode of string
   | Verbatim of string
   | Style of style_kind * text
   | List of text list
@@ -53,7 +53,7 @@ and text_element =
   | Newline
   | Block of text
   | Title of int * string option * text
-  | Ref of string * ref_kind * text option
+  | Ref of ref_kind * string * text option
   | Special_ref of special_ref_kind
   | Target of string option * string
 
