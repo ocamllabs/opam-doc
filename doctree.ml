@@ -19,7 +19,7 @@ type type_kind =
 
 (* Type expressions for the class language *)
 
-and class_type = 
+type class_type = 
     Dcty_constr
   | Dcty_signature of class_signature
   | Dcty_fun of class_type
@@ -66,7 +66,7 @@ and class_field_desc =
 
 (* Type expressions for the module language *)
 
-and module_type =
+type module_type =
     Dmty_ident
   | Dmty_signature of signature
   | Dmty_functor of module_type * module_type
@@ -127,14 +127,14 @@ and structure_item_desc =
   | Dstr_comment
   | Dstr_stop
 
-and interface = 
+type interface = 
   { dintf_items: signature_item list;
     dintf_info: Info.t option; }
 
-and implementation = 
+type implementation = 
   { dimpl_items: structure_item list;
     dimpl_info: Info.t option; }
 
-and file = 
+type file = 
   Dfile_intf of interface
 | Dfile_impl of implementation

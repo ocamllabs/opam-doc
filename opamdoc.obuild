@@ -1,0 +1,11 @@
+name: opamdoc
+version: 0.0.0
+synopsis: my new project
+obuild-ver: 1
+
+executable opamdoc
+  main: driver.ml
+  build-deps: cow.syntax, cow, ocamlcommon
+  pp: camlp4o
+  src-dir: ./
+  c-dir: ./
