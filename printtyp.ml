@@ -2,13 +2,180 @@
 (*                                                                     *)
 (*                                OCaml                                *)
 (*                                                                     *)
-(* Xavier Leroy and Jerome Vouillon, projet Cristal, INRIA Rocquencourt*)
+(*         Xavier Leroy, Jerome Vouillon, Daniel de Rauglaudre         *)
+(*               projet Cristal, INRIA Rocquencourt                    *)
 (*                                                                     *)
 (*  Copyright 1996 Institut National de Recherche en Informatique et   *)
 (*  en Automatique.  All rights reserved.  This file is distributed    *)
 (*  under the terms of the Q Public License version 1.0.               *)
 (*                                                                     *)
 (***********************************************************************)
+
+type out_ident =
+  | Oide_apply of out_ident * out_ident
+  | Oide_dot of out_ident * string
+  | Oide_ident of string
+
+type out_type =
+  | Otyp_alias of out_type * string
+  | Otyp_arrow of string * out_type * out_type
+  | Otyp_class of bool * out_ident * out_type list
+  | Otyp_constr of out_ident * out_type list
+  | Otyp_object of (string * out_type) list * bool option
+  | Otyp_stuff of string
+  | Otyp_tuple of out_type list
+  | Otyp_var of bool * string
+  | Otyp_variant of
+      bool * out_variant * bool * (string list) option
+  | Otyp_poly of string list * out_type
+  | Otyp_module of string * string list * out_type list
+
+and out_variant =
+  | Ovar_fields of (string * bool * out_type list) list
+  | Ovar_name of out_ident * out_type list
+
+
+let rec print_ident ppf =
+  function
+    Oide_ident s -> pp_print_string ppf s
+  | Oide_dot (id, s) -> print_ident ppf id; pp_print_char ppf '.'; pp_print_string ppf s
+  | Oide_apply (id1, id2) ->
+      fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+
+(* Types *)
+
+let rec print_list pr sep ppf =
+  function
+    [] -> ()
+  | [a] -> pr ppf a
+  | a :: l -> pr ppf a; sep ppf; print_list pr sep ppf l
+
+let pr_present =
+  print_list (fun ppf s -> fprintf ppf "`%s" s) (fun ppf -> fprintf ppf "@ ")
+
+let pr_vars =
+  print_list (fun ppf s -> fprintf ppf "'%s" s) (fun ppf -> fprintf ppf "@ ")
+
+let rec print_out_type ppf =
+  function
+  | Otyp_alias (ty, s) ->
+      fprintf ppf "@[%a@ as '%s@]" print_out_type ty s
+  | Otyp_poly (sl, ty) ->
+      fprintf ppf "@[<hov 2>%a.@ %a@]"
+        pr_vars sl
+        print_out_type ty
+  | ty ->
+      print_out_type_1 ppf ty
+
+and print_out_type_1 ppf =
+  function
+    Otyp_arrow (lab, ty1, ty2) ->
+      pp_open_box ppf 0;
+      if lab <> "" then (pp_print_string ppf lab; pp_print_char ppf ':');
+      print_out_type_2 ppf ty1;
+      pp_print_string ppf " ->";
+      pp_print_space ppf ();
+      print_out_type_1 ppf ty2;
+      pp_close_box ppf ()
+  | ty -> print_out_type_2 ppf ty
+and print_out_type_2 ppf =
+  function
+    Otyp_tuple tyl ->
+      fprintf ppf "@[<0>%a@]" (print_typlist print_simple_out_type " *") tyl
+  | ty -> print_simple_out_type ppf ty
+and print_simple_out_type ppf =
+  function
+    Otyp_class (ng, id, tyl) ->
+      fprintf ppf "@[%a%s#%a@]" print_typargs tyl (if ng then "_" else "")
+        print_ident id
+  | Otyp_constr (id, tyl) ->
+      pp_open_box ppf 0;
+      print_typargs ppf tyl;
+      print_ident ppf id;
+      pp_close_box ppf ()
+  | Otyp_object (fields, rest) ->
+      fprintf ppf "@[<2>< %a >@]" (print_fields rest) fields
+  | Otyp_stuff s -> pp_print_string ppf s
+  | Otyp_var (ng, s) -> fprintf ppf "'%s%s" (if ng then "_" else "") s
+  | Otyp_variant (non_gen, row_fields, closed, tags) ->
+      let print_present ppf =
+        function
+          None | Some [] -> ()
+        | Some l -> fprintf ppf "@;<1 -2>> @[<hov>%a@]" pr_present l
+      in
+      let print_fields ppf =
+        function
+          Ovar_fields fields ->
+            print_list print_row_field (fun ppf -> fprintf ppf "@;<1 -2>| ")
+              ppf fields
+        | Ovar_name (id, tyl) ->
+            fprintf ppf "@[%a%a@]" print_typargs tyl print_ident id
+      in
+      fprintf ppf "%s[%s@[<hv>@[<hv>%a@]%a ]@]" (if non_gen then "_" else "")
+        (if closed then if tags = None then " " else "< "
+         else if tags = None then "> " else "? ")
+        print_fields row_fields
+        print_present tags
+  | Otyp_alias _ | Otyp_poly _ | Otyp_arrow _ | Otyp_tuple _ as ty ->
+      pp_open_box ppf 1;
+      pp_print_char ppf '(';
+      print_out_type ppf ty;
+      pp_print_char ppf ')';
+      pp_close_box ppf ()
+  | Otyp_module (p, n, tyl) ->
+      fprintf ppf "@[<1>(module %s" p;
+      let first = ref true in
+      List.iter2
+        (fun s t ->
+          let sep = if !first then (first := false; "with") else "and" in
+          fprintf ppf " %s type %s = %a" sep s print_out_type t
+        )
+        n tyl;
+      fprintf ppf ")@]"
+and print_fields rest ppf =
+  function
+    [] ->
+      begin match rest with
+        Some non_gen -> fprintf ppf "%s.." (if non_gen then "_" else "")
+      | None -> ()
+      end
+  | [s, t] ->
+      fprintf ppf "%s : %a" s print_out_type t;
+      begin match rest with
+        Some _ -> fprintf ppf ";@ "
+      | None -> ()
+      end;
+      print_fields rest ppf []
+  | (s, t) :: l ->
+      fprintf ppf "%s : %a;@ %a" s print_out_type t (print_fields rest) l
+and print_row_field ppf (l, opt_amp, tyl) =
+  let pr_of ppf =
+    if opt_amp then fprintf ppf " of@ &@ "
+    else if tyl <> [] then fprintf ppf " of@ "
+    else fprintf ppf ""
+  in
+  fprintf ppf "@[<hv 2>`%s%t%a@]" l pr_of (print_typlist print_out_type " &")
+    tyl
+and print_typlist print_elem sep ppf =
+  function
+    [] -> ()
+  | [ty] -> print_elem ppf ty
+  | ty :: tyl ->
+      print_elem ppf ty;
+      pp_print_string ppf sep;
+      pp_print_space ppf ();
+      print_typlist print_elem sep ppf tyl
+and print_typargs ppf =
+  function
+    [] -> ()
+  | [ty1] -> print_simple_out_type ppf ty1; pp_print_space ppf ()
+  | tyl ->
+      pp_open_box ppf 1;
+      pp_print_char ppf '(';
+      print_typlist print_out_type "," ppf tyl;
+      pp_print_char ppf ')';
+      pp_close_box ppf ();
+      pp_print_space ppf ()
 
 (* Print a path *)
 
@@ -24,13 +191,8 @@ let rec tree_of_path = function
   | Papply(p1, p2) ->
       Oide_apply (tree_of_path p1, tree_of_path p2)
 
-(* Print a raw type expression, with sharing *)
-
-let raw_list pr ppf = function
-    [] -> fprintf ppf "[]"
-  | a :: l ->
-      fprintf ppf "@[<1>[%a%t]@]" pr a
-        (fun ppf -> List.iter (fun x -> fprintf ppf ";@,%a" pr x) l)
+let path ppf p =
+  print_ident ppf (tree_of_path p)
 
 (* Print a type expression *)
 
@@ -341,7 +503,7 @@ and tree_of_typfields sch rest = function
       (field :: fields, rest)
 
 let typexp sch prio ppf ty =
-  !Oprint.out_type ppf (tree_of_typexp sch ty)
+  print_type ppf (tree_of_typexp sch ty)
 
 let type_expr ppf ty = typexp false 0 ppf ty
 
