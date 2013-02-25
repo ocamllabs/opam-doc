@@ -178,12 +178,7 @@ let generate_info_opt local info =
 
 (* TODO do proper type printing *)
 let generate_typ local typ = 
-  let b = Buffer.create 80 in
-  let ppf = Format.formatter_of_buffer b in
-    Printtyp.type_scheme ppf typ.ctyp_type;
-    Format.pp_print_flush ppf ();
-    let s = Buffer.contents b in
-      <:html<$str:s$>>
+  Gentyp.type_scheme local typ.ctyp_type
 
 let generate_typ_param param = 
   let s =
@@ -196,29 +191,6 @@ let generate_typ_param param =
 let generate_class_param param = 
   <:html<$str:("'" ^ param.txt)$>>
 ;;
-let generate_ident local ident = 
-  let name = Ident.name ident in
-    if Ident.persistent ident then
-      let prefix = 
-        try
-          let file = Index.local_lookup local name in
-            <:html<<span class="file" style="display:none">$str:file$</span>&>>
-        with Not_found -> Html.nil
-      in
-        <:html<<span class="ident">$prefix$$str:name$</span>&>>
-    else
-      <:html<<span class="name">$str:name$</span>&>>
-
-let rec generate_path local path = 
-  match path with
-    Path.Pident id -> generate_ident local id
-  | Path.Pdot(base, s, _) -> 
-      let base = generate_path local base in
-        <:html<$base$.<span class="name">$str:s$</span>&>>
-  | Path.Papply(base, arg) ->
-      let base = generate_path local base in
-      let arg = generate_path local arg in
-        <:html<$base$.<span class="path">$arg$</span>&>>
 
 let generate_variant_constructor local (name, info) (_, _, args, _) =
   constructor 
@@ -282,7 +254,7 @@ let generate_type_kind local dtk tk =
 let generate_class_type local dclty clty = raise (Failure "Not implemented")
 
 let generate_with_constraint local (path, _, cstr) =
-  let path = generate_path local path in
+  let path = Gentyp.path local path in
     match cstr with
       Twith_type td -> 
         let typ = 
@@ -298,8 +270,8 @@ let generate_with_constraint local (path, _, cstr) =
           | None -> assert false
         in
           kWithType path true (generate_typ local typ)
-    | Twith_module(p, _) -> kWithMod path false (generate_path local p)
-    | Twith_modsubst(p, _) -> kWithMod path true (generate_path local p)
+    | Twith_module(p, _) -> kWithMod path false (Gentyp.path local p)
+    | Twith_modsubst(p, _) -> kWithMod path true (Gentyp.path local p)
 
 let generate_variance = function
   | true, false -> vPositive
@@ -308,7 +280,7 @@ let generate_variance = function
 
 let rec generate_module_type local dmty mty = 
   match dmty, mty.mty_desc with
-    Dmty_ident, Tmty_ident(p, _) -> kModIdent (generate_path local p)
+    Dmty_ident, Tmty_ident(p, _) -> kModIdent (Gentyp.path local p)
   | Dmty_signature dsg, Tmty_signature sg ->
       let jsg = generate_signature_item_list local dsg sg.sig_items in
         kModSig jsg

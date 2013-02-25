@@ -11,10 +11,16 @@
 (*                                                                     *)
 (***********************************************************************)
 
+open Format
+open Types
+open Btype
+open Ctype
+
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
-  | Oide_ident of string
+  (* Added the identifier's persistence *)
+  | Oide_ident of bool * string
 
 type out_type =
   | Otyp_alias of out_type * string
@@ -34,13 +40,31 @@ and out_variant =
   | Ovar_fields of (string * bool * out_type list) list
   | Ovar_name of out_ident * out_type list
 
+(* Added semantic tags to identifiers and special handling of pervasives *)
+let index = ref None
 
-let rec print_ident ppf =
-  function
-    Oide_ident s -> pp_print_string ppf s
-  | Oide_dot (id, s) -> print_ident ppf id; pp_print_char ppf '.'; pp_print_string ppf s
+let rec print_ident ppf id =
+  fprintf ppf "@{<path>%a@}" print_sub_ident id
+
+and print_sub_ident ppf id = 
+  match id with
+  | Oide_ident(true, name) -> begin
+      try
+        match !index with
+          Some local -> 
+            let file = Index.local_lookup local name in
+              fprintf ppf "@{<file:%s>%s@}" file name
+        | None -> raise Not_found
+      with Not_found -> fprintf ppf "@{<ident>%s@}" name
+    end
+  | Oide_ident(false, name) -> 
+      fprintf ppf "@{<name>%s@}" name
+  | Oide_dot(Oide_ident(true, "Pervasives"), name) -> 
+      fprintf ppf "@{<ident>%s@}" name
+  | Oide_dot (id, name) -> 
+      fprintf ppf "%a.@{<name>%s@}" print_sub_ident id name
   | Oide_apply (id1, id2) ->
-      fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+      fprintf ppf "%a(%a)" print_sub_ident id1 print_ident id2
 
 (* Types *)
 
@@ -179,16 +203,15 @@ and print_typargs ppf =
 
 (* Print a path *)
 
-let ident_pervasive = Ident.create_persistent "Pervasives"
-
+(* Removed special handling of pervasives *)
 let rec tree_of_path = function
-  | Pident id ->
-      Oide_ident (ident_name id)
-  | Pdot(Pident id, s, pos) when Ident.same id ident_pervasive ->
-      Oide_ident s
-  | Pdot(p, s, pos) ->
+  | Path.Pident id ->
+    let pers = Ident.persistent id in
+    let name = Ident.name id in
+      Oide_ident(pers, name)
+  | Path.Pdot(p, s, pos) ->
       Oide_dot (tree_of_path p, s)
-  | Papply(p1, p2) ->
+  | Path.Papply(p1, p2) ->
       Oide_apply (tree_of_path p1, tree_of_path p2)
 
 let path ppf p =
@@ -326,7 +349,7 @@ let rec mark_loops_rec visited ty =
         mark_loops_rec visited ty2
     | Tnil -> ()
     | Tsubst ty -> mark_loops_rec visited ty
-    | Tlink _ -> fatal_error "Printtyp.mark_loops_rec (2)"
+    | Tlink _ -> assert false
     | Tpoly (ty, tyl) ->
         List.iter (fun t -> add_alias t) tyl;
         mark_loops_rec visited ty
@@ -340,7 +363,7 @@ let reset_loop_marks () =
   visited_objects := []; aliased := []; delayed := []
 
 let reset () =
-  unique_names := Ident.empty; reset_names (); reset_loop_marks ()
+  reset_names (); reset_loop_marks ()
 
 let reset_and_mark_loops ty =
   reset (); mark_loops ty
@@ -414,7 +437,7 @@ let rec tree_of_typexp sch ty =
     | Tsubst ty ->
         tree_of_typexp sch ty
     | Tlink _ ->
-        fatal_error "Printtyp.tree_of_typexp"
+        assert false
     | Tpoly (ty, []) ->
         tree_of_typexp sch ty
     | Tpoly (ty, tyl) ->
@@ -481,7 +504,7 @@ and tree_of_typobject sch fi nm =
       let args = tree_of_typlist sch tyl in
       Otyp_class (non_gen, tree_of_path p, args)
   | _ ->
-      fatal_error "Printtyp.tree_of_typobject"
+      assert false
   end
 
 and is_non_gen sch ty =
@@ -494,7 +517,7 @@ and tree_of_typfields sch rest = function
         | Tvar _ | Tunivar _ -> Some (is_non_gen sch rest)
         | Tconstr _ -> Some false
         | Tnil -> None
-        | _ -> fatal_error "typfields (1)"
+        | _ -> assert false
       in
       ([], rest)
   | (s, t) :: l ->
@@ -503,10 +526,108 @@ and tree_of_typfields sch rest = function
       (field :: fields, rest)
 
 let typexp sch prio ppf ty =
-  print_type ppf (tree_of_typexp sch ty)
+  print_out_type ppf (tree_of_typexp sch ty)
 
-let type_expr ppf ty = typexp false 0 ppf ty
+let type_scheme ppf ty = reset_and_mark_loops ty; typexp true 0 ppf ty
 
-and type_sch ppf ty = typexp true 0 ppf ty
+(* Create special buffers and formatters to allow HTML to be mixed
+   into the pretty printer's output. *)
+open Cow
 
-and type_scheme ppf ty = reset_and_mark_loops ty; typexp true 0 ppf ty
+type html_buffer = 
+  { mutable stack: Cow.Html.t list;
+    data: Buffer.t }
+
+let html_buffer () = { stack = [Html.nil]; data = Buffer.create 80 }
+
+let flush_data hb = 
+  if Buffer.length hb.data <> 0 then begin
+    let data = `Data (Buffer.contents hb.data) in
+      Buffer.clear hb.data;
+      match hb.stack with
+        top :: rest -> hb.stack <- (data :: top) :: rest
+      | [] -> assert false
+  end
+
+let push_level hb = 
+  flush_data hb;
+  hb.stack <- Html.nil :: hb.stack
+
+
+let pop_level hb = 
+  flush_data hb;
+  match hb.stack with
+    top :: rest -> 
+      hb.stack <- rest;
+      List.rev top
+  | _ -> assert false
+
+let add_string hb str = 
+  Buffer.add_string hb.data str
+
+let add_substring hb str ofs lens = 
+  Buffer.add_substring hb.data str ofs lens
+
+let add_html hb html = 
+  match hb.stack with
+    top :: rest -> 
+      hb.stack <- (List.rev_append html top) :: rest
+  | _ -> assert false
+
+let formatter_of_html_buffer hb =
+  make_formatter (add_substring hb) ignore
+    
+let with_html tagf pf a =
+  let hb = html_buffer () in 
+  let ppf = formatter_of_html_buffer hb in
+  let mark_open_tag tag = 
+    push_level hb;
+    ""
+  in
+  let mark_close_tag tag = 
+    try
+      let make_html = tagf tag in
+      let body = pop_level hb in
+      let html = make_html body in
+        add_html hb html;
+        ""
+    with Not_found -> ""
+  in
+  let tag_functions = 
+    { mark_open_tag;
+      mark_close_tag;
+      print_open_tag = ignore;
+      print_close_tag = ignore } 
+  in
+    pp_set_formatter_tag_functions ppf tag_functions;
+    pp_set_mark_tags ppf true;
+    pf ppf a;
+    pp_print_flush ppf ();
+    pop_level hb
+
+(* Convert semantic tags into HTML *)
+let process_tags tag =
+  match tag with
+    "path" -> (fun body -> <:html<<span class="path">$body$</span>&>>)
+  | "ident" -> (fun body -> <:html<<span class="ident">$body$</span>&>>)
+  | "name" -> (fun body -> <:html<<span class="name">$body$</span>&>>)
+  | _ -> 
+    let idx = String.index tag ':' in
+    let len = (String.length tag) - idx in
+    let pref = String.sub tag 0 idx in 
+    let arg = String.sub tag (idx + 1) (len - 1) in
+      match pref with
+        "file" -> 
+          let prefix = 
+            <:html<<span class="file" style="display:none">$str:arg$</span>&>>
+          in
+            (fun body -> <:html<$prefix$<span class="ident">$body$</span>&>>)
+      | _ -> raise Not_found
+
+let path local p = 
+  index := Some local;
+  with_html process_tags path p
+
+let type_scheme local ty = 
+  index := Some local;
+  with_html process_tags type_scheme ty
