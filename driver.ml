@@ -98,7 +98,7 @@ let _ =
       !files
   in
   let cmt_files = List.filter (fun file -> Filename.check_suffix file ".cmti") files in
-  let cmd_files = List.filter (fun file -> Filename.check_suffix file ".cmd") files in
+  let cmd_files = List.filter (fun file -> Filename.check_suffix file ".cmdi") files in
   let global = create_global_from_files cmt_files in
     List.iter 
       (fun cmd -> let cmt = get_cmt cmd cmt_files in process_file global cmd cmt)
