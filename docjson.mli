@@ -83,13 +83,19 @@ type signature_item
 
 val json_of_signature_item: signature_item -> Json.t
 
-val kModIdent: path -> module_type
+type module_expr
 
-val kModSig: signature_item list -> module_type 
+val json_of_module_expr: module_expr -> Json.t
 
-val kFunctor: string -> module_type -> module_type -> module_type
+val kModTypeIdent: path -> module_type
 
-val kWith: with_constraint list -> module_type -> module_type
+val kModTypeSig: signature_item list -> module_type 
+
+val kModTypeFunctor: string -> module_type -> module_type -> module_type
+
+val kModTypeWith: with_constraint list -> module_type -> module_type
+
+val kModTypeTypeOf: module_expr -> module_type
 
 val iValue: string -> typ -> info option -> signature_item
 
@@ -113,6 +119,8 @@ val iClassType: string -> typ list -> variance list -> bool ->
   class_type -> info option -> signature_item
 
 val iComment: info option -> signature_item
+
+val kModIdent: path -> module_expr
 
 type file
 
