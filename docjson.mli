@@ -2,6 +2,8 @@ open Cow
 
 type info = Html.t
 
+val string_of_html : Xml.t -> string
+
 val json_of_info: info -> Json.t
 
 type typ = Html.t
@@ -12,19 +14,37 @@ type path = Html.t
 
 val json_of_path: path -> Json.t
 
-type variant_constructor
-
+type variant_constructor = 
+    { name: string;
+      args: typ list;
+      info: info option }
+      
 val json_of_variant_constructor: variant_constructor -> Json.t
 
 val constructor: string -> typ list ->  info option -> variant_constructor
 
-type record_label
+(* + *)
+val triplet_of_constructor : variant_constructor -> string * typ list * info option
 
-val json_of_record_label: record_label -> Json.t
+module Record_label : sig
+  type record_label =  
+      { name: string;
+	mut: bool;
+	typ: typ;
+	info: info option }
+end
 
-val label: string -> bool -> typ -> info option -> record_label
+(* + *)
+val record_fields : Record_label.record_label -> string * bool * typ * info option
 
-type type_kind
+(* val json_of_record_label: Record_label.record_label -> Json.t *)
+
+val label: string -> bool -> typ -> info option -> Record_label.record_label
+
+type type_kind =  
+    { kind: [ `Abstract | `Variant | `Record ];
+      constructors: variant_constructor list option;
+      labels: Record_label.record_label list option }
 
 val json_of_type_kind: type_kind -> Json.t
 
@@ -32,7 +52,7 @@ val kAbstract: type_kind
 
 val kVariant: variant_constructor list -> type_kind
 
-val kRecord: record_label list -> type_kind
+val kRecord: Record_label.record_label list -> type_kind
 
 type class_type
 
@@ -65,7 +85,7 @@ val kWithType: path -> bool -> typ -> with_constraint
 
 val kWithMod: path -> bool -> path -> with_constraint
 
-type variance
+type variance = [ `None | `Positive | `Negative ]
 
 val json_of_variance: variance -> Json.t
 
@@ -79,7 +99,23 @@ type module_type
 
 val json_of_module_type: module_type -> Json.t
 
-type signature_item
+type signature_item =
+  { item: [ `Value | `Primitive | `Type | `Exception | `Module 
+          | `ModType | `Include | `Class | `ClassType | `Comment ];
+    name: string option;
+    typ: typ option;
+    primitive: string list option;
+    params: typ list option;
+    cstrs: (typ * typ) list option;
+    type_kind: type_kind option;
+    priv: bool option;
+    manifest: typ option;
+    variance: variance list option;
+    args: typ list option;
+    module_type: module_type option;
+    virt: bool option;
+    class_type: class_type option;
+    info: info option }
 
 val json_of_signature_item: signature_item -> Json.t
 
@@ -114,8 +150,12 @@ val iClassType: string -> typ list -> variance list -> bool ->
 
 val iComment: info option -> signature_item
 
-type file
+type file = 
+    { items: signature_item list;
+      info: info option }
 
 val json_of_file: file -> Json.t
 
 val file: signature_item list -> info option -> file
+
+val get_info_sig_item : signature_item -> info option

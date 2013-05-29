@@ -1,0 +1,118 @@
+{"items": [{"item": "Type", 
+	    "name": "t", 
+	    "params": ["'a", 
+		       "'b"
+		      ], 
+	    "type_kind": {"kind": "Abstract"
+			 }, 
+	    "priv": false, 
+	    "variance": ["Positive", 
+			 "None"
+			], 
+	    "info": "type t kikoo kikoo<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">moi<\/span><\/div>"
+	   }, 
+	   {"item": "Value", 
+	    "name": "foo", 
+	    "typ": "'a -&gt; 'a", 
+	    "info": "Foo identity<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">ookok<\/span><\/div>"
+	   }, 
+	   {"item": "Value", 
+	    "name": "l", 
+	    "typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> <span class=\"path\"><span class=\"name\">list<\/span><\/span>", 
+	    "info": "Descr liste l<div class=\"see\">   <b>See also <\/b> <br\/><span class=\"see\"><code class=\"code\">test.ml <\/code>seeinfo<\/span> <br\/><span class=\"see\"> <a href=\"infsup\">seeinfo2<\/a><\/span> <br\/><span class=\"see\"><i class=\"doc\">guill <\/i>seeinfo3<\/span><\/div>"
+	   }, 
+	   {"item": "Type", 
+	    "name": "testCOMM", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Variant", 
+			  "constructors": [{"name": "A", 
+					    "args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+						     "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+						    ], 
+					    "info": "comm pour A of int * float"
+					   }, 
+					   {"name": "B", 
+					    "args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>", 
+						     "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
+						    ], 
+					    "info": "comm pour B of float * int"
+					   }
+					  ]
+			 }, 
+	    "priv": false, 
+	    "variance": [
+	    ]
+	   }, 
+	   {"item": "Type", 
+	    "name": "testc", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Variant", 
+			  "constructors": [{"name": "A", 
+					    "args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+						     "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+						    ]
+					   }, 
+					   {"name": "B", 
+					    "args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+						    ]
+					   }
+					  ]
+			 }, 
+	    "priv": true, 
+	    "variance": [
+	    ]
+	   }, 
+	   {"item": "Type", 
+	    "name": "t2", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Abstract"
+			 }, 
+	    "priv": false, 
+	    "manifest": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+	    "variance": [
+	    ]
+	   }, 
+	   {"item": "Type", 
+	    "name": "record", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Record", 
+			  "labels": [{"name": "a", 
+				      "mut": false, 
+				      "typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
+				     }, 
+				     {"name": "b", 
+				      "mut": false, 
+				      "typ": "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+				     }
+				    ]
+			 }, 
+	    "priv": false, 
+	    "variance": [
+	    ]
+	   }, 
+	   {"item": "Type", 
+	    "name": "test", 
+	    "params": ["'a", 
+		       "'b"
+		      ], 
+	    "cstrs": [["<span class=\"path\"><span class=\"name\">testc<\/span><\/span>", 
+		       "<span class=\"path\"><span class=\"name\">testc<\/span><\/span>"
+		      ], 
+		      ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+		       "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
+		      ]
+		     ], 
+	    "type_kind": {"kind": "Abstract"
+			 }, 
+	    "priv": false, 
+	    "variance": ["None", 
+			 "None"
+			]
+	   }
+	  ], 
+ "info": "MLI doc"
+}

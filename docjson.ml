@@ -21,7 +21,8 @@ let string_of_html html =
     output_html_data out html;
     Buffer.contents b
 
-let json_of_info i = Json.String (string_of_html i)
+let json_of_info i = 
+  Json.String (string_of_html i)
 
 let list_opt = function
   | [] -> None
@@ -49,12 +50,23 @@ with json
 
 let constructor name args info = {name; args; info}
 
+let triplet_of_constructor  = 
+  function {name=n; args=ags; info=info} -> n, ags, info
+
+module Record_label = struct
 type record_label =
  { name: string;
    mut: bool;
    typ: typ;
    info: info option }
 with json
+end
+open Record_label
+
+
+
+let record_fields = 
+  function  { name=n; mut=b; typ=t; info=i} -> n,b,t,i
 
 let label name mut typ info = {name; mut; typ; info}
 
@@ -278,6 +290,9 @@ let iValue name typ info =
     virt = None;
     class_type = None;
     info = info }
+
+(* bug : cannot infere type ??*)
+let get_info_sig_item item = item.info
 
 let iPrimitive name typ primitive info = 
   { item = `Primitive;

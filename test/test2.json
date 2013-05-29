@@ -1,0 +1,30 @@
+{"items": [{"item": "Comment", 
+	    "info": "on open test"
+	   }, 
+	   {"item": "Type", 
+	    "name": "t3", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Variant", 
+			  "constructors": [{"name": "Bla", 
+					    "args": ["<span class=\"path\"><span class=\"file\" style=\"display:none\">test\/test.cmti<\/span><span class=\"ident\">Test<\/span>.<span class=\"name\">testc<\/span><\/span>"
+						    ]
+					   }, 
+					   {"name": "Bli", 
+					    "args": ["<span class=\"path\"><span class=\"ident\">in_channel<\/span><\/span>"
+						    ]
+					   }
+					  ]
+			 }, 
+	    "priv": false, 
+	    "variance": [
+	    ], 
+	    "info": "type t3 c'est cool<div class=\"see\"> <b>See also <\/b> <br\/><span class=\"see\"><code class=\"code\">toi <\/code>bla<\/span><\/div>"
+	   }, 
+	   {"item": "Value", 
+	    "name": "f", 
+	    "typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> -&gt; <span class=\"path\"><span class=\"ident\">in_channel<\/span><\/span>"
+	   }
+	  ], 
+ "info": "Module descr"
+}

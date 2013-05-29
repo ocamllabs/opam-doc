@@ -1,0 +1,21 @@
+{"items": [{"item": "Type", 
+	    "name": "t3", 
+	    "params": [
+	    ], 
+	    "type_kind": {"kind": "Variant", 
+			  "constructors": [{"name": "Bla", 
+					    "args": ["<span class=\"path\"><span class=\"file\" style=\"display:none\">test\/test.cmti<\/span><span class=\"ident\">Test<\/span>.<span class=\"name\">testc<\/span><\/span>"
+						    ]
+					   }, 
+					   {"name": "Bli", 
+					    "args": [
+					    ]
+					   }
+					  ]
+			 }, 
+	    "priv": false, 
+	    "variance": [
+	    ]
+	   }
+	  ]
+}

@@ -83,14 +83,18 @@ let process_file global cmd cmt =
           | Cmt_format.Implementation _ -> raise (Failure "Not implemented")
           | _ -> raise (Failure "Wrong kind of cmt file")
   in
-    let local = create_local global imports in
-    let jintf = generate_file local dintf intf in
-    let json = Docjson.json_of_file jintf in
-    let json_name = (Filename.chop_extension cmd) ^ ".json" in
-    let oc = open_out json_name in
-      output_string oc (json_to_string json);
-      close_out oc
-
+  let local = create_local global imports in
+  let jintf = generate_file local dintf intf in
+  let json = Docjson.json_of_file jintf in
+  let json_name = (Filename.chop_extension cmd) ^ ".json" in
+  let oc = open_out json_name in
+  output_string oc (json_to_string json);
+  close_out oc
+  (* mon truc *)
+  ; Html_printer.generate_html 
+    ~filename:((Filename.chop_extension cmd) ^ ".html")
+    ~jfile:jintf
+    
 let _ = 
   let files = 
     let files = ref [] in

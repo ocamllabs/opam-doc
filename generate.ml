@@ -27,7 +27,8 @@ let rec generate_text_element local elem =
       in
         (* TODO include the title weight *)
         <:html<<span class="title">$opt:lbl$$generate_text local t$</span>&>>
-  | Ref(rk, s, t) -> <:html<<span class="reference">$str:s$</span>&>>
+  | Ref(rk, s, t) -> 
+    <:html<<span class="reference">$str:s$</span>&>>
   | Special_ref _ -> raise (Failure "Not implemented")
   | Target _ -> raise (Failure "Not implemented")
 
@@ -62,23 +63,23 @@ and generate_style local sk t =
 let generate_authors local authors = 
   List.fold_left 
     (fun acc author -> <:html<$acc$<span class="author">$str:author$</span>&>>)
-    Html.nil
+    <:html<<b>Author(s): </b>&>>
     authors
 
 let generate_sees local sees = 
   let gen_see (sr, t) = 
     match sr with
     | See_url s -> 
-        <:html<<span class="url">$str:s$</span>$generate_text local t$>>
+      <:html< <a href="$str:s$">$generate_text local t$</a>&>> (*  class="url" *)
     | See_file s -> 
-        <:html<<span class="file">$str:s$</span>$generate_text local t$>>
+        <:html<<code class="code">$str:s$ </code>$generate_text local t$>>
     | See_doc s -> 
-        <:html<<span class="doc">$str:s$</span>$generate_text local t$>>
+        <:html<<i class="doc">$str:s$ </i>$generate_text local t$>>
   in
-    List.fold_left 
-    (fun acc see -> <:html<$acc$<span class="see">$gen_see see$</span>&>>)
-    Html.nil
-    sees
+  List.fold_left 
+    (fun acc see -> <:html< $acc$ <br/><span class="see">$gen_see see$</span>&>>)
+      <:html<<b>See also </b>&>>
+      sees
 
 let generate_befores local befores = 
   let gen_before (s, t) =
@@ -149,7 +150,7 @@ let generate_info local info =
     match info.i_deprecated with
     | None -> jinfo
     | Some t -> 
-        <:html<$jinfo$<div class="depracated">$generate_text local t$</div>&>>
+        <:html<$jinfo$<div class="deprecated">$generate_text local t$</div>&>>
   in
   let jinfo = 
     match info.i_params with
@@ -183,10 +184,10 @@ let generate_typ local typ =
 let generate_typ_param param = 
   let s =
     match param with
-      Some {txt=s} -> "'" ^ s
-    | None -> "_"
+	Some {txt=s} -> "'" ^ s
+      | None -> "_"
   in
-    <:html<$str:s$>>
+  <:html<$str:s$>>
 
 let generate_class_param param = 
   <:html<$str:("'" ^ param.txt)$>>
@@ -447,4 +448,3 @@ let generate_file local dintf intf =
   let jitems = generate_signature_item_list local dintf.dintf_items intf.sig_items in
   let jinfo = generate_info_opt local dintf.dintf_info in
     file jitems jinfo
-    
