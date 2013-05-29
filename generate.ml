@@ -27,10 +27,16 @@ let rec generate_text_element local elem =
       in
         (* TODO include the title weight *)
         <:html<<span class="title">$opt:lbl$$generate_text local t$</span>&>>
+<<<<<<< HEAD
   | Ref(rk, s, t) -> 
     <:html<<span class="reference">$str:s$</span>&>>
   | Special_ref _ -> raise (Failure "Not implemented")
   | Target _ -> raise (Failure "Not implemented")
+=======
+  | Ref(rk, s, t) -> <:html<<span class="reference">$str:s$</span>&>>
+  | Special_ref _ -> raise (Failure "Not implemented: Special refs")
+  | Target _ -> raise (Failure "Not implemented: Targets")
+>>>>>>> 4a5b7387ae5b5adf25777f4d776c18c44f3b779c
 
 and generate_text local text =
   List.fold_left 
@@ -55,7 +61,7 @@ and generate_style local sk t =
     | SK_right -> "right"
     | SK_superscript -> "superscript"
     | SK_subscript -> "subscript"
-    | SK_custom _ -> raise (Failure "Not implemented")
+    | SK_custom _ -> raise (Failure "Not implemented: Custom styles")
   in
     <:html<<span class="$str:s$">$generate_text local t$</span>&>>
 
@@ -252,7 +258,7 @@ let generate_type_kind local dtk tk =
         kRecord labels
   | _, _ -> raise (Failure "Mismatch")
 
-let generate_class_type local dclty clty = raise (Failure "Not implemented")
+let generate_class_type local dclty clty = raise (Failure "Not implemented: Class types")
 
 let generate_with_constraint local (path, _, cstr) =
   let path = Gentyp.path local path in
@@ -281,20 +287,21 @@ let generate_variance = function
 
 let rec generate_module_type local dmty mty = 
   match dmty, mty.mty_desc with
-    Dmty_ident, Tmty_ident(p, _) -> kModIdent (Gentyp.path local p)
+    Dmty_ident, Tmty_ident(p, _) -> kModTypeIdent (Gentyp.path local p)
   | Dmty_signature dsg, Tmty_signature sg ->
       let jsg = generate_signature_item_list local dsg sg.sig_items in
-        kModSig jsg
+        kModTypeSig jsg
   | Dmty_functor(darg, dbase), Tmty_functor(_, {txt=name}, arg, base) ->
       let jarg = generate_module_type local darg arg in
       let jbase = generate_module_type local dbase base in
-        kFunctor name jarg jbase
+        kModTypeFunctor name jarg jbase
   | Dmty_with dbase, Tmty_with(base, cnstrs) ->
       let jbase = generate_module_type local dbase base in
       let jcnstrs = List.map (generate_with_constraint local) cnstrs in
-        kWith jcnstrs jbase
+        kModTypeWith jcnstrs jbase
   | Dmty_typeof dexpr, Tmty_typeof expr ->
-      raise (Failure "Not implemented")
+      let jexpr = generate_module_expr local dexpr expr in
+        kModTypeTypeOf jexpr
   | _, _ -> raise (Failure "Mismatch")
 
 (* TODO remove assumption that typedtree and doctree perfectly match *)
@@ -302,11 +309,12 @@ and generate_signature_item_list local ditems items =
   let rec loop ditems items acc =
       match ditems, items with
         [], _ -> List.rev acc
-      | ({dsig_desc = Dsig_comment} as ditem) :: drest, item :: _ -> 
-          let jitem = generate_signature_item local ditem item in
+      | ({dsig_desc = Dsig_comment} as ditem) :: drest, _ ->
+          let jinfo = generate_info_opt local ditem.dsig_info in
+          let jitem = iComment jinfo in
             loop drest items (jitem :: acc)
-      | {dsig_desc = Dsig_stop} :: drest, item :: _ ->
-          loop drest items acc
+      | {dsig_desc = Dsig_stop} :: drest, _ ->
+          raise (Failure "Not supported")          
       | {dsig_desc = Dsig_open} :: drest, {sig_desc = Tsig_open _} :: rest ->
           loop drest rest acc
       | ({dsig_desc = Dsig_type _} as ditem) :: drest, 
@@ -399,7 +407,7 @@ and generate_signature_item local ditem item =
       let jmty = generate_module_type local dmty mty in
       let jinfo = generate_info_opt local ditem.dsig_info in
         iModule name jmty jinfo
-  | Dsig_recmodule _ , Tsig_recmodule _ -> raise (Failure "Not implemented")
+  | Dsig_recmodule _ , Tsig_recmodule _ -> raise (Failure "Not implemented: Recursive modules")
   | Dsig_modtype(name, dmtyo), Tsig_modtype(_, _, mtydecl) ->
       let jmtyo = 
         match dmtyo, mtydecl with
@@ -437,11 +445,21 @@ and generate_signature_item local ditem item =
       let jclty = generate_class_type local dclty clty_decl.ci_expr in
       let jinfo = generate_info_opt local ditem.dsig_info in
         iClassType name jparams jvariance virt jclty jinfo
-  | Dsig_comment, _ ->
-      let jinfo = generate_info_opt local ditem.dsig_info in
-      iComment jinfo
-  | Dsig_stop, _ ->
-      raise (Failure "Not supported")
+  | _, _ -> raise (Failure "Mismatch")
+
+and generate_module_expr local dmod md = 
+  match dmod, md.mod_desc with
+    Dmod_ident, Tmod_ident(p, _) -> kModIdent (Gentyp.path local p)
+  | Dmod_structure _, Tmod_structure _ ->
+      raise (Failure "Not implemented: Module structure")
+  | Dmod_functor _, Tmod_functor _ ->
+      raise (Failure "Not implemented: Module functor")
+  | Dmod_apply _, Tmod_apply _ ->
+      raise (Failure "Not implemented: Module apply")
+  | Dmod_constraint _, Tmod_constraint _ ->
+      raise (Failure "Not implemented: Module constraint")
+  | Dmod_unpack _, Tmod_unpack _ ->
+      raise (Failure "Not implemented: Module unpack")
   | _, _ -> raise (Failure "Mismatch")
 
 let generate_file local dintf intf =

@@ -119,13 +119,19 @@ type signature_item =
 
 val json_of_signature_item: signature_item -> Json.t
 
-val kModIdent: path -> module_type
+type module_expr
 
-val kModSig: signature_item list -> module_type 
+val json_of_module_expr: module_expr -> Json.t
 
-val kFunctor: string -> module_type -> module_type -> module_type
+val kModTypeIdent: path -> module_type
 
-val kWith: with_constraint list -> module_type -> module_type
+val kModTypeSig: signature_item list -> module_type 
+
+val kModTypeFunctor: string -> module_type -> module_type -> module_type
+
+val kModTypeWith: with_constraint list -> module_type -> module_type
+
+val kModTypeTypeOf: module_expr -> module_type
 
 val iValue: string -> typ -> info option -> signature_item
 
@@ -150,9 +156,15 @@ val iClassType: string -> typ list -> variance list -> bool ->
 
 val iComment: info option -> signature_item
 
+<<<<<<< HEAD
 type file = 
     { items: signature_item list;
       info: info option }
+=======
+val kModIdent: path -> module_expr
+
+type file
+>>>>>>> 4a5b7387ae5b5adf25777f4d776c18c44f3b779c
 
 val json_of_file: file -> Json.t
 

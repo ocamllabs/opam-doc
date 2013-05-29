@@ -211,13 +211,14 @@ let vPositive = `Positive
 let vNegative = `Negative
 
 type module_type =
-  { kind: [ `Ident | `Sig | `Functor | `With ];
-    path: path option;
+  { mtkind: [ `Ident | `Sig | `Functor | `With | `TypeOf ];
+    mtpath: path option;
     items: signature_item list option;
     arg_name: string option;
     arg_type: module_type option;
     cnstrs: with_constraint list option;
-    base: module_type option }
+    base: module_type option;
+    expr: module_expr option }
 
 and signature_item =
   { item: [ `Value | `Primitive | `Type | `Exception | `Module 
@@ -236,43 +237,61 @@ and signature_item =
     virt: bool option;
     class_type: class_type option;
     info: info option }
+
+and module_expr =
+  { mkind: [ `Ident ];
+    mpath: path option }
 with json
 
-let kModIdent path = 
-  { kind = `Ident;
-    path = Some path;
+let kModTypeIdent path = 
+  { mtkind = `Ident;
+    mtpath = Some path;
     items = None;
     arg_name = None;
     arg_type = None;
     cnstrs = None;
-    base = None }
+    base = None;
+    expr = None }
 
-let kModSig items = 
-  { kind = `Sig;
-    path = None;
+let kModTypeSig items = 
+  { mtkind = `Sig;
+    mtpath = None;
     items = Some items;
     arg_name = None;
     arg_type = None;
     cnstrs = None;
-    base = None }
+    base = None;
+    expr = None }
 
-let kFunctor arg_name arg_type base = 
-  { kind = `Functor;
-    path = None;
+let kModTypeFunctor arg_name arg_type base = 
+  { mtkind = `Functor;
+    mtpath = None;
     items = None;
     arg_name = Some arg_name;
     arg_type = Some arg_type;
     cnstrs = None;
-    base = Some base }
+    base = Some base;
+    expr = None }
 
-let kWith cnstrs base = 
-  { kind = `With;
-    path = None;
+let kModTypeWith cnstrs base = 
+  { mtkind = `With;
+    mtpath = None;
     items = None;
     arg_name = None;
     arg_type = None;
     cnstrs = Some cnstrs;
-    base = Some base }
+    base = Some base;
+    expr = None }
+
+let kModTypeTypeOf expr = 
+  { mtkind = `TypeOf;
+    mtpath = None;
+    items = None;
+    arg_name = None;
+    arg_type = None;
+    cnstrs = None;
+    base = None;
+    expr = Some expr }
 
 let iValue name typ info = 
   { item = `Value;
@@ -446,6 +465,10 @@ let iComment info =
     virt = None;
     class_type = None;
     info = info }
+
+let kModIdent path = 
+  { mkind = `Ident;
+    mpath = Some path }
 
 type file = 
   { items: signature_item list;

@@ -70,17 +70,17 @@ let process_file global cmd cmt =
     let cmd = Cmd_format.read_cmd cmd in
       match cmd.Cmd_format.cmd_doctree with
         Doctree.Dfile_intf dintf -> dintf
-      | Doctree.Dfile_impl _ -> raise (Failure "Not implemented")
+      | Doctree.Dfile_impl _ -> raise (Failure "Not implemented: .cmd files")
   in
   let intf, imports = 
     let cmi, cmt = Cmt_format.read cmt in
       match cmi, cmt with
       | _, None -> raise (Failure "Not a cmt file")
-      | None, Some cmt -> raise (Failure "Not implemented")
+      | None, Some cmt -> raise (Failure "Not implemented: .cmt files")
       | Some cmi, Some cmt -> 
           match cmt.Cmt_format.cmt_annots with
             Cmt_format.Interface intf -> intf, cmi.Cmi_format.cmi_crcs
-          | Cmt_format.Implementation _ -> raise (Failure "Not implemented")
+          | Cmt_format.Implementation _ -> raise (Failure "Not implemented: .cmt files")
           | _ -> raise (Failure "Wrong kind of cmt file")
   in
   let local = create_local global imports in
