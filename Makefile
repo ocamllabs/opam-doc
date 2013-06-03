@@ -1,6 +1,45 @@
-all:
-	obuild build
+OCAMLC=ocamlc
+OCAMLLINK=ocamlc
+OCAMLLEX=ocamllex
+OCAMLYACC=ocamlyacc
+OCAMLFIND=ocamlfind
 
-run: *.ml
+OCAMLCFLAGS=-g -annot -syntax "camlp4o" -package "cow,cow.syntax,compiler-libs.common"
+
+%.cmi: %.mli
+	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -c $<
+
+%.cmo %.cmi: %.ml
+	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -c $<
+
+all: opam-doc
+
+clean:
+	-rm *.cmi *.cmo
+	-rm opam-doc
+
+opam-doc: index.cmo gentyp.cmo  doctree.cmo docjson.cmo doc_html.cmo cmd_format.cmo generate.cmo driver.cmo 
+	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
+
+run:opam-doc
 	cd test; $(MAKE)
-	dist/build/opamdoc/opamdoc test/test.cmdi test/test.cmti test/test2.cmdi test/test2.cmti
+	./opam-doc test/test.cmdi test/test.cmti test/test2.cmdi test/test2.cmti
+
+docjson.cmi :
+doctree.cmi : info.cmi
+gentyp.cmi : index.cmi
+index.cmi :
+info.cmi :
+cmd_format.cmo : doctree.cmi
+doc_html.cmo : docjson.cmi
+docjson.cmo : docjson.cmi
+doctree.cmo : info.cmi doctree.cmi
+driver.cmo : index.cmi generate.cmo doctree.cmi docjson.cmi doc_html.cmo \
+    cmd_format.cmo
+generate.cmo : info.cmi gentyp.cmi doctree.cmi docjson.cmi
+gentyp.cmo : index.cmi gentyp.cmi
+index.cmo : index.cmi
+info.cmo : info.cmi
+printast.cmo :
+printdoctree.cmo : info.cmi doctree.cmi
+untypeast.cmo :

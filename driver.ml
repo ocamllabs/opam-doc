@@ -91,9 +91,21 @@ let process_file global cmd cmt =
   output_string oc (json_to_string json);
   close_out oc
   (* mon truc *)
-  ; Html_printer.generate_html 
+  ; 
+  Doc_html.(
+    let module_name = String.capitalize 
+      (Filename.chop_extension (Filename.basename cmd)) in
+    let html = html_of_file module_name jintf in
+    let html_name = module_name ^ ".html" in
+    let oc = open_out ((Filename.dirname cmd) ^"/"^ html_name) in
+    output_string oc doctype;
+    output_string oc (Docjson.string_of_html html);
+    close_out oc;
+  )
+  (*
+  Html_printer.generate_html 
     ~filename:((Filename.chop_extension cmd) ^ ".html")
-    ~jfile:jintf
+    ~jfile:jintf*)
     
 let _ = 
   let files = 
@@ -104,6 +116,7 @@ let _ =
   let cmt_files = List.filter (fun file -> Filename.check_suffix file ".cmti") files in
   let cmd_files = List.filter (fun file -> Filename.check_suffix file ".cmdi") files in
   let global = create_global_from_files cmt_files in
-    List.iter 
-      (fun cmd -> let cmt = get_cmt cmd cmt_files in process_file global cmd cmt)
-      cmd_files
+  List.iter 
+    (fun cmd -> let cmt = get_cmt cmd cmt_files in process_file global cmd cmt)
+    cmd_files
+    

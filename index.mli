@@ -1,4 +1,3 @@
-
 type global
 
 type local

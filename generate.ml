@@ -27,16 +27,10 @@ let rec generate_text_element local elem =
       in
         (* TODO include the title weight *)
         <:html<<span class="title">$opt:lbl$$generate_text local t$</span>&>>
-<<<<<<< HEAD
   | Ref(rk, s, t) -> 
     <:html<<span class="reference">$str:s$</span>&>>
   | Special_ref _ -> raise (Failure "Not implemented")
   | Target _ -> raise (Failure "Not implemented")
-=======
-  | Ref(rk, s, t) -> <:html<<span class="reference">$str:s$</span>&>>
-  | Special_ref _ -> raise (Failure "Not implemented: Special refs")
-  | Target _ -> raise (Failure "Not implemented: Targets")
->>>>>>> 4a5b7387ae5b5adf25777f4d776c18c44f3b779c
 
 and generate_text local text =
   List.fold_left 
@@ -82,10 +76,12 @@ let generate_sees local sees =
     | See_doc s -> 
         <:html<<i class="doc">$str:s$ </i>$generate_text local t$>>
   in
-  List.fold_left 
-    (fun acc see -> <:html< $acc$ <br/><span class="see">$gen_see see$</span>&>>)
-      <:html<<b>See also </b>&>>
-      sees
+  let elems = 
+    List.fold_left 
+      (fun acc see -> <:html< $acc$ <li>$gen_see see$</li>&>>)
+      Html.nil
+      sees in
+  <:html<<b>See also</b> <ul>$elems$</ul>&>>
 
 let generate_befores local befores = 
   let gen_before (s, t) =
@@ -281,9 +277,9 @@ let generate_with_constraint local (path, _, cstr) =
     | Twith_modsubst(p, _) -> kWithMod path true (Gentyp.path local p)
 
 let generate_variance = function
-  | true, false -> vPositive
-  | false, true -> vNegative
-  | _, _ -> vNone
+  | true, false -> `Positive
+  | false, true -> `Negative
+  | _, _ -> `None
 
 let rec generate_module_type local dmty mty = 
   match dmty, mty.mty_desc with
@@ -458,7 +454,7 @@ and generate_module_expr local dmod md =
       raise (Failure "Not implemented: Module apply")
   | Dmod_constraint _, Tmod_constraint _ ->
       raise (Failure "Not implemented: Module constraint")
-  | Dmod_unpack _, Tmod_unpack _ ->
+  | Dmod_unpack, Tmod_unpack _ ->
       raise (Failure "Not implemented: Module unpack")
   | _, _ -> raise (Failure "Mismatch")
 

@@ -14,37 +14,27 @@ type path = Html.t
 
 val json_of_path: path -> Json.t
 
-type variant_constructor = 
-    { name: string;
-      args: typ list;
-      info: info option }
+type variant_constructor =
+ { vc_name: string;
+   vc_args: typ list;
+   vc_info: info option }
       
 val json_of_variant_constructor: variant_constructor -> Json.t
 
 val constructor: string -> typ list ->  info option -> variant_constructor
 
-(* + *)
-val triplet_of_constructor : variant_constructor -> string * typ list * info option
+type record_label =
+ { rl_name: string;
+   rl_mut: bool;
+   rl_typ: typ;
+   rl_info: info option }
 
-module Record_label : sig
-  type record_label =  
-      { name: string;
-	mut: bool;
-	typ: typ;
-	info: info option }
-end
+val label: string -> bool -> typ -> info option -> record_label
 
-(* + *)
-val record_fields : Record_label.record_label -> string * bool * typ * info option
-
-(* val json_of_record_label: Record_label.record_label -> Json.t *)
-
-val label: string -> bool -> typ -> info option -> Record_label.record_label
-
-type type_kind =  
-    { kind: [ `Abstract | `Variant | `Record ];
-      constructors: variant_constructor list option;
-      labels: Record_label.record_label list option }
+type type_kind = 
+  { tk_kind: [ `Abstract | `Variant | `Record ];
+    tk_constructors: variant_constructor list option;
+    tk_labels: record_label list option }
 
 val json_of_type_kind: type_kind -> Json.t
 
@@ -52,13 +42,26 @@ val kAbstract: type_kind
 
 val kVariant: variant_constructor list -> type_kind
 
-val kRecord: Record_label.record_label list -> type_kind
+val kRecord: record_label list -> type_kind
 
-type class_type
+type class_type =
+  { ct_kind: [ `Ident | `Sig ];
+    ct_args: typ list option;
+    ct_params: typ list option;
+    ct_path: path option;
+    ct_fields: class_type_field list option }
+and class_type_field =
+  { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
+    ctf_class_type: class_type option;
+    ctf_name: string option;
+    ctf_mut: bool option;
+    ctf_virt: bool option;
+    ctf_priv: bool option;
+    ctf_typ: typ option;
+    ctf_eq: (typ * typ) option;
+    ctf_info: info option; }
 
 val json_of_class_type: class_type -> Json.t
-
-type class_type_field
 
 val json_of_class_type_field: class_type_field -> Json.t
 
@@ -77,7 +80,12 @@ val fConstraint: typ -> typ -> info option -> class_type_field
 
 val fClassComment: info option -> class_type_field 
 
-type with_constraint
+type with_constraint =
+  { wc_kind: [ `Type | `Module ];
+    wc_path: path;
+    wc_subst: bool;
+    wc_typeq: typ option;
+    wc_modeq: path option }
 
 val json_of_with_constraint: with_constraint -> Json.t
 
@@ -89,37 +97,39 @@ type variance = [ `None | `Positive | `Negative ]
 
 val json_of_variance: variance -> Json.t
 
-val vNone: variance
-
-val vPositive: variance
-
-val vNegative: variance
-
-type module_type
+type module_type =
+  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf ];
+    mt_path: path option;
+    mt_items: signature_item list option;
+    mt_arg_name: string option;
+    mt_arg_type: module_type option;
+    mt_cnstrs: with_constraint list option;
+    mt_base: module_type option;
+    mt_expr: module_expr option }
+and signature_item =
+  { si_item: [ `Value | `Primitive | `Type | `Exception | `Module 
+          | `ModType | `Include | `Class | `ClassType | `Comment ];
+    si_name: string option;
+    si_typ: typ option;
+    si_primitive: string list option;
+    si_params: typ list option;
+    si_cstrs: (typ * typ) list option;
+    si_type_kind: type_kind option;
+    si_priv: bool option;
+    si_manifest: typ option;
+    si_variance: variance list option;
+    si_args: typ list option;
+    si_module_type: module_type option;
+    si_virt: bool option;
+    si_class_type: class_type option;
+    si_info: info option }
+and module_expr =
+  { me_kind: [ `Ident ];
+    me_path: path option }
 
 val json_of_module_type: module_type -> Json.t
 
-type signature_item =
-  { item: [ `Value | `Primitive | `Type | `Exception | `Module 
-          | `ModType | `Include | `Class | `ClassType | `Comment ];
-    name: string option;
-    typ: typ option;
-    primitive: string list option;
-    params: typ list option;
-    cstrs: (typ * typ) list option;
-    type_kind: type_kind option;
-    priv: bool option;
-    manifest: typ option;
-    variance: variance list option;
-    args: typ list option;
-    module_type: module_type option;
-    virt: bool option;
-    class_type: class_type option;
-    info: info option }
-
 val json_of_signature_item: signature_item -> Json.t
-
-type module_expr
 
 val json_of_module_expr: module_expr -> Json.t
 
@@ -145,7 +155,7 @@ val iException: string -> typ list -> info option -> signature_item
 val iModule: string -> module_type -> info option -> signature_item 
 
 val iModType: string -> module_type option -> info option -> signature_item 
-
+  
 val iInclude: module_type -> info option -> signature_item
 
 val iClass: string -> typ list -> variance list -> bool -> 
@@ -156,18 +166,13 @@ val iClassType: string -> typ list -> variance list -> bool ->
 
 val iComment: info option -> signature_item
 
-<<<<<<< HEAD
 type file = 
-    { items: signature_item list;
-      info: info option }
-=======
-val kModIdent: path -> module_expr
+  { f_items: signature_item list;
+    f_info: info option }
 
-type file
->>>>>>> 4a5b7387ae5b5adf25777f4d776c18c44f3b779c
+val kModIdent: path -> module_expr
 
 val json_of_file: file -> Json.t
 
 val file: signature_item list -> info option -> file
 
-val get_info_sig_item : signature_item -> info option

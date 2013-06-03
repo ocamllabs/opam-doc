@@ -1,142 +1,147 @@
-{"items": [{"item": "Type", 
-"name": "t", 
-"params": ["'a", 
+{"f_items": [{"si_item": "Type", 
+"si_name": "t", 
+"si_params": ["'a", 
 "'b"
 ], 
-"type_kind": {"kind": "Abstract"
+"si_type_kind": {"tk_kind": "Abstract"
 }, 
-"priv": false, 
-"variance": ["Positive", 
+"si_priv": false, 
+"si_variance": ["Positive", 
 "None"
 ], 
-"info": "type t kikoo kikoo<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">moi<\/span><\/div>"
+"si_info": "type t kikoo kikoo<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">moi<\/span><\/div>"
 }, 
-{"item": "Comment", 
-"info": "Foo identity<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">ookok<\/span><\/div>"
-}, 
-{"item": "Type", 
-"name": "testz", 
-"params": [
+{"si_item": "Type", 
+"si_name": "testz", 
+"si_params": [
 ], 
-"type_kind": {"kind": "Abstract"
+"si_type_kind": {"tk_kind": "Abstract"
 }, 
-"priv": false, 
-"manifest": "[ `A | `B | `C ]", 
-"variance": [
-]
-}, 
-{"item": "Value", 
-"name": "foo", 
-"typ": "'a -&gt; 'a"
-}, 
-{"item": "Value", 
-"name": "l", 
-"typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> <span class=\"path\"><span class=\"name\">list<\/span><\/span>", 
-"info": "Descr liste l<div class=\"see\">   <b>See also <\/b> <br\/><span class=\"see\"><code class=\"code\">test.ml <\/code>seeinfo<\/span> <br\/><span class=\"see\"> <a href=\"infsup\">seeinfo2<\/a><\/span> <br\/><span class=\"see\"><i class=\"doc\">guill <\/i>seeinfo3<\/span><\/div>"
-}, 
-{"item": "Type", 
-"name": "testCOMM", 
-"params": [
+"si_priv": false, 
+"si_manifest": "[ `A | `B | `C ]", 
+"si_variance": [
 ], 
-"type_kind": {"kind": "Variant", 
-"constructors": [{"name": "A", 
-"args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+"si_info": "comm testz"
+}, 
+{"si_item": "Value", 
+"si_name": "foo", 
+"si_typ": "'a -&gt; 'a", 
+"si_info": "Foo identity<div class=\"authors\"><b>Author(s): <\/b><span class=\"author\">ookok<\/span><\/div>"
+}, 
+{"si_item": "Value", 
+"si_name": "l", 
+"si_typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> <span class=\"path\"><span class=\"name\">list<\/span><\/span>", 
+"si_info": "Descr liste l<div class=\"see\"><b>See also<\/b> <ul>    <li><code class=\"code\">test.ml <\/code>seeinfo<\/li> <li> <a href=\"infsup\">seeinfo2<\/a><\/li> <li><i class=\"doc\">guill <\/i>seeinfo3<\/li><\/ul><\/div>"
+}, 
+{"si_item": "Type", 
+"si_name": "testCOMM", 
+"si_params": [
+], 
+"si_type_kind": {"tk_kind": "Variant", 
+"tk_constructors": [{"vc_name": "A", 
+"vc_args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
 "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
 ], 
-"info": "comm pour A of int * float"
+"vc_info": "comm pour A of int * float"
 }, 
-{"name": "B", 
-"args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>", 
+{"vc_name": "B", 
+"vc_args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>", 
 "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
 ], 
-"info": "comm pour B of float * int"
+"vc_info": "comm pour B of float * int"
 }
 ]
 }, 
-"priv": false, 
-"variance": [
-]
-}, 
-{"item": "Type", 
-"name": "testc", 
-"params": [
+"si_priv": false, 
+"si_variance": [
 ], 
-"type_kind": {"kind": "Variant", 
-"constructors": [{"name": "A", 
-"args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+"si_info": "comm testComm"
+}, 
+{"si_item": "Type", 
+"si_name": "testc", 
+"si_params": [
+], 
+"si_type_kind": {"tk_kind": "Variant", 
+"tk_constructors": [{"vc_name": "A", 
+"vc_args": ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
 "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
 ]
 }, 
-{"name": "B", 
-"args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+{"vc_name": "B", 
+"vc_args": ["<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
 ]
 }
 ]
 }, 
-"priv": true, 
-"variance": [
+"si_priv": true, 
+"si_variance": [
+], 
+"si_info": "comm testc"
+}, 
+{"si_item": "Type", 
+"si_name": "testd", 
+"si_params": [
+], 
+"si_type_kind": {"tk_kind": "Abstract"
+}, 
+"si_priv": false, 
+"si_manifest": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+"si_variance": [
 ]
 }, 
-{"item": "Type", 
-"name": "testd", 
-"params": [
+{"si_item": "Type", 
+"si_name": "t2", 
+"si_params": [
 ], 
-"type_kind": {"kind": "Abstract"
+"si_type_kind": {"tk_kind": "Abstract"
 }, 
-"priv": false, 
-"manifest": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
-"variance": [
-]
-}, 
-{"item": "Type", 
-"name": "t2", 
-"params": [
+"si_priv": false, 
+"si_manifest": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+"si_variance": [
 ], 
-"type_kind": {"kind": "Abstract"
+"si_info": "comm t2"
 }, 
-"priv": false, 
-"manifest": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
-"variance": [
-]
-}, 
-{"item": "Type", 
-"name": "record", 
-"params": [
+{"si_item": "Type", 
+"si_name": "record", 
+"si_params": [
 ], 
-"type_kind": {"kind": "Record", 
-"labels": [{"name": "a", 
-"mut": false, 
-"typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
+"si_type_kind": {"tk_kind": "Record", 
+"tk_labels": [{"rl_name": "a", 
+"rl_mut": false, 
+"rl_typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
+"rl_info": "comm pour record field a"
 }, 
-{"name": "b", 
-"mut": true, 
-"typ": "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
+{"rl_name": "b", 
+"rl_mut": true, 
+"rl_typ": "<span class=\"path\"><span class=\"name\">float<\/span><\/span>"
 }
 ]
 }, 
-"priv": false, 
-"variance": [
-]
+"si_priv": false, 
+"si_variance": [
+], 
+"si_info": "comm record field"
 }, 
-{"item": "Type", 
-"name": "test", 
-"params": ["'a", 
+{"si_item": "Type", 
+"si_name": "test", 
+"si_params": ["'a", 
 "'b"
 ], 
-"cstrs": [["<span class=\"path\"><span class=\"name\">testc<\/span><\/span>", 
+"si_cstrs": [["<span class=\"path\"><span class=\"name\">testc<\/span><\/span>", 
 "<span class=\"path\"><span class=\"name\">testc<\/span><\/span>"
 ], 
 ["<span class=\"path\"><span class=\"name\">int<\/span><\/span>", 
 "<span class=\"path\"><span class=\"name\">int<\/span><\/span>"
 ]
 ], 
-"type_kind": {"kind": "Abstract"
+"si_type_kind": {"tk_kind": "Abstract"
 }, 
-"priv": false, 
-"variance": ["None", 
+"si_priv": false, 
+"si_variance": ["None", 
 "None"
-]
+], 
+"si_info": "comm type ('a,'b) test constraint 'a = testc constraint 'b = int"
 }
 ], 
-"info": "MLI doc"
+"f_info": "MLI doc"
 }

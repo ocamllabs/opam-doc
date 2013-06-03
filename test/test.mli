@@ -5,12 +5,12 @@
 *)
 type (+'a, 'b) t
 
+(** comm testz *)
+type testz = [ `A | `B | `C ]
+
 (** Foo identity 
     @author ookok
 *)
-
-type testz = [ `A | `B | `C ]
-
 val foo : 'a -> 'a
 
 (** Descr liste l 
@@ -20,16 +20,24 @@ val foo : 'a -> 'a
 *)
 val l : int list
 
+(** comm testComm *)
 type testCOMM = 
-    A of int * float (** comm pour A of int * float *)
+  | A of int * float (** comm pour A of int * float *)
   | B of float * int (** comm pour B of float * int *)
 
+(** comm testc *)
 type testc = private A of int * float | B of float
 
+(** comm testd *)
 type testd = int
 
+(** comm t2 *)
 type t2 = int
 
-type record = {a:int; mutable b:float}
+(** comm record field *)
+type record = {a:int; (** comm pour record field a *)
 
+	       mutable b:float}
+
+(** comm type ('a,'b) test constraint 'a = testc constraint 'b = int *)
 type ('a,'b) test constraint 'a = testc constraint 'b = int
