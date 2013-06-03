@@ -1,3 +1,4 @@
 dist/
 *.cm[oia]
 *.annot
+opam-doc

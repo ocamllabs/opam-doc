@@ -1,5 +1,5 @@
 opam-doc
 =========
 
-#Produce documentation for libraries installed with OPAM
+Produce documentation for libraries installed with OPAM
 
