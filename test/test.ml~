@@ -1,8 +1,0 @@
-(** Module blabla*)
-
-(** id @return tarace *)
-let foo x = x
-
-let l = [1;2;3]
-
-type test = [ `A | `B | `C ]

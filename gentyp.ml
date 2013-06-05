@@ -51,16 +51,18 @@ and print_sub_ident ppf id =
   | Oide_ident(true, name) -> begin
       try
         match !index with
-          Some local -> 
-            let file = Index.local_lookup local name in
+            Some local -> 
+              let file = Index.local_lookup local name in
               fprintf ppf "@{<file:%s>%s@}" file name
         | None -> raise Not_found
       with Not_found -> fprintf ppf "@{<ident>%s@}" name
     end
   | Oide_ident(false, name) -> 
       fprintf ppf "@{<name>%s@}" name
-  | Oide_dot(Oide_ident(true, "Pervasives"), name) -> 
-      fprintf ppf "@{<ident>%s@}" name
+(*  Do we want pervasives?
+ *  | Oide_dot(Oide_ident(true, "Pervasives"), name) -> 
+ *   fprintf ppf "@{<ident>%s@}" name
+ *)
   | Oide_dot (id, name) -> 
       fprintf ppf "%a.@{<name>%s@}" print_sub_ident id name
   | Oide_apply (id1, id2) ->
@@ -208,7 +210,8 @@ let rec tree_of_path = function
   | Path.Pident id ->
     let pers = Ident.persistent id in
     let name = Ident.name id in
-      Oide_ident(pers, name)
+(*    Printf.printf "pers:%b name:%s\n" pers name;*)
+    Oide_ident(pers, name)
   | Path.Pdot(p, s, pos) ->
       Oide_dot (tree_of_path p, s)
   | Path.Papply(p1, p2) ->
@@ -228,8 +231,8 @@ let add_named_var ty =
   match ty.desc with
     Tvar (Some name) | Tunivar (Some name) ->
       if List.mem name !named_vars then () else
-      named_vars := name :: !named_vars
-  | _ -> ()
+	named_vars := name :: !named_vars
+    | _ -> ()
 
 let rec new_name () =
   let name =
@@ -608,26 +611,28 @@ let with_html tagf pf a =
 (* Convert semantic tags into HTML *)
 let process_tags tag =
   match tag with
-    "path" -> (fun body -> <:html<<span class="path">$body$</span>&>>)
-  | "ident" -> (fun body -> <:html<<span class="ident">$body$</span>&>>)
-  | "name" -> (fun body -> <:html<<span class="name">$body$</span>&>>)
-  | _ -> 
-    let idx = String.index tag ':' in
-    let len = (String.length tag) - idx in
-    let pref = String.sub tag 0 idx in 
-    let arg = String.sub tag (idx + 1) (len - 1) in
+    | "path" -> (fun body -> <:html<<span class="path">$body$</span>&>>)
+    | "ident" -> (fun body -> <:html<<span class="ident">$body$</span>&>>)
+    | "name" -> (fun body -> <:html<<span class="name">$body$</span>&>>)
+    | _ -> 
+      let idx = String.index tag ':' in
+      let len = (String.length tag) - idx in
+      let pref = String.sub tag 0 idx in 
+      let arg = String.sub tag (idx + 1) (len - 1) in
+      let html_doc = (String.capitalize (Filename.chop_extension arg))^".html" in
       match pref with
-        "file" -> 
+        | "file" -> 
           let prefix = 
-            <:html<<span class="file" style="display:none">$str:arg$</span>&>>
+	    <:html<<span class="file" style="display:none">$str:arg$</span>&>>
           in
-            (fun body -> <:html<$prefix$<span class="ident">$body$</span>&>>)
-      | _ -> raise Not_found
-
+	  fun body -> <:html<$prefix$<a href="$str:html_doc$">$body$</a>&>>
+	  (*(fun body -> <:html<$prefix$<span class="ident">$body$</span>&>>)*)
+	| _ -> raise Not_found
+	  
 let path local p = 
   index := Some local;
   with_html process_tags path p
-
+    
 let type_scheme local ty = 
   index := Some local;
   with_html process_tags type_scheme ty

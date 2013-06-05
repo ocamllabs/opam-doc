@@ -21,20 +21,25 @@ let create_global_from_files filenames =
       match cmio, cmto with
       | Some cmi, _ -> begin
           match cmi.Cmi_format.cmi_crcs with
-            (_, crc) :: _ -> 
-              CrcMap.add (cmi.Cmi_format.cmi_name, crc) fname acc
-          | _ -> acc
-        end
+            | (_, crc) ::l -> 
+	      CrcMap.add (cmi.Cmi_format.cmi_name, crc) fname acc
+            | _ -> acc
+      end
       | _, Some cmt -> begin
           match cmt.Cmt_format.cmt_interface_digest with
-            Some crc ->
+            | Some crc ->
               CrcMap.add (cmt.Cmt_format.cmt_modname, crc) fname acc
-          | None -> acc
+            | None -> acc
         end
       | None, None -> acc 
   (* TODO handle possible errors from Cmt_format.read *)
   in
     List.fold_left doFile CrcMap.empty filenames
+
+let global_print global =
+  CrcMap.iter
+    (fun (x,y) -> Printf.printf "key : (%s,%s) - value: %s\n" x y)
+    global
 
 let global_lookup global md = CrcMap.find md global
 

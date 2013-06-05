@@ -1,7 +1,7 @@
-(** MLI doc *)
+(** MLI doc - module info *)
 
-(** type t kikoo kikoo
-    @author moi
+(** comm type t 
+    @author myself
 *)
 type (+'a, 'b) t
 
@@ -13,20 +13,20 @@ type testz = [ `A | `B | `C ]
 *)
 val foo : 'a -> 'a
 
-(** Descr liste l 
-    @see 'test.ml' seeinfo
-    @see <infsup> seeinfo2
-    @see "guill" seeinfo3
+(** Descr list l 
+    @see 'test.ml' seeinfo    
+    @see "ita" seeinfo2
+    @see "ita" seeinfo3
 *)
 val l : int list
 
 (** comm testComm *)
-type testCOMM = 
-  | A of int * float (** comm pour A of int * float *)
-  | B of float * int (** comm pour B of float * int *)
+type testCOMM = private
+  | One of int * float (** comm for A of int * float *)
+  | Two of float * int (** comm for B of float * int *)
 
 (** comm testc *)
-type testc = private A of int * float | B of float
+type testc = A of int * float | B of float
 
 (** comm testd *)
 type testd = int
@@ -34,10 +34,14 @@ type testd = int
 (** comm t2 *)
 type t2 = int
 
-(** comm record field *)
-type record = {a:int; (** comm pour record field a *)
-
+(** A record type's comm *)
+type record = {a:int; (** comm for field a *)
 	       mutable b:float}
-
+(*
 (** comm type ('a,'b) test constraint 'a = testc constraint 'b = int *)
 type ('a,'b) test constraint 'a = testc constraint 'b = int
+*)
+
+(** lblgtk type *)
+type tTestLBLGTK = Gpointer.optstring
+

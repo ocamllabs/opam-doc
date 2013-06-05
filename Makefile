@@ -22,8 +22,9 @@ opam-doc: index.cmo gentyp.cmo  doctree.cmo docjson.cmo doc_html.cmo cmd_format.
 	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
 
 run:opam-doc
-	cd test; $(MAKE)
-	./opam-doc test/test.cmdi test/test.cmti test/test2.cmdi test/test2.cmti
+	$(MAKE) -C test
+	cd test; ../opam-doc test.cmdi test.cmti test2.cmdi test2.cmti gpointer.cmti gpointer.cmdi
+#	cd test; ../opam-doc test_impl.cmd test_impl.cmt test2_impl.cmd test2_impl.cmt
 
 docjson.cmi :
 doctree.cmi : info.cmi

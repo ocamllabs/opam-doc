@@ -1,0 +1,7 @@
+(** comm record field*) -> parser bug sans l'espace
+
+Ca serait pas mal de faire une iframe sur les types d'autres modules quand on passe dessus (avec une requête ajax)
+
+
+Tenter de fournir des feuilles de styles personnalisables
+genre pour chaque élément, une espèce de syntaxe décrivant l'output

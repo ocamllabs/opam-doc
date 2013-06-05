@@ -1,5 +1,26 @@
 open Cow
 
+let mark_type = "TYPE"
+  
+(** The prefix for types elements (record fields or constructors). *)
+let mark_type_elt = "TYPEELT"
+  
+(** The prefix for functions marks. *)
+let mark_function = "FUN"
+
+(** The prefix for exceptions marks. *)
+let mark_exception = "EXCEPTION"
+
+(** The prefix for values marks. *)
+let mark_value = "VAL"
+
+(** The prefix for attributes marks. *)
+let mark_attribute = "ATT"
+
+(** The prefix for methods marks. *)
+let mark_method = "METHOD"
+
+
 let create_div s =
   <:html<<div>$str:s$</div> &>>
     
@@ -161,7 +182,10 @@ let rec insert_between sep = function
 
 
 let make_field_comment comm =
-  <:html<<td class="typefieldcomment" align="left" valign="top"><code>(*</code></td><td class="typefieldcomment" align="left" valign="top">$comm$</td><td class="typefieldcomment" align="left" valign="bottom"><code>*)</code></td>&>>
+  <:html<<td class="typefieldcomment" align="left" >$comm$</td>&>>
+
+let generate_id_mark mark name html =
+  <:html<<span id="$str:mark^name$">$html$</span>&>>
 
 (****************************************)
 
@@ -188,56 +212,6 @@ let html_of_primitive = function
   | { si_item = `Primitive; _ } -> Html.nil
   | _ -> assert false
 
-(*
-
-type record_label =
- { rl_name: string;
-   rl_mut: bool;
-   rl_typ: typ;
-   rl_info: info option }
-
-type type_kind = 
-  { tk_kind: [ `Abstract | `Variant | `Record ];
-    tk_constructors: variant_constructor list option;
-    tk_labels: record_label list option }
-with json
-
-let iType name params cstrs type_kind priv manifest variance info = 
-  { si_item = `Type;
-    si_name = Some name;
-    si_typ = None;
-    si_primitive = None;
-    si_params = Some params;
-    si_cstrs = list_opt cstrs;
-    si_type_kind = Some type_kind;
-    si_priv = Some priv;
-    si_manifest = manifest;
-    si_variance = Some variance;
-    si_args = None;
-    si_module_type = None;
-    si_virt = None;
-    si_class_type = None;
-    si_info = info }
-
-type signature_item =
-  { si_item: [ `Value | `Primitive | `Type | `Exception | `Module 
-          | `ModType | `Include | `Class | `ClassType | `Comment ];
-    si_name: string option;
-    si_typ: typ option;
-    si_primitive: string list option;
-    si_params: typ list option;
-    si_cstrs: (typ * typ) list option;
-    si_type_kind: type_kind option;
-    si_priv: bool option;
-    si_manifest: typ option;
-    si_variance: variance list option;
-    si_args: typ list option;
-    si_module_type: module_type option;
-    si_virt: bool option;
-    si_class_type: class_type option;
-    si_info: info option }
-*)
-
 let html_of_type_param_list params variances =
     let lstrparam = (List.map2 
 		     (fun param -> function
@@ -250,13 +224,15 @@ let html_of_type_param_list params variances =
       | [h] -> code "type" <:html<$h$ >>
       | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
       
-let html_of_type_variant = function 
+let html_of_type_variant father_name = function 
   | {tk_constructors = Some cstrs; _} ->
     make_type_table 
       (function {vc_name=name; vc_args=args; vc_info=info} ->
 	let cell typ = <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$typ$</code></td>&>>
 	in 
-	let constr_name = <:html<<span id="$str:name$"><span class="constructor">$str:name$</span></span>&>>
+	let constr_name = 
+	  generate_id_mark mark_type_elt (father_name^"."^name)
+	  (<:html<<span class="constructor">$str:name$</span>&>>)
 	in 
 	let constr = 
 	  match args with
@@ -276,12 +252,12 @@ let html_of_type_variant = function
   | _ -> assert false
 
 (* to improve :l *)
-let html_of_type_record = function
+let html_of_type_record father_name = function
   | {tk_labels = Some lbls; _} ->
     make_type_table 
       (function {rl_name=name; rl_mut=mut; rl_typ=typ; rl_info=info} ->
 	(* bug on &nbsp -> scotch tape : simple space *)
-	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ <span id=$str:name$><span>$str:name$</span></span> :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
+	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_id_mark mark_type_elt (father_name^"."^name) (h name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
 	  &>>
       )
       lbls
@@ -304,32 +280,31 @@ let html_of_type = function
         | None, `Record -> (fun x -> make_pre (code "" x))
         | _ -> make_pre
     in
-    (* +id *)
-    let name = 
-      <:html<$keyword "type"$ $html_of_type_param_list params variances$$str:name$>> 
-    in
-    (* +close span id *)
-    let name = <:html<$name$ >> in
+    let name_html = 
+      <:html<$keyword "type"$ $html_of_type_param_list params variances$$str:name$ >>
+    in    
+    let name_html = generate_id_mark mark_type name name_html in
     let manifest = 
       match manifest, type_kind.tk_kind with 
 	| Some typ,`Record -> <:html<= {$typ$ >>
         | Some typ,_ -> <:html<= $typ$ >>
 	| None, `Record -> <:html<= {>>
+        | None, `Abstract -> Html.nil
         | None, _ -> <:html<= >>
+
     in
     let signature =
       let priv = <:html<$if priv then keyword "private" else Html.nil$>>  in
-      h_f <:html<$name$$manifest$$priv$>>
+      h_f <:html<$name_html$$manifest$$priv$>>
     in
     let html_typ = match type_kind.tk_kind with
 	`Abstract -> signature
-      | `Variant -> <:html<$signature$$html_of_type_variant type_kind$>>
-      | `Record -> <:html<$signature$$html_of_type_record type_kind$}>>
+      | `Variant -> <:html<$signature$$html_of_type_variant name type_kind$>>
+      | `Record -> <:html<$signature$$html_of_type_record name type_kind$}>>
     in
     <:html<$html_typ$
       $make_info info$
     >>
-  (* add info *)
   | _ -> assert false
 
 (* TODO *)
@@ -398,7 +373,7 @@ let html_of_file module_name =
       (fun acc e -> <:html< $acc$ $html_of_signature_item e$ >>)
       Html.nil 
       sig_items in
-    (* doctype should be here but parsing doesn't support it *)
+    (* <!doctype> should be here but parsing doesn't support it *)
     <:html<
       <html>
       <head>
@@ -410,5 +385,4 @@ let html_of_file module_name =
       $items$
       </body>
       </html>
-    >>
-      
+    >>    

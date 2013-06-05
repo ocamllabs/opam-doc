@@ -6,12 +6,12 @@
 "si_params": [
 ], 
 "si_type_kind": {"tk_kind": "Variant", 
-"tk_constructors": [{"vc_name": "Bla", 
-"vc_args": ["<span class=\"path\"><span class=\"file\" style=\"display:none\">test\/test.cmti<\/span><span class=\"ident\">Test<\/span>.<span class=\"name\">testc<\/span><\/span>"
+"tk_constructors": [{"vc_name": "A", 
+"vc_args": ["<span class=\"path\"><span class=\"file\" style=\"display:none\">test.cmti<\/span><a href=\"Test.html\">Test<\/a>.<span class=\"name\">testc<\/span><\/span>"
 ]
 }, 
-{"vc_name": "Bli", 
-"vc_args": ["<span class=\"path\"><span class=\"ident\">in_channel<\/span><\/span>"
+{"vc_name": "B", 
+"vc_args": ["<span class=\"path\"><span class=\"ident\">Pervasives<\/span>.<span class=\"name\">in_channel<\/span><\/span>"
 ]
 }
 ]
@@ -19,11 +19,11 @@
 "si_priv": false, 
 "si_variance": [
 ], 
-"si_info": "type t3 c'est cool<div class=\"see\"><b>See also<\/b> <ul>  <li><code class=\"code\">toi <\/code>bla<\/li><\/ul><\/div>"
+"si_info": "type t3 comm<div class=\"see\"><b>See also<\/b> <ul>  <li><code class=\"code\">this <\/code>bla<\/li><\/ul><\/div>"
 }, 
 {"si_item": "Value", 
 "si_name": "f", 
-"si_typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> -&gt; <span class=\"path\"><span class=\"ident\">in_channel<\/span><\/span>"
+"si_typ": "<span class=\"path\"><span class=\"name\">int<\/span><\/span> -&gt; <span class=\"path\"><span class=\"ident\">Pervasives<\/span>.<span class=\"name\">in_channel<\/span><\/span>"
 }
 ], 
 "f_info": "Module descr"

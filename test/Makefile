@@ -1,11 +1,17 @@
 all:
-	ocamldoc -d defaultdoc -html test.mli test2.mli
-	ocamlc -bin-annot test.mli test2.mli
-	bin-doc test.mli test.ml test2.mli test2.ml 
+#	ocamlc -I ~/.opam/4.00.1/lib/lablgtk2 lablgtk.cma test.mli test2.mli
+#	ocamldoc -d defaultdoc -html test.mli  test2.mli
+	ocamlc -I ~/.opam/4.00.1/lib/lablgtk2 lablgtk.cma -bin-annot test.mli test2.mli
+	bin-doc test.mli test2.mli
+
+oldall:
+	ocamlc -I ~/.opam/4.00.1/lib/lablgtk2 lablgtk.cma -bin-annot test_impl.ml test2_impl.ml
+	bin-doc test_impl.ml test2_impl.ml
 
 clean:
-	-rm *~
-	-rm *.cm*
-	-rm a.out
+	-rm -f *~ a.out
+	-rm *.cm[io]
+	-rm test.cmti test2.cmti test.cmdi test2.cmdi
+	-rm test_impl.cmt test2_impl.cmt test_impl.cmd test2_impl.cmd
 	-rm *.json
 

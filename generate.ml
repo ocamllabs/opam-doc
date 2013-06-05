@@ -193,7 +193,6 @@ let generate_typ_param param =
 
 let generate_class_param param = 
   <:html<$str:("'" ^ param.txt)$>>
-;;
 
 let generate_variant_constructor local (name, info) (_, _, args, _) =
   constructor 
