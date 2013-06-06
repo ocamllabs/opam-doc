@@ -115,65 +115,65 @@ let generate_raised local raised =
 let generate_info local info = 
   let jinfo = 
     match info.i_desc with
-      Some t -> generate_text local t
-    | None -> Html.nil
+	Some t -> generate_text local t
+      | None -> Html.nil
   in
   let jinfo = 
     match info.i_authors with
-    | [] -> jinfo
-    | authors -> 
+      | [] -> jinfo
+      | authors -> 
         <:html<$jinfo$<div class="authors">$generate_authors local authors$</div>&>>
   in
   let jinfo = 
     match info.i_version with
-    | None -> jinfo
-    | Some s -> 
+      | None -> jinfo
+      | Some s -> 
         <:html<$jinfo$<div class="version">$str:s$</div>&>>
   in
   let jinfo = 
     match info.i_sees with
-    | [] -> jinfo
-    | sees -> 
-       <:html<$jinfo$<div class="see">$generate_sees local sees$</div>&>>
+      | [] -> jinfo
+      | sees -> 
+	<:html<$jinfo$<div class="see">$generate_sees local sees$</div>&>>
   in
   let jinfo = 
     match info.i_since with
-    | None -> jinfo
-    | Some s -> 
+      | None -> jinfo
+      | Some s -> 
         <:html<$jinfo$<div class="since">$str:s$</div>&>>
   in
   let jinfo = 
     match info.i_before with
-    | [] -> jinfo
-    | befores -> 
+      | [] -> jinfo
+      | befores -> 
         <:html<$jinfo$<div class="before">$generate_befores local befores$</div>&>>
   in
   let jinfo = 
     match info.i_deprecated with
-    | None -> jinfo
-    | Some t -> 
+      | None -> jinfo
+      | Some t -> 
         <:html<$jinfo$<div class="deprecated">$generate_text local t$</div>&>>
   in
   let jinfo = 
     match info.i_params with
-    | [] -> jinfo
-    | params -> 
+      | [] -> jinfo
+      | params -> 
         <:html<$jinfo$<div class="parameters">$generate_params local params$</div>&>>
   in
   let jinfo = 
     match info.i_raised_exceptions with
-    | [] -> jinfo
-    | raised -> 
+      | [] -> jinfo
+      | raised -> 
         <:html<$jinfo$<div class="raised">$generate_raised local raised$</div>&>>
   in
   let jinfo = 
     match info.i_return_value with
-    | None -> jinfo
-    | Some t -> 
-        <:html<$jinfo$<div class="return">$generate_text local t$</div>&>>
+      | None -> jinfo
+      | Some t -> 
+	<:html<$jinfo$<div class="return">$generate_text local t$</div>&>>
   in
-    jinfo
-
+  jinfo
+    
 let generate_info_opt local info =
   match info with
     None -> None
@@ -457,7 +457,253 @@ and generate_module_expr local dmod md =
       raise (Failure "Not implemented: Module unpack")
   | _, _ -> raise (Failure "Mismatch")
 
-let generate_file local dintf intf =
+
+(** Go through both tree at the same time *)
+let rec generate_structure_item_list local dimpl_items impl_items =
+  let rec loop ditems items acc =
+    match ditems, items with
+      | [], _ -> List.rev acc
+      | {dstr_desc = Dstr_eval} :: drest , _ -> 
+	  (* debug *)
+	print_endline "Eval found .. ?";
+	loop drest items acc	
+      | {dstr_desc = Dstr_open} :: drest, {str_desc = Tstr_open _} :: rest->
+	loop drest rest acc	
+      | ({dstr_desc = Dstr_type _} as ditem) :: drest, 
+        ({str_desc = Tstr_type (tnext :: trest)} as item) :: rest -> 
+        let item = {item with str_desc = Tstr_type [tnext]}
+        and rest = 
+          match trest with
+	    | [] -> rest
+            | _ -> {item with str_desc = Tstr_type trest} :: rest
+          in
+          let jitem = generate_structure_item local ditem item in
+          loop drest rest (jitem :: acc)
+      | ({dstr_desc = Dstr_recmodule _} as ditem) :: drest, 
+          ({str_desc = Tstr_recmodule (mnext :: mrest)} as item) :: rest -> 
+        let item = {item with str_desc = Tstr_recmodule [mnext]} 
+        and rest = 
+          match mrest with
+	      [] -> rest
+            | _ -> {item with str_desc = Tstr_recmodule mrest} :: rest
+        in
+        let jitem = generate_structure_item local ditem item in
+        loop drest rest (jitem :: acc)
+	(* A class *)
+      | ({dstr_desc = Dstr_class _} as ditem) :: drest, 
+        ({str_desc = Tstr_class (cnext :: crest)} as item) :: rest -> 
+        let item = {item with str_desc = Tstr_class [cnext]} 
+        and rest = 
+          match crest with
+	      [] -> rest
+            | _ -> {item with str_desc = Tstr_class crest} :: rest
+        in
+        let jitem = generate_structure_item local ditem item in
+        loop drest rest (jitem :: acc)
+      (* A class type *)
+      | ({dstr_desc = Dstr_class_type _} as ditem) :: drest, 
+        ({str_desc = Tstr_class_type (cnext :: crest)} as item) :: rest -> 
+        let item = {item with str_desc = Tstr_class_type [cnext]}
+        and rest = 
+          match crest with
+	      [] -> rest
+            | _ -> {item with str_desc = Tstr_class_type crest} :: rest
+        in
+        let jitem = generate_structure_item local ditem item in
+        loop drest rest (jitem :: acc)
+	(* Comment *)
+      | ({dstr_desc= Dstr_comment} as ditem) :: drest, _ ->
+	let jinfo = generate_info_opt local ditem.dstr_info in
+	let jitem = iComment jinfo in
+	loop drest items (jitem :: acc)	
+
+      (* Stop comment *)
+      |  {dstr_desc = Dstr_stop} :: drest, _ ->
+	raise (Failure "not supported")
+	  
+      | ditem :: drest, item :: rest ->
+        let jitem = generate_structure_item local ditem item in
+        loop drest rest (jitem :: acc)  
+      | _, _ -> raise (Failure "mismatch")
+  in
+  loop dimpl_items impl_items []
+    
+and generate_structure_item local ditem item =
+  match ditem.dstr_desc, item.str_desc with
+    | Dstr_value (Some name), Tstr_value (rec_flag, list)  ->
+      Printf.printf "[debug] generate -> generate_structure_item -> match Tstr_value -> don't know what to do with : val %s - yet\n%!" name;	
+      let jinfo = generate_info_opt local ditem.dstr_info in
+      iValue name <:html<rien>> jinfo
+	
+    | Dstr_type(name, dkind), Tstr_type [_, _, tdecl] ->
+      let jparams = List.map generate_typ_param tdecl.typ_params in
+      let jcstrs = 
+        List.map 
+          (fun (ct1, ct2, _) -> 
+            (generate_typ local ct1, generate_typ local ct2))
+          tdecl.typ_cstrs
+      in
+      let jkind = generate_type_kind local dkind tdecl.typ_kind in
+      let priv = 
+        match tdecl.typ_private with
+          Private -> true
+        | Public -> false
+      in
+      let jmanifest = 
+        match tdecl.typ_manifest with
+        | None -> None
+        | Some typ -> Some (generate_typ local typ)
+      in
+      let jvariance = List.map generate_variance tdecl.typ_variance in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+        iType name jparams jcstrs jkind priv jmanifest jvariance jinfo
+  | Dstr_exception name, Tstr_exception(_, _, edecl) ->
+      let jargs = List.map (generate_typ local) edecl.exn_params in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+        iException name jargs jinfo
+  | Dstr_module(name, dmty), Tstr_module(_, _, mty) -> 
+    raise (Failure "Not implemented : module expr")
+    (*let jmty = generate_module_type local dmty mty in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+        iModule name jmty jinfo*)
+  | Dstr_recmodule _ , Tstr_recmodule _ -> raise (Failure "Not implemented: Recursive modules")
+  | Dstr_modtype(name, dmtyo), Tstr_modtype(_, _, mtydecl) ->
+    raise (Failure "Not implemented: module type") 
+  (*let jmtyo = 
+        match dmtyo, mtydecl with
+          | Some dmty, Tmodtype_manifest mty -> 
+          | Some (generate_module_type local dmty mty)
+          | None, Tmodtype_abstract -> None
+          | _, _ -> raise (Failure "Mismatch")
+      in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+        iModType name jmtyo jinfo
+  *)
+  | Dstr_open, Tstr_open _ -> raise (Failure "Not supported")
+  | Dstr_include dmty, Tstr_include(mty, _) ->
+    raise (Failure "Not implemented: module type") 
+(*
+  let jmty = generate_module_type local dmty mty in
+  let jinfo = generate_info_opt local ditem.dstr_info in
+  iInclude jmty jinfo
+*)
+  | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] ->
+    raise (Failure "Not implemented: module type") 
+  (*
+    let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
+    let jvariance = List.map generate_variance cl_desc.ci_variance in
+    let virt = 
+        match cl_desc.ci_virt with
+          Virtual -> true
+        | Concrete -> false
+      in
+      let jclty = generate_class_type local dclty cl_desc.ci_expr in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+        iClass name jparams jvariance virt jclty jinfo
+  *)
+  | Dstr_class_type(name, dclty), Tstr_class_type [clty_decl] ->
+    raise (Failure "Not implemented: class type") 
+  (*
+    let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
+    let jvariance = List.map generate_variance clty_decl.ci_variance in
+    let virt = 
+    match clty_decl.ci_virt with
+    Virtual -> true
+    | Concrete -> false
+    in
+    let jclty = generate_class_type local dclty clty_decl.ci_expr in
+    let jinfo = generate_info_opt local ditem.dstr_info in
+    iClassType name jparams jvariance virt jclty jinfo
+  *)
+  | _, _ -> raise (Failure "Mismatch")
+    
+(*
+	| Dstr_value of string option
+	| Dstr_primitive of string
+	| Dstr_type of string * type_kind
+	| Dstr_exception of string
+	| Dstr_exn_rebind of string
+	| Dstr_module of string * module_expr
+	| Dstr_recmodule of string * module_type * module_expr
+	| Dstr_modtype of string * module_type
+	| Dstr_open
+	| Dstr_class of string * class_expr
+	| Dstr_class_type of string * class_type
+	| Dstr_include of module_expr
+	| Dstr_comment
+	| Dstr_stop
+      
+
+	| [], _ -> List.rev acc
+	(* A comment *)
+	| ({dsig_desc = Dsig_comment} as ditem) :: drest, _ ->
+          let jinfo = generate_info_opt local ditem.dsig_info in
+          let jitem = iComment jinfo in
+          loop drest items (jitem :: acc)
+	(* A commentary stop *)
+	| {dsig_desc = Dsig_stop} :: drest, _ ->
+          raise (Failure "Not supported")          
+	(* An open declaration *)
+	| {dsig_desc = Dsig_open} :: drest, {sig_desc = Tsig_open _} :: rest ->
+          loop drest rest acc
+	(* A type declaration *)
+	| ({dsig_desc = Dsig_type _} as ditem) :: drest, 
+          ({sig_desc = Tsig_type (tnext :: trest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_type [tnext]}
+          and rest = 
+            match trest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_type trest} :: rest
+          in
+          let jitem = generate_signature_item local ditem item in
+          loop drest rest (jitem :: acc)
+	(* A recursive module *)
+	| ({dsig_desc = Dsig_recmodule _} as ditem) :: drest, 
+          ({sig_desc = Tsig_recmodule (mnext :: mrest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_recmodule [mnext]} 
+          and rest = 
+            match mrest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_recmodule mrest} :: rest
+          in
+          let jitem = generate_signature_item local ditem item in
+          loop drest rest (jitem :: acc)
+	(* A class *)
+	| ({dsig_desc = Dsig_class _} as ditem) :: drest, 
+          ({sig_desc = Tsig_class (cnext :: crest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class [cnext]} 
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class crest} :: rest
+          in
+          let jitem = generate_signature_item local ditem item in
+          loop drest rest (jitem :: acc)
+	| ({dsig_desc = Dsig_class_type _} as ditem) :: drest, 
+          ({sig_desc = Tsig_class_type (cnext :: crest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class_type [cnext]}
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class_type crest} :: rest
+          in
+          let jitem = generate_signature_item local ditem item in
+          loop drest rest (jitem :: acc)
+	| ditem :: drest, item :: rest ->
+          let jitem = generate_signature_item local ditem item in
+          loop drest rest (jitem :: acc)
+	| _, _ -> raise (Failure "Mismatch")
+*)
+
+let generate_file_from_interface local dintf intf =
+  let dintf = match dintf with Dfile_intf intf -> intf | _ -> failwith "bla" in
   let jitems = generate_signature_item_list local dintf.dintf_items intf.sig_items in
   let jinfo = generate_info_opt local dintf.dintf_info in
-    file jitems jinfo
+  file jitems jinfo
+
+let generate_file_from_structure local dimpl impl =
+  let dimpl = match dimpl with Dfile_impl impl -> impl | _ -> failwith "bla" in
+  let jitems = generate_structure_item_list local dimpl.dimpl_items impl.str_items in
+  let jinfo = generate_info_opt local dimpl.dimpl_info in
+  file jitems jinfo
+  

@@ -69,11 +69,30 @@ let json_to_string json =
 
 let process_cmd cmd =
   Cmd_format.(
-    let cmd = read_cmd cmd in cmd.cmd_doctree 
+    let cmd = read_cmd cmd in cmd.cmd_doctree
   )
-(*
+
+let generate_json cmd jfile =
+  let json = Docjson.json_of_file jfile in
+  let json_name = (Filename.chop_extension cmd) ^ ".json" in
+  let oc = open_out json_name in
+  output_string oc (json_to_string json);
+  close_out oc
+    
+let generate_html cmd jfile =
+  Doc_html.(
+    let module_name = String.capitalize 
+      (Filename.chop_extension (Filename.basename cmd)) in
+    let html = html_of_file module_name jfile in
+    let html_name = module_name ^ ".html" in
+    let oc = open_out html_name in
+    output_string oc doctype;
+    output_string oc (Docjson.string_of_html html);
+    close_out oc;
+  )
+  
 let process_file global cmd cmt = 
-  let doc_tree = process_cmd cmd in
+  let doc_file = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
     | _, None -> raise (Failure "Not a cmt file")
@@ -81,44 +100,16 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
-      match cmt.Cmt_format.cmt_annots with
-          Cmt_format.Interface intf -> process_interface local intf
-        | Cmt_format.Implementation impl -> process_implementation impl print_endline "IMPLEM"
-        | _ -> raise (Failure "Wrong kind of cmt file")
-*)      
-let process_file global cmd cmt = 
-  let doc_file = match process_cmd cmd with
-      Doctree.Dfile_intf intf -> intf | _ -> raise (Failure "") in
-  let intf, imports = 
-    let cmi, cmt = Cmt_format.read cmt in
-    match cmi, cmt with
-      | _, None -> raise (Failure "Not a cmt file")
-      | None, Some cmt -> raise (Failure "Not implemented: .cmt files")
-      | Some cmi, Some cmt -> 
-          match cmt.Cmt_format.cmt_annots with
-            Cmt_format.Interface intf -> intf, cmi.Cmi_format.cmi_crcs
-          | Cmt_format.Implementation _ -> raise (Failure "Not implemented: .cmt files")
-          | _ -> raise (Failure "Wrong kind of cmt file")
-  in
-  let local = create_local global imports in
-  let jintf = generate_file local doc_file intf in
-  let json = Docjson.json_of_file jintf in
-  let json_name = (Filename.chop_extension cmd) ^ ".json" in
-  let oc = open_out json_name in
-  output_string oc (json_to_string json);
-  close_out oc
-  (* mon truc *)
-  ; 
-  Doc_html.(
-    let module_name = String.capitalize 
-      (Filename.chop_extension (Filename.basename cmd)) in
-    let html = html_of_file module_name jintf in
-    let html_name = module_name ^ ".html" in
-    let oc = open_out html_name in
-    output_string oc doctype;
-    output_string oc (Docjson.string_of_html html);
-    close_out oc;
-  )
+      let jfile = 
+	match cmt.Cmt_format.cmt_annots with
+          | Cmt_format.Interface intf ->   
+	    generate_file_from_interface local doc_file intf
+          | Cmt_format.Implementation impl ->  
+	    generate_file_from_structure local doc_file impl
+          | _ -> raise (Failure "Wrong kind of cmt file") 
+      in
+      generate_json cmd jfile;
+      generate_html cmd jfile
 
 let _ = 
   let files = 

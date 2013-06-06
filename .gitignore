@@ -2,3 +2,6 @@ dist/
 *.cm[oia]
 *.annot
 opam-doc
+*.cmt
+test/*
+*.cmd*

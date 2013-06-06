@@ -160,9 +160,9 @@ let code css_class data =
 
 let make_info = 
   function 
-    | Some i -> 
-      <:html<<div class="info">$i$</div>&>>
-    | None -> Html.nil
+    | Some i when i != Html.nil -> 
+	<:html<<div class="info">$i$</div>&>>
+    | _ -> Html.nil
       
 let make_type_table f l =
   let table rows =
