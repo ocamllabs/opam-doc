@@ -309,37 +309,62 @@ let html_of_type = function
 
 (* TODO *)
 let html_of_exception = function 
-  | { si_item = `Exception; _ } -> Html.nil
+  | { si_item = `Exception; _ } -> <:html<TODO exception>>
   | _ -> assert false
 
-(* TODO *)
+let html_of_module_ident = function
+  | { mt_kind = `Ident; mt_path = Some path} -> Html.nil
+  | _ -> assert false
+
+let html_of_module_sig = function
+  | { mt_kind = `Sig; mt_items = Some items } -> Html.nil
+  | _ -> assert false
+
+let html_of_module_functor = function
+{ mt_kind = `Functor; mt_arg_name = Some arg_name; mt_arg_type = Some arg_type; mt_base = Some base} -> Html.nil
+  | _ -> assert false
+
+let html_of_module_with = function
+  | { mt_kind = `With; mt_cnstrs = Some cnstrs; mt_base = Some base } -> Html.nil
+  | _ -> assert false
+
+let html_of_module_typeof = function 
+  | { mt_kind = `TypeOf; mt_expr = Some expr } -> Html.nil
+  | _ -> assert false
+
 let html_of_module = function 
-  | { si_item = `Module; _ } -> Html.nil
+  | { si_item = `Module; si_module_type=Some mty} -> 
+    (match mty.mt_kind with
+      | `Ident   -> html_of_module_ident  
+      | `Sig     -> html_of_module_sig 	  
+      | `Functor -> html_of_module_functor 
+      | `With    -> html_of_module_with   
+      | `TypeOf  -> html_of_module_typeof) mty
   | _ -> assert false
 
 (* TODO *)
 let html_of_modtype = function 
-  | { si_item = `ModType; _ } -> Html.nil
+  | { si_item = `ModType; _ } -> <:html<TODO module type>>
   | _ -> assert false
 
 (* TODO *)
 let html_of_include = function 
-  | { si_item = `Include; _ } -> Html.nil
+  | { si_item = `Include; _ } -> <:html<TODO include>>
   | _ -> assert false
 
 (* TODO *)
 let html_of_class = function 
-  | { si_item = `Class; _ } -> Html.nil
+  | { si_item = `Class; _ } -> <:html<TODO class>>
   | _ -> assert false
 
 (* TODO *)
 let html_of_classtype = function 
-  | { si_item = `ClassType; _ } -> Html.nil
+  | { si_item = `ClassType; _ } -> <:html<TODO class>>
   | _ -> assert false
 
-(* TODO *)
+(* Do we print comment? *)
 let html_of_comment = function 
-  | { si_item = `Comment; _ } -> Html.nil
+  | { si_item = `Comment; si_info = Some info} -> info
   | _ -> assert false
 
 let html_of_signature_item sig_item =
