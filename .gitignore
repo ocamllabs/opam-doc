@@ -5,3 +5,4 @@ opam-doc
 *.cmt
 test/*
 *.cmd*
+*.html

@@ -98,7 +98,7 @@ type variance = [ `None | `Positive | `Negative ]
 val json_of_variance: variance -> Json.t
 
 type module_type =
-  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf ];
+  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf | `Apply ];
     mt_path: path option;
     mt_items: signature_item list option;
     mt_arg_name: string option;
@@ -138,6 +138,8 @@ val kModTypeIdent: path -> module_type
 val kModTypeSig: signature_item list -> module_type 
 
 val kModTypeFunctor: string -> module_type -> module_type -> module_type
+
+val kModTypeApply : module_type -> module_type -> module_type
 
 val kModTypeWith: with_constraint list -> module_type -> module_type
 

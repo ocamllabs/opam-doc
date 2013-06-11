@@ -21,6 +21,7 @@ let mark_attribute = "ATT"
 let mark_method = "METHOD"
 
 
+
 let create_div s =
   <:html<<div>$str:s$</div> &>>
     
@@ -207,11 +208,6 @@ let html_of_value = function
     >>
     | _ -> assert false
 
-(* TODO *)
-let html_of_primitive = function 
-  | { si_item = `Primitive; _ } -> Html.nil
-  | _ -> assert false
-
 let html_of_type_param_list params variances =
     let lstrparam = (List.map2 
 		     (fun param -> function
@@ -223,7 +219,7 @@ let html_of_type_param_list params variances =
 	[] -> Html.nil
       | [h] -> code "type" <:html<$h$ >>
       | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
-      
+	
 let html_of_type_variant father_name = function 
   | {tk_constructors = Some cstrs; _} ->
     make_type_table 
@@ -286,8 +282,8 @@ let html_of_type = function
     let name_html = generate_id_mark mark_type name name_html in
     let manifest = 
       match manifest, type_kind.tk_kind with 
-	| Some typ,`Record -> <:html<= {$typ$ >>
-        | Some typ,_ -> <:html<= $typ$ >>
+	| Some typ,`Record -> <:html<= {$code "type" typ$ >>
+        | Some typ,_ -> <:html<= $code "type" typ$ >>
 	| None, `Record -> <:html<= {>>
         | None, `Abstract -> Html.nil
         | None, _ -> <:html<= >>
@@ -307,49 +303,107 @@ let html_of_type = function
     >>
   | _ -> assert false
 
-(* TODO *)
 let html_of_exception = function 
-  | { si_item = `Exception; _ } -> <:html<TODO exception>>
+  | { si_item = `Exception; si_name = Some name; 
+      si_args = Some args; si_info = info} -> 
+    let id = generate_id_mark mark_exception name <:html<$keyword "exception"$ $str:name$>> 
+    in let args = match args with 
+      | [] -> Html.nil 
+      | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
+    let signature = make_pre <:html<$id$$args$>> in
+    <:html<$signature$$make_info info$>>
   | _ -> assert false
 
+(* Modules generation *)
+(* TODO: associate html pages -- ? *)
+
 let html_of_module_ident = function
-  | { mt_kind = `Ident; mt_path = Some path} -> Html.nil
+  | { mt_kind = `Ident; mt_path = Some path} -> 
+    <:html<$code "code" path$&>>
   | _ -> assert false
 
 let html_of_module_sig = function
-  | { mt_kind = `Sig; mt_items = Some items } -> Html.nil
+  | { mt_kind = `Sig; mt_items = Some items } ->
+    <:html<$code "code" (h "sig")$ .. $code "code" (h "end")$>>
   | _ -> assert false
 
-let html_of_module_functor = function
-{ mt_kind = `Functor; mt_arg_name = Some arg_name; mt_arg_type = Some arg_type; mt_base = Some base} -> Html.nil
-  | _ -> assert false
+let rec html_of_module_functor = function 
+  | { mt_kind = `Functor
+    ; mt_arg_name = Some arg_name
+    ; mt_arg_type = Some arg_type
+    ; mt_base = Some base} ->
+    let path = match arg_type.mt_path with 
+      | Some p -> code "type" p
+      | None -> Html.nil in
+    let body = 
+      <:html<$code "code" (h "functor (")$$code "code" (h arg_name)$<code class="code"> : </code>$path$$code "code" (h ") -> ")$&>> in
+    <:html<<div class="sig_block">$body$$html_of_module_functor base$</div>&>>
+  | {mt_kind = `Sig} as mod_sig -> html_of_module_sig mod_sig
+  | _ -> raise (Failure "html_of_functor: mismatch")
+    
 
-let html_of_module_with = function
-  | { mt_kind = `With; mt_cnstrs = Some cnstrs; mt_base = Some base } -> Html.nil
+let html_of_module_apply = function
+  | { mt_kind = `Apply; 
+      mt_arg_type = Some arg_type; 
+      mt_base = Some base } -> 
+    let base_html = html_of_module_ident base in
+    let arg_html = (match arg_type.mt_kind with 
+	| `Ident -> html_of_module_ident
+	| `Sig -> html_of_module_sig
+	| _ -> failwith "html_of_module_apply : mismatch") arg_type
+    in <:html<$base_html$($arg_html$)>>    
   | _ -> assert false
 
 let html_of_module_typeof = function 
-  | { mt_kind = `TypeOf; mt_expr = Some expr } -> Html.nil
+  | { mt_kind = `TypeOf; mt_expr = Some expr } -> 
+    <:html<module typeof>>
   | _ -> assert false
+
+
+let rec html_body_of_module mty = 
+  (match mty.mt_kind with 
+  | `Ident   -> html_of_module_ident  
+  | `Sig     -> html_of_module_sig 	  
+  | `Functor -> html_of_module_functor 
+  | `With    -> html_of_module_with   
+  | `Apply   -> html_of_module_apply
+  | `TypeOf  -> html_of_module_typeof) mty
+
+and html_of_module_with = function
+  | { mt_kind = `With; 
+      mt_cnstrs = Some cnstrs; 
+      mt_base = Some base } ->
+    let l = List.map 
+      (function {wc_typeq = Some typ; wc_path = path} -> 
+	<:html<type $path$ = $typ$>> 
+      | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
+      | _ -> assert false)
+      cnstrs in
+    <:html<$html_body_of_module base$ with $insert_between " and " l$>>
+  | _ -> assert false
+    
 
 let html_of_module = function 
-  | { si_item = `Module; si_module_type=Some mty} -> 
-    (match mty.mt_kind with
-      | `Ident   -> html_of_module_ident  
-      | `Sig     -> html_of_module_sig 	  
-      | `Functor -> html_of_module_functor 
-      | `With    -> html_of_module_with   
-      | `TypeOf  -> html_of_module_typeof) mty
+  | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} -> 
+    let sig_mod = make_pre (<:html<$keyword "module"$ $str:name$: $html_body_of_module mty$>>) in
+    <:html<$sig_mod$$make_info info$&>>
   | _ -> assert false
 
-(* TODO *)
+(* Module types generation *)
 let html_of_modtype = function 
-  | { si_item = `ModType; _ } -> <:html<TODO module type>>
+  | { si_item = `ModType
+    ; si_name = Some name
+    ; si_module_type = Some module_type
+    ; si_info = info } -> 
+    let sig_mod = make_pre (<:html<$keyword "module type"$ $str:name$ = $code "type" (html_body_of_module module_type)$>>)
+    in
+    <:html<$sig_mod$$make_info info$>>
   | _ -> assert false
 
-(* TODO *)
+
 let html_of_include = function 
-  | { si_item = `Include; _ } -> <:html<TODO include>>
+  | { si_item = `Include; si_module_type=Some mty} -> 
+    make_pre <:html<$keyword "include"$ $html_body_of_module mty$>>
   | _ -> assert false
 
 (* TODO *)
@@ -362,28 +416,28 @@ let html_of_classtype = function
   | { si_item = `ClassType; _ } -> <:html<TODO class>>
   | _ -> assert false
 
-(* Do we print comment? *)
+(* Do we print normal comments? *)
 let html_of_comment = function 
   | { si_item = `Comment; si_info = Some info} -> info
   | _ -> assert false
 
 let html_of_signature_item sig_item =
-  match sig_item.si_item with
-    | `Value -> html_of_value sig_item
-    | `Primitive -> html_of_primitive sig_item
-    | `Type -> html_of_type sig_item
-    | `Exception -> html_of_exception sig_item
-    | `Module -> html_of_module sig_item	 
-    | `ModType -> html_of_modtype sig_item
-    | `Include -> html_of_include sig_item
-    | `Class -> html_of_class sig_item
-    | `ClassType -> html_of_classtype sig_item
-    | `Comment -> html_of_comment sig_item
+  (match sig_item.si_item with
+    | `Value -> html_of_value
+    | `Primitive -> (fun item -> html_of_value {item with si_item = `Value})
+    | `Type -> html_of_type
+    | `Exception -> html_of_exception
+    | `Module -> html_of_module
+    | `ModType -> html_of_modtype
+    | `Include -> html_of_include
+    | `Class -> html_of_class
+    | `ClassType -> html_of_classtype
+    | `Comment -> html_of_comment) sig_item
     
 let generate_page_header info module_name = 
   (* link on current page *)
   let pre = make_pre 
-    (<:html<$keyword "module"$ $str:module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>) 
+    (<:html<$keyword "module"$ $str:module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>)
   in
   <:html<
   <h1>Module $str:module_name$</h1>

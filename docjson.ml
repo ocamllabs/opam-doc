@@ -194,7 +194,7 @@ type variance = [ `None | `Positive | `Negative ]
 with json
 
 type module_type =
-  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf ];
+  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf | `Apply ];
     mt_path: path option;
     mt_items: signature_item list option;
     mt_arg_name: string option;
@@ -275,6 +275,16 @@ let kModTypeTypeOf expr =
     mt_cnstrs = None;
     mt_base = None;
     mt_expr = Some expr }
+
+let kModTypeApply base arg_type = 
+  { mt_kind = `Apply;
+    mt_path = None;
+    mt_items = None;
+    mt_arg_name = None;
+    mt_arg_type = Some arg_type;
+    mt_cnstrs = None;
+    mt_base = Some base;
+    mt_expr = None; }
 
 let iValue name typ info = 
   { si_item = `Value;

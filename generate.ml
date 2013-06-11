@@ -1,3 +1,5 @@
+(** TODO : HANDLE THE LABELS ~~ *)
+
 open Docjson
 open Info
 open Doctree
@@ -282,26 +284,57 @@ let generate_type_kind local dtk tk =
       let labels = loop lbls dlbls [] in
         kRecord labels
   | _, _ -> raise (Failure "Mismatch")
-
-let generate_class_type local dclty clty = raise (Failure "Not implemented: Class types")
+    
+(* DONE *)
+let rec generate_class_type local dclty clty =
+  let rec loop local dclty clty args_acc =
+    match dclty, clty.cltyp_desc with
+      | Dcty_constr, Tcty_constr(path, loc, cor_list) ->
+	let params = List.map 
+	  (fun core_typ -> Gentyp.type_scheme local core_typ.ctyp_type)
+	  cor_list in
+	let path = Gentyp.path local path in
+	kClassIdent (List.rev args_acc) params path
+      | Dcty_signature dclass_sig, Tcty_signature class_sig ->
+	let jfields = List.map2 (generate_class_field local) 
+	  dclass_sig 
+	  class_sig.csig_fields in
+	kClassSig (List.rev args_acc) jfields
+      | Dcty_fun dclass_type, Tcty_fun (label, core_type, sub_class_type) ->
+	let arg = Gentyp.type_scheme local core_type.ctyp_type in
+	loop local dclass_type sub_class_type (arg::args_acc)
+      | _,_ -> assert false
+  in
+  loop local dclty clty []
+(* TODO *)
+and generate_class_field local dclsig tclsig =
+  match dclsig.dctf_desc , tclsig.ctf_desc with
+    | Dctf_inher dctyp, Tctf_inher ctyp-> print_endline "typ"; assert false
+    | Dctf_val str, Tctf_val _ -> print_endline "val"; 
+      fVal "bla" false false false Html.nil None
+    | Dctf_meth str, Tctf_meth _ -> print_endline "meth"; assert false
+    | Dctf_cstr, Tctf_cstr _ -> print_endline "cstr"; assert false
+    | Dctf_comment, _ -> raise (Failure "Ok je sais pas")
+    | Dctf_stop, _ -> raise (Failure "Ok je sais pas")
+    | _,_ -> assert false
 
 let generate_with_constraint local (path, _, cstr) =
   let path = Gentyp.path local path in
-    match cstr with
-      Twith_type td -> 
-        let typ = 
-          match td.typ_manifest with
+  match cstr with
+    | Twith_type td -> 
+      let typ = 
+        match td.typ_manifest with
             Some typ -> typ
           | None -> assert false
         in
-          kWithType path false (generate_typ local typ)
+      kWithType path false (generate_typ local typ)
     | Twith_typesubst td -> 
-        let typ = 
-          match td.typ_manifest with
+      let typ = 
+        match td.typ_manifest with
             Some typ -> typ
           | None -> assert false
-        in
-          kWithType path true (generate_typ local typ)
+      in
+      kWithType path true (generate_typ local typ)
     | Twith_module(p, _) -> kWithMod path false (Gentyp.path local p)
     | Twith_modsubst(p, _) -> kWithMod path true (Gentyp.path local p)
 
@@ -314,18 +347,18 @@ let rec generate_module_type local dmty mty =
   match dmty, mty.mty_desc with
     Dmty_ident, Tmty_ident(p, _) -> kModTypeIdent (Gentyp.path local p)
   | Dmty_signature dsg, Tmty_signature sg ->
-      let jsg = generate_signature_item_list local dsg sg.sig_items in
-        kModTypeSig jsg
+    let jsg = generate_signature_item_list local dsg sg.sig_items in
+    kModTypeSig jsg
   | Dmty_functor(darg, dbase), Tmty_functor(_, {txt=name}, arg, base) ->
-      let jarg = generate_module_type local darg arg in
-      let jbase = generate_module_type local dbase base in
-        kModTypeFunctor name jarg jbase
+    let jarg = generate_module_type local darg arg in
+    let jbase = generate_module_type local dbase base in
+    kModTypeFunctor name jarg jbase
   | Dmty_with dbase, Tmty_with(base, cnstrs) ->
       let jbase = generate_module_type local dbase base in
       let jcnstrs = List.map (generate_with_constraint local) cnstrs in
         kModTypeWith jcnstrs jbase
   | Dmty_typeof dexpr, Tmty_typeof expr ->
-      let jexpr = generate_module_expr local dexpr expr in
+    let jexpr = generate_module_expr local dexpr expr in
         kModTypeTypeOf jexpr
   | _, _ -> raise (Failure "Mismatch")
 
@@ -363,31 +396,31 @@ and generate_signature_item_list local ditems items =
           let jitem = generate_signature_item local ditem item in
             loop drest rest (jitem :: acc)
       | ({dsig_desc = Dsig_class _} as ditem) :: drest, 
-            ({sig_desc = Tsig_class (cnext :: crest)} as item) :: rest -> 
-          let item = {item with sig_desc = Tsig_class [cnext]} 
-          and rest = 
-            match crest with
+          ({sig_desc = Tsig_class (cnext :: crest)} as item) :: rest -> 
+        let item = {item with sig_desc = Tsig_class [cnext]} 
+        and rest = 
+          match crest with
               [] -> rest
             | _ -> {item with sig_desc = Tsig_class crest} :: rest
-          in
-          let jitem = generate_signature_item local ditem item in
-            loop drest rest (jitem :: acc)
+        in
+        let jitem = generate_signature_item local ditem item in
+        loop drest rest (jitem :: acc)
       | ({dsig_desc = Dsig_class_type _} as ditem) :: drest, 
-            ({sig_desc = Tsig_class_type (cnext :: crest)} as item) :: rest -> 
-          let item = {item with sig_desc = Tsig_class_type [cnext]}
-          and rest = 
-            match crest with
+        ({sig_desc = Tsig_class_type (cnext :: crest)} as item) :: rest -> 
+        let item = {item with sig_desc = Tsig_class_type [cnext]}
+        and rest = 
+          match crest with
               [] -> rest
             | _ -> {item with sig_desc = Tsig_class_type crest} :: rest
-          in
-          let jitem = generate_signature_item local ditem item in
-            loop drest rest (jitem :: acc)
+        in
+        let jitem = generate_signature_item local ditem item in
+        loop drest rest (jitem :: acc)
       | ditem :: drest, item :: rest ->
-          let jitem = generate_signature_item local ditem item in
-            loop drest rest (jitem :: acc)
+        let jitem = generate_signature_item local ditem item in
+        loop drest rest (jitem :: acc)
       | _, _ -> raise (Failure "Mismatch")
   in
-    loop ditems items []
+  loop ditems items []
 
 and generate_signature_item local ditem item =
   match ditem.dsig_desc, item.sig_desc with
@@ -432,7 +465,10 @@ and generate_signature_item local ditem item =
       let jmty = generate_module_type local dmty mty in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iModule name jmty jinfo
-    | Dsig_recmodule _ , Tsig_recmodule _ -> raise (Failure "Not implemented: Recursive modules")
+    | Dsig_recmodule (name, dmty) , Tsig_recmodule [_,_,mty;_] -> 
+      let jmty = generate_module_type local dmty mty in
+      let jinfo = generate_info_opt local ditem.dsig_info in
+      iModule name jmty jinfo
     | Dsig_modtype(name, dmtyo), Tsig_modtype(_, _, mtydecl) ->
       let jmtyo = 
         match dmtyo, mtydecl with
@@ -449,6 +485,7 @@ and generate_signature_item local ditem item =
       let jinfo = generate_info_opt local ditem.dsig_info in
       iInclude jmty jinfo
     | Dsig_class(name, dclty), Tsig_class [cl_desc] ->
+      (* jparams = class ->['a, 'b]<- point *)
       let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
       let jvariance = List.map generate_variance cl_desc.ci_variance in
       let virt = 
@@ -552,6 +589,7 @@ and generate_structure_item_list local dimpl_items impl_items =
   in
   loop dimpl_items impl_items []
     
+(** TODO class gen *)
 and generate_structure_item local ditem item type_items =
   match ditem.dstr_desc, item.str_desc with
     | Dstr_value (Some name), Tstr_value (rec_flag, list)  ->
@@ -590,62 +628,65 @@ and generate_structure_item local ditem item type_items =
       let jargs = List.map (generate_typ local) edecl.exn_params in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iException name jargs jinfo
-    | Dstr_module(name, dmty), Tstr_module(_, _, mexpr) ->
-      let jmty = generate_module_str_type local dmty mexpr in
+    | Dstr_module(name, dmexpr), Tstr_module(_, _, mexpr) ->
+      let jmty = generate_module_str_type local dmexpr mexpr in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModule name jmty jinfo
-    | Dstr_recmodule _ , Tstr_recmodule _ -> raise (Failure "Not implemented: Recursive modules")
-    | Dstr_modtype(name, dmtyo), Tstr_modtype(_, _, mtydecl) ->
-      raise (Failure "Not implemented: module type") 
-  (*let jmtyo = 
-    match dmtyo, mtydecl with
-    | Some dmty, Tmodtype_manifest mty -> 
-    | Some (generate_module_type local dmty mty)
-    | None, Tmodtype_abstract -> None
+    | Dstr_recmodule (name, dmty, _), Tstr_recmodule ((_,_,mty,_)::_) -> 
+      let jmty = generate_module_type local dmty mty in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+      iModule name jmty jinfo
+	
+    | Dstr_modtype(name, dmty), Tstr_modtype(_, _, mtydecl) ->
+      let jmtyo = generate_module_type local dmty mtydecl in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+      iModType name (Some jmtyo) jinfo
+	
+   | Dstr_open, Tstr_open _ -> raise (Failure "open: Not supported")
+   | Dstr_include dmty, Tstr_include(mty, _) ->
+     let jmty = generate_module_str_type local dmty mty in
+     let jinfo = generate_info_opt local ditem.dstr_info in
+     iInclude jmty jinfo
+
+   | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] ->
+     (*debug*)
+     let lookup_res = dummy_lookup `Class name type_items in
+     (match lookup_res with
+	 Sig_class (_,{cty_params=list},_) ->
+	   List.iter (fun x -> print_endline 
+	     (string_of_html (Gentyp.type_scheme local x))) list
+       |_ -> assert false
+     );
+     
+     let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
+     let jvariance = List.map generate_variance cl_desc.ci_variance in
+     let virt = 
+       match cl_desc.ci_virt with
+	   Virtual -> true
+	 | Concrete -> false
+     in
+     let jclty = generate_class_struct local dclty cl_desc.ci_expr in
+     let jinfo = generate_info_opt local ditem.dstr_info in
+     iClass name jparams jvariance virt jclty jinfo
+    | Dstr_class_type(name, dclty), Tstr_class_type [(_, _, clty_decl)] ->
+      let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
+      let jvariance = List.map generate_variance clty_decl.ci_variance in
+      let virt = 
+	match clty_decl.ci_virt with
+	    Virtual -> true
+	  | Concrete -> false
+      in
+      let jclty = generate_class_type local dclty clty_decl.ci_expr in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+      iClassType name jparams jvariance virt jclty jinfo
+    | Dstr_primitive name , Tstr_primitive (_,_,val_desc) ->
+      let jtyp = generate_typ local val_desc.val_desc in
+      let jinfo = generate_info_opt local ditem.dstr_info in
+      iPrimitive name jtyp val_desc.val_prim jinfo
     | _, _ -> raise (Failure "Mismatch")
-    in
-    let jinfo = generate_info_opt local ditem.dstr_info in
-    iModType name jmtyo jinfo
-  *)
-    | Dstr_open, Tstr_open _ -> raise (Failure "Not supported")
-    | Dstr_include dmty, Tstr_include(mty, _) ->
-      raise (Failure "Not implemented: module type") 
-  (*
-    let jmty = generate_module_type local dmty mty in
-    let jinfo = generate_info_opt local ditem.dstr_info in
-    iInclude jmty jinfo
-  *)
-    | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] ->
-      raise (Failure "Not implemented: module type") 
-  (*
-    let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
-    let jvariance = List.map generate_variance cl_desc.ci_variance in
-    let virt = 
-    match cl_desc.ci_virt with
-    Virtual -> true
-    | Concrete -> false
-    in
-    let jclty = generate_class_type local dclty cl_desc.ci_expr in
-    let jinfo = generate_info_opt local ditem.dstr_info in
-    iClass name jparams jvariance virt jclty jinfo
-  *)
-    | Dstr_class_type(name, dclty), Tstr_class_type [clty_decl] ->
-      raise (Failure "Not implemented: class type") 
-  (*
-    let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
-    let jvariance = List.map generate_variance clty_decl.ci_variance in
-    let virt = 
-    match clty_decl.ci_virt with
-    Virtual -> true
-    | Concrete -> false
-    in
-    let jclty = generate_class_type local dclty clty_decl.ci_expr in
-    let jinfo = generate_info_opt local ditem.dstr_info in
-    iClassType name jparams jvariance virt jclty jinfo
-  *)
-    | _, _ -> raise (Failure "Mismatch")
-and generate_module_str_type local dmty mexpr =
-  match dmty, mexpr.mod_desc with
+
+and generate_module_str_type local dmexpr mexpr =
+  match dmexpr, mexpr.mod_desc with
     | Dmod_ident , Tmod_ident (p, _) -> kModTypeIdent (Gentyp.path local p)
     | Dmod_structure str, Tmod_structure tstr -> 
       let jstr = generate_structure_item_list local str tstr in
@@ -654,22 +695,54 @@ and generate_module_str_type local dmty mexpr =
       let jarg = generate_module_type local darg arg in
       let jbase = generate_module_str_type local dbase base in
       kModTypeFunctor name jarg jbase
-    | Dmod_apply (dmexpr1, dmexpr2), Tmod_apply (mexpr1, mexpr2, coerc) ->
-      failwith "module apply not implemented"
+    | Dmod_apply (dmexpr1, dmexpr2), Tmod_apply (mexpr1, mexpr2, _) ->
+      let jbase =  generate_module_str_type local dmexpr1 mexpr1 in
+      let jarg = generate_module_str_type local dmexpr2 mexpr2 in
+      kModTypeApply jbase jarg
     | Dmod_constraint (dmexpr,dmty), Tmod_constraint (mexpr, tmty, mtconstr, coerc) ->
-      failwith "module apply not implemented"
+      (* What to do? *)
+      failwith "module constraint: not implemented"
     | Dmod_unpack, Tmod_unpack (expr ,tmty) ->
-      failwith "module apply not implemented"
-    | _, _ -> raise (Failure "mismatch")
+      (* What to do? *)
+      failwith "module unpack: not implemented"
+    | _, _ -> raise (Failure "Mismatch")
+
+and generate_class_struct local dclexpr ci_expr = 
+  match dclexpr, ci_expr.cl_desc with
+    | Dcl_constr, _ -> print_endline "constr"; assert false
+    | Dcl_structure dcstruct, Tcl_structure cstruct -> 
+      (* need le type :c *)
+      let fields = [] in (* use dcstruct, cstruct *)
+      print_endline "struct";
+      
+      
+      kClassSig [] fields
+	
+    | Dcl_fun dcexpr, Tcl_fun (_, _, list, class_expr, _) -> 
+      print_endline "fun"; 
+      let i = ref 1 in
+      List.iter 
+	(fun x -> print_int !i; incr i; print_newline ())
+	list;
+      let sub_expr = generate_class_struct local dcexpr class_expr in
+      
+      assert false
+    | Dcl_apply dcexpr, _ -> print_endline "apply"; assert false
+    | Dcl_let dcexpr, _ -> print_endline "let"; assert false
+    | Dcl_constraint (dcexpr, dctyp), _ -> print_endline "constraint"; assert false
+    | _,_ -> raise (Failure "Mismatch")
+
 
 let generate_file_from_interface local dintf intf =
-  let dintf = match dintf with Dfile_intf intf -> intf | _ -> failwith "bla" in
+  let dintf = match dintf with Dfile_intf intf -> intf 
+    | _ -> failwith "generate from intf fail" in
   let jitems = generate_signature_item_list local dintf.dintf_items intf.sig_items in
   let jinfo = generate_info_opt local dintf.dintf_info in
   file jitems jinfo
 
 let generate_file_from_structure local dimpl impl =
-  let dimpl = match dimpl with Dfile_impl impl -> impl | _ -> failwith "bla" in
+  let dimpl = match dimpl with Dfile_impl impl -> impl
+    | _ -> failwith "generate from struct fail" in
   let jitems = generate_structure_item_list local dimpl.dimpl_items impl in
   let jinfo = generate_info_opt local dimpl.dimpl_info in
   file jitems jinfo

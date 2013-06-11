@@ -1,13 +1,13 @@
 
-all:
-	ocamlc -bin-annot test_impl.ml test2_impl.ml
-	../../bin-doc/bin-doc test_impl.ml test2_impl.ml
-
 oldall:
 #	ocamlc -I ~/.opam/4.00.1/lib/lablgtk2 lablgtk.cma test.mli test2.mli
 #	ocamldoc -d defaultdoc -html test.mli  test2.mli
 	ocamlc -I ~/.opam/4.00.1/lib/lablgtk2 lablgtk.cma -bin-annot test.mli test2.mli
 	bin-doc test.mli test2.mli
+
+all:
+	ocamlc -bin-annot test_impl.ml test2_impl.ml
+	../../bin-doc/bin-doc test_impl.ml test2_impl.ml
 
 clean:
 	-rm -f *~ a.out
