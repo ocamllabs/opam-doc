@@ -22,11 +22,11 @@ opam-doc: index.cmo gentyp.cmo  doctree.cmo docjson.cmo doc_html.cmo cmd_format.
 	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
 
 run:opam-doc
-	$(MAKE) -C test
-	cd test; ocamldoc -html -d defaultdoc/ test.mli
-	cd test; ../opam-doc test.cmdi test.cmti
-#	cd test; ocamldoc -html -d default_impl/ test_impl.ml
-#	cd test; ../opam-doc test_impl.cmd test_impl.cmt test2_impl.cmd test2_impl.cmt; 
+	$(MAKE) all -C test
+#	cd test; ocamldoc -html -d defaultdoc/ test.mli
+#	cd test; ../opam-doc test.cmdi test.cmti
+	cd test; ocamldoc -html -d default_impl/ test_impl.ml
+	cd test; ../opam-doc test_impl.cmd test_impl.cmt test2_impl.cmd test2_impl.cmt; 
 
 docjson.cmi :
 doctree.cmi : info.cmi

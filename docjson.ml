@@ -2,14 +2,12 @@ open Cow
 
 type info = Html.t
 
-let id x = x
-
 let rec output_html_data out = function
   | (`Data _ as d) :: t ->
     Xml.output out d;
     output_html_data out t
   | (`El _ as e) :: t ->
-    Xml.output_tree id out e;
+    Xml.output_tree (fun x -> x) out e;
     Xml.output out (`Dtd None);
     output_html_data out t
   | [] -> ()
@@ -81,11 +79,13 @@ let kRecord labels =
     tk_labels = Some labels }
 
 type class_type =
-  { ct_kind: [ `Ident | `Sig ];
+  { ct_kind: [ `Ident | `Sig | `Constraint ];
     ct_args: typ list option;
     ct_params: typ list option;
     ct_path: path option;
-    ct_fields: class_type_field list option }
+    ct_fields: class_type_field list option;
+    ct_cstr : (class_type * class_type) option;
+  }
 
 and class_type_field =
   { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
@@ -104,14 +104,26 @@ let kClassIdent args params path =
     ct_args = list_opt args;
     ct_params = Some params;
     ct_path = Some path;
-    ct_fields = None }
+    ct_fields = None;
+    ct_cstr = None; }
 
 let kClassSig args fields =
   { ct_kind = `Sig;
     ct_args = list_opt args;
     ct_params = None;
     ct_path = None;
-    ct_fields = Some fields }
+    ct_fields = Some fields;
+    ct_cstr = None;  }
+
+(* params or not params*)
+let kClassConstraint args constr = 
+  { ct_kind = `Constraint;
+    ct_args = list_opt args;
+    ct_params = None;
+    ct_path = None;
+    ct_fields = None;
+    ct_cstr = Some constr; 
+  }
 
 let fInherit class_type info = 
   { ctf_field = `Inherit;
@@ -124,13 +136,13 @@ let fInherit class_type info =
     ctf_eq = None;
     ctf_info = info }
 
-let fVal name mut virt priv typ info = 
+let fVal name mut virt (*priv*) typ info = 
   { ctf_field = `Val;
     ctf_class_type = None;
     ctf_name = Some name;
     ctf_mut = Some mut;
     ctf_virt = Some virt;
-    ctf_priv = Some priv;
+    ctf_priv = None(* Some priv*);
     ctf_typ = Some typ;
     ctf_eq = None;
     ctf_info = info }

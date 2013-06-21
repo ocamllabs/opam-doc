@@ -11,8 +11,10 @@ all:
 
 clean:
 	-rm -f *~ a.out
-	-rm *.cm[io]
-	-rm test.cmti test2.cmti test.cmdi test2.cmdi
-	-rm test_impl.cmt test2_impl.cmt test_impl.cmd test2_impl.cmd
-	-rm *.json
+	-rm -f *.cm[io]
+	-rm -f test.cmti test2.cmti test.cmdi test2.cmdi
+	-rm -f test_impl.cmt test2_impl.cmt test_impl.cmd test2_impl.cmd
+	-rm -f *.json
+	-rm -f *.html style.css
+	-rm -f global.index
 

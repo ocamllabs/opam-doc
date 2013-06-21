@@ -79,19 +79,8 @@ let generate_json cmd jfile =
   output_string oc (json_to_string json);
   close_out oc
     
-let generate_html cmd jfile =
-  Doc_html.(
-    let module_name = String.capitalize 
-      (Filename.chop_extension (Filename.basename cmd)) in
-    let html = html_of_file module_name jfile in
-    let html_name = module_name ^ ".html" in
-    let oc = open_out html_name in
-    output_string oc doctype;
-    output_string oc (Docjson.string_of_html html);
-    close_out oc;
-  )
-  
 let process_file global cmd cmt = 
+  print_endline ("Processing : "^cmt^" and "^cmd);
   let doc_file = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
@@ -100,6 +89,8 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
+(*      print_endline ("printing local for "^cmd);
+      local_print local;*)
       let jfile = 
 	match cmt.Cmt_format.cmt_annots with
           | Cmt_format.Interface intf ->   
@@ -108,22 +99,69 @@ let process_file global cmd cmt =
 	    generate_file_from_structure local doc_file impl
           | _ -> raise (Failure "Wrong kind of cmt file") 
       in
-      generate_json cmd jfile;
-      generate_html cmd jfile
+      (*generate_json cmd jfile;*)
+      let module_name = String.capitalize 
+	(Filename.chop_extension (Filename.basename cmd)) in
+      ignore(Doc_html.generate_html module_name jfile)
 
 let _ = 
-  let files = 
-    let files = ref [] in
-    Arg.(parse
-    [( "-d", String(fun p -> path:=p; (*check "/" *) print_endline p), "osef")]
+  let global_path = ref "global.index"  in
+  
+
+  let files = ref [] in
+  
+  Arg.(
+    parse
+    [ ("-d", String(fun p -> path:=p; (*check "/" *) print_endline p), "")
+    ; ("-index-file", Set_string (global_path), "Load a specific index file")
+    ]
       (fun file -> files := file :: !files)
       "Bad usage");
-    !files
+
+  (* read the saved global table *)  
+  let global = read_global_file !global_path in
+(* 
+   print_endline "[debug] global table before update :";
+   global_print global;
+*)
+
+  let cmt_files = List.filter
+    (fun file -> Filename.check_suffix file ".cmti"
+      || Filename.check_suffix file ".cmt") !files in
+  
+  let cmd_files = List.filter 
+    (fun file -> Filename.check_suffix file ".cmdi" 
+      || Filename.check_suffix file ".cmd") !files in
+    
+  let filter_impl_files ext files = 
+    List.filter 
+      (fun file -> 
+	if Filename.check_suffix file ext then
+	  try ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files); 
+	      false 
+	  with Not_found -> true
+	else true) 
+      files 
   in
-  let cmt_files = List.filter (fun file -> Filename.check_suffix file ".cmti" || Filename.check_suffix file ".cmt") files in
-  let cmd_files = List.filter (fun file -> Filename.check_suffix file ".cmdi" || Filename.check_suffix file ".cmd") files in
-  let global = create_global_from_files cmt_files in
+
+  let cmt_files = filter_impl_files ".cmt" cmt_files in  
+  let cmd_files = filter_impl_files ".cmd" cmd_files in 
+
+  (* updates the global table with the new references - 
+     should also contain the possibles '-pack' cmt modules *)
+  let global = update_global global cmt_files in
+(*
+  print_endline "[debug] global table after update :";
+  global_print global;
+*)
+      
+  Doc_html.generate_html_index_from_global (List.map Filename.chop_extension cmt_files);
   List.iter 
-    (fun cmd -> let cmt = get_cmt cmd cmt_files in process_file global cmd cmt)
-    cmd_files
+    (fun cmd -> let cmt = get_cmt cmd cmt_files in 
+		try process_file global cmd cmt with e -> raise e)
+    cmd_files;
+
+  (* write down the updated global table *)
+  write_global_file global !global_path
+    
     

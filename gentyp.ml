@@ -43,30 +43,99 @@ and out_variant =
 (* Added semantic tags to identifiers and special handling of pervasives *)
 let index = ref None
 
-let rec print_ident ppf id =
-  fprintf ppf "@{<path>%a@}" print_sub_ident id
+let rec print_ident ppf id = 
+  
+  let is_module name =
+    name.[0] >= 'A' && name.[0] <= 'Z'
+  in
+  
+  let rec loop (elems:string list) = function
+    (* lib externe, index a interrogé *)
+    | Oide_ident (true, name) ->
+      (* A.B.c *)
+      (* elems : contient ["B";"c"] *) 
+      
+      let html_path =
+	try 
+	  let local = match !index with 
+	    | Some local -> local 
+	    | None -> raise Not_found in
 
-and print_sub_ident ppf id = 
-  match id with
-    | Oide_ident(true, name) -> begin
-      try
-        match !index with
-            Some local -> 
-              let file = Index.local_lookup local name in
-              fprintf ppf "@{<file:%s>%s@}" file name
-          | None -> raise Not_found
-      with Not_found -> fprintf ppf "@{<ident>%s@}" name
-    end
-    | Oide_ident(false, name) -> 
-      fprintf ppf "@{<name>%s@}" name
-  (*  Do we want pervasives?
-   *  | Oide_dot(Oide_ident(true, "Pervasives"), name) -> 
-   *   fprintf ppf "@{<ident>%s@}" name
-   *)
-    | Oide_dot (id, name) -> 
-      fprintf ppf "%a.@{<name>%s@}" print_sub_ident id name
+	  let rest = ref elems in
+	  let path = ref "" in
+	  
+	  ignore (List.find 
+	    (fun name -> 
+	      if is_module name then
+		begin
+		  match Index.local_lookup local name with
+		    | Some p -> path := p; true
+		    | None -> (* packed again - re-iter *)
+		      rest := List.tl !rest; false
+		end
+	      else 
+		raise Not_found)
+	    (name::elems));
+	  
+	  let full_path =
+	    List.fold_left 
+	      (fun acc name -> 
+		if is_module name then
+		  acc^"."^name
+		else
+		(* assuming that "TYPE" is the default type id html mark *)
+		  acc^".html#TYPE"^name
+	      )
+	      (Filename.chop_suffix !path ".html")
+	      !rest
+	  in 
+	  Some full_path
+	  
+	with 
+	  | Not_found -> None
+      in
+
+      let concrete_name = String.concat "." (name::elems) in
+      begin
+      match html_path with
+	| Some path ->
+	  fprintf ppf "@{<path:%s>%s@}" path concrete_name
+	| None -> fprintf ppf "@{<unresolved>%s@}" concrete_name
+      end
+	
+    | Oide_ident (false, name) ->
+      (* I HAVE NO IDEA HOW TO RESOLVE THAT SHIT *)
+      let concrete_name = String.concat "." (name::elems) in
+      fprintf ppf "@{<unresolved>%s@}" concrete_name
+      
+    (*
+    (* Ca marchera pas pour les liens imbriqués dans des modules .. 
+      M.M2.t -> Marche pas si l'on est dans le module M2
+    *)
+      
+      let html_path =
+      List.fold_left 
+      (fun acc name ->
+      if is_module name then
+      acc^"."^name
+      else
+    (* assuming that "TYPE" is the default type id html mark *)
+      acc^".html#TYPE"^name
+      )
+      ""
+      (name::elems)
+      in 
+      let concrete_name = String.concat "." (name::elems) in
+      fprintf ppf "@{<path:%s>%s@}" html_path concrete_name
+    *)  
+      
+    | Oide_dot (sub_id, name) ->
+      loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->
-      fprintf ppf "%a(%a)" print_sub_ident id1 print_ident id2
+      fprintf ppf "%a(%a)" print_ident id2 print_ident id2
+  in
+
+  loop [] id
 
 (* Types *)
 
@@ -207,17 +276,29 @@ and print_typargs ppf =
 (* Print a path *)
 
 (* Removed special handling of pervasives *)
-let rec tree_of_path = function
+let rec tree_of_path p = 
+  (*DEBUG
+    print_path p;*)
+  match p with (*function*)
   | Path.Pident id ->
     let pers = Ident.persistent id in
     let name = Ident.name id in
-    (*    Printf.printf "pers:%b name:%s\n" pers name;*)
     Oide_ident(pers, name)
   | Path.Pdot(p, s, pos) ->
     Oide_dot (tree_of_path p, s)
   | Path.Papply(p1, p2) ->
     Oide_apply (tree_of_path p1, tree_of_path p2)
 
+and print_path = function
+  | Path.Pident id ->
+    Ident.print std_formatter id;
+    print_newline ()
+  | Path.Pdot(p, s, pos) ->
+    print_endline ("dot "^s); print_path p;
+    Printf.printf "Pdot name : %s\n" s
+  | Path.Papply(p1, p2) ->
+    ()
+      
 let path ppf p =
   print_ident ppf (tree_of_path p)
 
@@ -541,9 +622,9 @@ open Cow
 type html_buffer = 
     { mutable stack: Cow.Html.t list;
       data: Buffer.t }
-
+      
 let html_buffer () = { stack = [Html.nil]; data = Buffer.create 80 }
-
+  
 let flush_data hb = 
   if Buffer.length hb.data <> 0 then begin
     let data = `Data (Buffer.contents hb.data) in
@@ -612,24 +693,17 @@ let with_html tagf pf a =
 (* Convert semantic tags into HTML *)
 let process_tags tag =
   match tag with
-    | "path" -> (fun body -> <:html<<span class="path">$body$</span>&>>)
-    | "ident" -> (fun body -> <:html<<span class="ident">$body$</span>&>>)
-    | "name" -> (fun body -> <:html<<span class="name">$body$</span>&>>)
+    | "unresolved" -> (fun body -> <:html<$body$&>>)
     | _ -> 
       let idx = String.index tag ':' in
       let len = (String.length tag) - idx in
       let pref = String.sub tag 0 idx in 
       let arg = String.sub tag (idx + 1) (len - 1) in
-      let html_doc = (String.capitalize (Filename.chop_extension arg))^".html" in
       match pref with
-        | "file" -> 
-          let prefix = 
-	    <:html<<span class="file" style="display:none">$str:arg$</span>&>>
-          in
-	  fun body -> <:html<$prefix$<a href="$str:html_doc$">$body$</a>&>>
-	(*(fun body -> <:html<$prefix$<span class="ident">$body$</span>&>>)*)
-	    | _ -> raise Not_found
-	      
+        | "path" -> 
+          (fun body -> <:html<<a href="$str:arg$">$body$</a>&>>)
+	| _ -> raise Not_found
+	       
 let path local p = 
   index := Some local;
   with_html process_tags path p

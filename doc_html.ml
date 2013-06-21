@@ -1,5 +1,11 @@
 open Cow
 
+let current_module_name = ref ""
+
+let html_reference_of_module sub_module_name =
+  let html_page = !current_module_name^"."^sub_module_name^".html" in
+  <:html<<a href="$str:html_page$">$str:sub_module_name$</a>&>>
+
 let mark_type = "TYPE"
   
 (** The prefix for types elements (record fields or constructors). *)
@@ -219,7 +225,19 @@ let html_of_type_param_list params variances =
 	[] -> Html.nil
       | [h] -> code "type" <:html<$h$ >>
       | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
-	
+
+let html_of_type_class_param_list params variances =
+  let lstrparam = (List.map2 
+		     (fun param -> function
+		       | `None -> param
+		       | `Positive -> <:html<+$param$>>
+		       | `Negative -> <:html<-$param>>)
+		     params variances) in
+  match lstrparam with
+      [] -> Html.nil
+    | [h] -> code "type" <:html<[$h$] >>
+    | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
+      
 let html_of_type_variant father_name = function 
   | {tk_constructors = Some cstrs; _} ->
     make_type_table 
@@ -315,19 +333,113 @@ let html_of_exception = function
   | _ -> assert false
 
 (* Modules generation *)
-(* TODO: associate html pages -- ? *)
-
-let html_of_module_ident = function
-  | { mt_kind = `Ident; mt_path = Some path} -> 
-    <:html<$code "code" path$&>>
+let sub_module_name = ref ""
+let sub_module_info = ref None
+    
+let rec html_of_class_type_ident = function
+  | { ct_kind = `Ident; 
+      ct_args = args;
+      ct_params = Some params;
+      ct_path = Some path; } ->
+    let args = match args with None -> Html.nil | Some args ->
+      code "type"
+	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
+    in 
+    let params = html_of_type_class_param_list 
+      params 
+      (List.map (fun _ -> `None) params) in
+    <:html<$args$$params$$path$>>
+  | _ -> assert false
+    
+and html_of_class_type_sig = function
+  | { ct_kind = `Sig; 
+      ct_args = args (* option *);
+      ct_fields = Some fields; } ->
+    let args = match args with None -> Html.nil | Some args ->
+      code "type"
+	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
+    in 
+    let ref_link = <:html<..>> (*add link *) in
+    <:html<$args$$code "code" (h "object")$ $ref_link$ $code "code" (h "end")$>>
+  | _ -> assert false
+    
+and html_of_class_type_constraint = function
+  | { ct_kind = `Constraint; 
+    ct_args = args (* option *);
+    ct_cstr = Some (ctype, cttype) } ->
+    let args = match args with None -> Html.nil | Some args ->
+      code "type"
+	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
+    in
+    <:html<$args$( $html_of_class_type ctype$ : $html_of_class_type cttype$ )>>
   | _ -> assert false
 
-let html_of_module_sig = function
+(** Print the body of a class/class_type signature
+    can maybe generate an url to the definition file
+    look up on next step
+*)
+and html_of_class_type class_type =
+  (match class_type.ct_kind with
+    | `Ident -> html_of_class_type_ident 
+    | `Sig -> html_of_class_type_sig
+    | `Constraint -> html_of_class_type_constraint) class_type
+
+(* url = CurrentModule.ClassName-c.html *)
+let html_of_class is_class_type = function 
+  | { si_name = Some name;
+      si_params = Some params;
+      si_variance = Some variances;
+      si_virt = Some virt;
+      si_class_type = Some class_type;
+      si_info = info } -> 
+    let id = generate_id_mark mark_type name in
+    let params_html = html_of_type_class_param_list params variances in
+    let ref = <:html<$str:name$>> (* todo : referencing link *) in
+    let header = 
+      <:html<$keyword (if is_class_type then "class type" else "class")$$
+	if virt then keyword " virtual" 
+	else Html.nil$ $params_html$$ref$>> in
+    let sign = if is_class_type then "=" else ":" in
+    let pre = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
+    <:html<$pre$$make_info info$
+    >>    
+  | _ -> assert false 
+
+(* Do we print normal comments? *)
+let html_of_comment = function 
+  | { si_item = `Comment; si_info = info} -> make_info info
+  | _ -> assert false
+
+let generate_page_header info module_name = 
+  let title_module_name = String.(let pos = try rindex module_name '.' + 1 with Not_found -> 0 in 
+			    sub module_name pos ((length module_name) - pos)) in
+  let pre = make_pre 
+    (<:html<$keyword "module"$ $str:title_module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>)
+  in
+  <:html<
+  <h1>Module $str:module_name$</h1>
+    $pre$
+    $make_info info$
+  >>
+
+let rec html_of_module_ident = function
+  | { mt_kind = `Ident; mt_path = Some path} -> 
+    <:html<$code "code" path$&>>
+  | _ -> <:html<HTML_OF_MODULE_IDENT BUG>>
+    (* assert false *)
+
+(** Generate the submodule file at this point *)
+and html_of_module_sig = function
   | { mt_kind = `Sig; mt_items = Some items } ->
+    let parent_name = !current_module_name in
+    current_module_name := parent_name^"."^(!sub_module_name);
+    (*print_endline !current_module_name;*)
+    generate_html !current_module_name (file items !sub_module_info);
+    current_module_name := parent_name;
     <:html<$code "code" (h "sig")$ .. $code "code" (h "end")$>>
   | _ -> assert false
 
-let rec html_of_module_functor = function 
+and html_of_module_functor = function 
   | { mt_kind = `Functor
     ; mt_arg_name = Some arg_name
     ; mt_arg_type = Some arg_type
@@ -337,38 +449,9 @@ let rec html_of_module_functor = function
       | None -> Html.nil in
     let body = 
       <:html<$code "code" (h "functor (")$$code "code" (h arg_name)$<code class="code"> : </code>$path$$code "code" (h ") -> ")$&>> in
-    <:html<<div class="sig_block">$body$$html_of_module_functor base$</div>&>>
-  | {mt_kind = `Sig} as mod_sig -> html_of_module_sig mod_sig
-  | _ -> raise (Failure "html_of_functor: mismatch")
+    <:html<<div class="sig_block">$body$$html_body_of_module base$</div>&>>
+  | _ -> raise (Failure "html_of_functor: Mismatch")
     
-
-let html_of_module_apply = function
-  | { mt_kind = `Apply; 
-      mt_arg_type = Some arg_type; 
-      mt_base = Some base } -> 
-    let base_html = html_of_module_ident base in
-    let arg_html = (match arg_type.mt_kind with 
-	| `Ident -> html_of_module_ident
-	| `Sig -> html_of_module_sig
-	| _ -> failwith "html_of_module_apply : mismatch") arg_type
-    in <:html<$base_html$($arg_html$)>>    
-  | _ -> assert false
-
-let html_of_module_typeof = function 
-  | { mt_kind = `TypeOf; mt_expr = Some expr } -> 
-    <:html<module typeof>>
-  | _ -> assert false
-
-
-let rec html_body_of_module mty = 
-  (match mty.mt_kind with 
-  | `Ident   -> html_of_module_ident  
-  | `Sig     -> html_of_module_sig 	  
-  | `Functor -> html_of_module_functor 
-  | `With    -> html_of_module_with   
-  | `Apply   -> html_of_module_apply
-  | `TypeOf  -> html_of_module_typeof) mty
-
 and html_of_module_with = function
   | { mt_kind = `With; 
       mt_cnstrs = Some cnstrs; 
@@ -382,15 +465,48 @@ and html_of_module_with = function
     <:html<$html_body_of_module base$ with $insert_between " and " l$>>
   | _ -> assert false
     
+(* TODO ? *)
+and html_of_module_typeof = function 
+  | { mt_kind = `TypeOf; mt_expr = Some expr } -> 
+    <:html<module typeof>>
+  | _ -> assert false
 
-let html_of_module = function 
-  | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} -> 
-    let sig_mod = make_pre (<:html<$keyword "module"$ $str:name$: $html_body_of_module mty$>>) in
-    <:html<$sig_mod$$make_info info$&>>
+and html_of_module_apply = function
+  | { mt_kind = `Apply; 
+      mt_arg_type = Some arg_type; 
+      mt_base = Some base } -> 
+    let base_html = html_of_module_ident base in
+    let arg_html = (match arg_type.mt_kind with 
+	| `Ident -> html_of_module_ident
+	| `Sig -> html_of_module_sig
+	| _ -> 
+	  (* todo *)
+	  (fun x -> <:html<Mismatch module apply>>)
+	  (*failwith "html_of_module_apply : Mismatch"*)) arg_type
+    in <:html<$base_html$($arg_html$)>>    
+  | _ -> assert false
+
+and html_body_of_module mty = 
+  (match mty.mt_kind with 
+  | `Ident   -> html_of_module_ident  
+  | `Sig     -> html_of_module_sig
+  | `Functor -> html_of_module_functor 
+  | `With    -> html_of_module_with   
+  | `Apply   -> html_of_module_apply
+  | `TypeOf  -> html_of_module_typeof) mty
+
+
+and html_of_module = function 
+  | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} ->
+    sub_module_name := name;
+    sub_module_info := info;
+    let path = html_reference_of_module name in
+    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $html_body_of_module mty$>>)
+    in <:html<$sig_mod$$make_info info$&>>
   | _ -> assert false
 
 (* Module types generation *)
-let html_of_modtype = function 
+and html_of_modtype = function 
   | { si_item = `ModType
     ; si_name = Some name
     ; si_module_type = Some module_type
@@ -400,28 +516,12 @@ let html_of_modtype = function
     <:html<$sig_mod$$make_info info$>>
   | _ -> assert false
 
-
-let html_of_include = function 
+and html_of_include = function 
   | { si_item = `Include; si_module_type=Some mty} -> 
     make_pre <:html<$keyword "include"$ $html_body_of_module mty$>>
   | _ -> assert false
 
-(* TODO *)
-let html_of_class = function 
-  | { si_item = `Class; _ } -> <:html<TODO class>>
-  | _ -> assert false
-
-(* TODO *)
-let html_of_classtype = function 
-  | { si_item = `ClassType; _ } -> <:html<TODO class>>
-  | _ -> assert false
-
-(* Do we print normal comments? *)
-let html_of_comment = function 
-  | { si_item = `Comment; si_info = Some info} -> info
-  | _ -> assert false
-
-let html_of_signature_item sig_item =
+and html_of_signature_item sig_item =
   (match sig_item.si_item with
     | `Value -> html_of_value
     | `Primitive -> (fun item -> html_of_value {item with si_item = `Value})
@@ -430,38 +530,69 @@ let html_of_signature_item sig_item =
     | `Module -> html_of_module
     | `ModType -> html_of_modtype
     | `Include -> html_of_include
-    | `Class -> html_of_class
-    | `ClassType -> html_of_classtype
+    | `Class -> html_of_class false
+    | `ClassType -> html_of_class true
     | `Comment -> html_of_comment) sig_item
     
-let generate_page_header info module_name = 
-  (* link on current page *)
-  let pre = make_pre 
-    (<:html<$keyword "module"$ $str:module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>)
-  in
-  <:html<
-  <h1>Module $str:module_name$</h1>
-    $pre$
-    $make_info info$
-  >>
-
-let html_of_file module_name =
+and html_of_file module_name =
   function {f_items=sig_items;
 	    f_info=info} ->
     let items = List.fold_left
       (fun acc e -> <:html< $acc$ $html_of_signature_item e$ >>)
       Html.nil 
       sig_items in
-    (* <!doctype> should be here but parsing doesn't support it *)
-    <:html<
+    let doc_page = (* <!doctype> should be here but parsing doesn't support it *)
+      <:html<
       <html>
       <head>
-      $generate_head module_name$
+	$generate_head module_name$
       </head>
       <body>     
-      $generate_page_header info module_name$
+	$generate_page_header info module_name$
       <hr width="100%" /> 
       $items$
       </body>
       </html>
-    >>    
+      >>    
+    in 
+    doc_page
+
+and generate_html module_name jfile =  
+ current_module_name := module_name;
+ let html = html_of_file module_name jfile in
+ let html_name = module_name ^ ".html" in
+ let oc = open_out html_name in
+ output_string oc doctype;
+ output_string oc (Docjson.string_of_html html);
+ close_out oc
+  
+
+let generate_html_index_from_global modules_list = 
+  let oc = open_out "index.html" in
+  output_string oc doctype;
+  let modules_links = List.fold_left 
+    (fun acc filepath -> 
+      let module_name = String.capitalize (Filename.basename filepath) in
+      let ref_x = h (module_name^".html") in
+      <:html<$acc$<li><a href="$ref_x$">$str:module_name$</a></li><br/>
+      >>)
+    Html.nil
+    modules_list
+  in
+  let html_content = 
+    <:html<
+    <html>
+    <head> 
+    <title>Simple index</title>
+    </head>
+    <body>
+    <h1>Module index</h1>
+    <ul>
+      $modules_links$
+    </ul>
+    </body>
+    </html>
+    >>
+  in
+  output_string oc (string_of_html html_content);
+  close_out oc

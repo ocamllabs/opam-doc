@@ -4,20 +4,27 @@
 <link rel="Start" href="index.html">
 <link title="Index of types" rel=Appendix href="index_types.html">
 <link title="Index of values" rel=Appendix href="index_values.html">
+<link title="Index of class attributes" rel=Appendix href="index_attributes.html">
+<link title="Index of class methods" rel=Appendix href="index_methods.html">
+<link title="Index of classes" rel=Appendix href="index_classes.html">
 <link title="Index of modules" rel=Appendix href="index_modules.html">
-<link title="Test" rel="Chapter" href="Test.html">
-<link title="Test2" rel="Chapter" href="Test2.html"><title>Test</title>
+<link title="Test" rel="Chapter" href="Test.html"><title>Test</title>
 </head>
 <body>
 <code class="code"><span class="keyword">sig</span><br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;dummy&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;float&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="keyword">object</span>&nbsp;<span class="keyword">val</span>&nbsp;x&nbsp;:&nbsp;int&nbsp;<span class="keyword">val</span>&nbsp;y&nbsp;:&nbsp;int&nbsp;<span class="keyword">end</span><br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;dummy2&nbsp;:&nbsp;<span class="keyword">object</span>&nbsp;<span class="keyword">val</span>&nbsp;x&nbsp;:&nbsp;int&nbsp;<span class="keyword">method</span>&nbsp;meth_test&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;unit&nbsp;<span class="keyword">end</span><br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;bla2&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;dummy<br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;[<span class="keywordsign">'</span>a]&nbsp;dummy_params&nbsp;:&nbsp;<span class="keyword">object</span>&nbsp;&nbsp;<span class="keyword">end</span><br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;[<span class="keywordsign">'</span>a,&nbsp;<span class="keywordsign">'</span>b]&nbsp;dummy_params2&nbsp;:&nbsp;<span class="keyword">object</span>&nbsp;&nbsp;<span class="keyword">end</span><br>
+&nbsp;&nbsp;<span class="keyword">class</span>&nbsp;point&nbsp;:&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;int&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="keyword">object</span>&nbsp;&nbsp;<span class="keyword">end</span><br>
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;(+<span class="keywordsign">'</span>a,&nbsp;<span class="keywordsign">'</span>b)&nbsp;t<br>
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testz&nbsp;=&nbsp;[&nbsp;<span class="keywordsign">`</span><span class="constructor">A</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">B</span>&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="keywordsign">`</span><span class="constructor">C</span>&nbsp;]<br>
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;foo&nbsp;:&nbsp;<span class="keywordsign">'</span>a&nbsp;<span class="keywordsign">-&gt;</span>&nbsp;<span class="keywordsign">'</span>a<br>
 &nbsp;&nbsp;<span class="keyword">val</span>&nbsp;l&nbsp;:&nbsp;int&nbsp;list<br>
-&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testCOMM&nbsp;=&nbsp;<span class="constructor">A</span>&nbsp;<span class="keyword">of</span>&nbsp;int&nbsp;*&nbsp;float&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">B</span>&nbsp;<span class="keyword">of</span>&nbsp;float&nbsp;*&nbsp;int<br>
-&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testc&nbsp;=&nbsp;<span class="keyword">private</span>&nbsp;<span class="constructor">A</span>&nbsp;<span class="keyword">of</span>&nbsp;int&nbsp;*&nbsp;float&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">B</span>&nbsp;<span class="keyword">of</span>&nbsp;float<br>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testCOMM&nbsp;=&nbsp;<span class="keyword">private</span>&nbsp;<span class="constructor">One</span>&nbsp;<span class="keyword">of</span>&nbsp;int&nbsp;*&nbsp;float&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">Two</span>&nbsp;<span class="keyword">of</span>&nbsp;float&nbsp;*&nbsp;int<br>
+&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testc&nbsp;=&nbsp;<span class="constructor">A</span>&nbsp;<span class="keyword">of</span>&nbsp;int&nbsp;*&nbsp;float&nbsp;<span class="keywordsign">|</span>&nbsp;<span class="constructor">B</span>&nbsp;<span class="keyword">of</span>&nbsp;float<br>
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;testd&nbsp;=&nbsp;int<br>
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;t2&nbsp;=&nbsp;int<br>
 &nbsp;&nbsp;<span class="keyword">type</span>&nbsp;record&nbsp;=&nbsp;{&nbsp;a&nbsp;:&nbsp;int;&nbsp;<span class="keyword">mutable</span>&nbsp;b&nbsp;:&nbsp;float;&nbsp;}<br>
-&nbsp;&nbsp;<span class="keyword">type</span>&nbsp;tOF&nbsp;=&nbsp;<span class="constructor">Unix</span>.open_flag<br>
 <span class="keyword">end</span></code></body></html>

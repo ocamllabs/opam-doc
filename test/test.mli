@@ -1,12 +1,23 @@
 (** MLI doc - module info *)
 
 (** test fun fun sig *)
-class dummy: int -> float -> object val x : int end
+class dummy: int -> float -> object val x : int val y : int end
+
+(** test fields *)
+class(* virtual*)  dummy2: 
+object
+  (** meth test comm *)
+  method meth_test : int -> unit
+  (*  method virtual meth_virt : int -> unit*)
+  val x : int 
+end
 
 (** test fun fun constr *)
 class bla2 : int -> int -> dummy
 
-class ['a, 'b, 'c] dummy_params: object end
+class ['a] dummy_params: object end
+
+class ['a, 'b] dummy_params2: object end
 
 class point : int -> int -> 
 object 

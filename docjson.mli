@@ -45,11 +45,13 @@ val kVariant: variant_constructor list -> type_kind
 val kRecord: record_label list -> type_kind
 
 type class_type =
-  { ct_kind: [ `Ident | `Sig ];
+  { ct_kind: [ `Ident | `Sig | `Constraint ];
     ct_args: typ list option;
     ct_params: typ list option;
     ct_path: path option;
-    ct_fields: class_type_field list option }
+    ct_fields: class_type_field list option;
+    ct_cstr : (class_type * class_type) option; }
+
 and class_type_field =
   { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
     ctf_class_type: class_type option;
@@ -69,9 +71,11 @@ val kClassIdent: typ list -> typ list -> path -> class_type
 
 val kClassSig: typ list -> class_type_field list -> class_type
 
+val kClassConstraint: typ list -> class_type * class_type -> class_type
+
 val fInherit: class_type -> info option -> class_type_field
 
-val fVal: string -> bool -> bool -> bool -> typ -> 
+val fVal: string -> bool -> bool -> typ -> 
   info option -> class_type_field 
 
 val fMethod: string -> bool -> bool ->  typ -> info option -> class_type_field
