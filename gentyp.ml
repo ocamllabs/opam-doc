@@ -56,45 +56,16 @@ let rec print_ident ppf id =
       (* elems : contient ["B";"c"] *) 
       
       let html_path =
-	try 
+	try
 	  let local = match !index with 
 	    | Some local -> local 
 	    | None -> raise Not_found in
-
-	  let rest = ref elems in
-	  let path = ref "" in
 	  
-	  ignore (List.find 
-	    (fun name -> 
-	      if is_module name then
-		begin
-		  match Index.local_lookup local name with
-		    | Some p -> path := p; true
-		    | None -> (* packed again - re-iter *)
-		      rest := List.tl !rest; false
-		end
-	      else 
-		raise Not_found)
-	    (name::elems));
-	  
-	  let full_path =
-	    List.fold_left 
-	      (fun acc name -> 
-		if is_module name then
-		  acc^"."^name
-		else
-		(* assuming that "TYPE" is the default type id html mark *)
-		  acc^".html#TYPE"^name
-	      )
-	      (Filename.chop_suffix !path ".html")
-	      !rest
-	  in 
-	  Some full_path
-	  
+	  Some (Index.local_lookup local (name::elems))
 	with 
-	  | Not_found -> None
+	    Not_found -> None
       in
-
+      
       let concrete_name = String.concat "." (name::elems) in
       begin
       match html_path with
@@ -104,31 +75,10 @@ let rec print_ident ppf id =
       end
 	
     | Oide_ident (false, name) ->
-      (* I HAVE NO IDEA HOW TO RESOLVE THAT SHIT *)
+      (* TODO : internal references *)
       let concrete_name = String.concat "." (name::elems) in
       fprintf ppf "@{<unresolved>%s@}" concrete_name
-      
-    (*
-    (* Ca marchera pas pour les liens imbriqués dans des modules .. 
-      M.M2.t -> Marche pas si l'on est dans le module M2
-    *)
-      
-      let html_path =
-      List.fold_left 
-      (fun acc name ->
-      if is_module name then
-      acc^"."^name
-      else
-    (* assuming that "TYPE" is the default type id html mark *)
-      acc^".html#TYPE"^name
-      )
-      ""
-      (name::elems)
-      in 
-      let concrete_name = String.concat "." (name::elems) in
-      fprintf ppf "@{<path:%s>%s@}" html_path concrete_name
-    *)  
-      
+
     | Oide_dot (sub_id, name) ->
       loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->

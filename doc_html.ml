@@ -2,6 +2,8 @@ open Cow
 
 let current_module_name = ref ""
 
+let index_content = ref []
+
 let html_reference_of_module sub_module_name =
   let html_page = !current_module_name^"."^sub_module_name^".html" in
   <:html<<a href="$str:html_page$">$str:sub_module_name$</a>&>>
@@ -457,10 +459,10 @@ and html_of_module_with = function
       mt_cnstrs = Some cnstrs; 
       mt_base = Some base } ->
     let l = List.map 
-      (function {wc_typeq = Some typ; wc_path = path} -> 
-	<:html<type $path$ = $typ$>> 
-      | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
-      | _ -> assert false)
+      (function 
+	| {wc_typeq = Some typ; wc_path = path} ->  <:html<type $path$ = $typ$>> 
+        | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
+	| _ -> assert false)
       cnstrs in
     <:html<$html_body_of_module base$ with $insert_between " and " l$>>
   | _ -> assert false
@@ -511,7 +513,10 @@ and html_of_modtype = function
     ; si_name = Some name
     ; si_module_type = Some module_type
     ; si_info = info } -> 
-    let sig_mod = make_pre (<:html<$keyword "module type"$ $str:name$ = $code "type" (html_body_of_module module_type)$>>)
+    sub_module_name := name;
+    sub_module_info := info;
+    let path = html_reference_of_module name in
+    let sig_mod = make_pre (<:html<$keyword "module type"$ $path$ = $code "type" (html_body_of_module module_type)$>>)
     in
     <:html<$sig_mod$$make_info info$>>
   | _ -> assert false
@@ -557,7 +562,10 @@ and html_of_file module_name =
     in 
     doc_page
 
-and generate_html module_name jfile =  
+and generate_html ?(is_root_module=false) module_name jfile =
+ if is_root_module then
+   add_to_index module_name jfile.f_info;
+
  current_module_name := module_name;
  let html = html_of_file module_name jfile in
  let html_name = module_name ^ ".html" in
@@ -565,34 +573,58 @@ and generate_html module_name jfile =
  output_string oc doctype;
  output_string oc (Docjson.string_of_html html);
  close_out oc
-  
 
-let generate_html_index_from_global modules_list = 
-  let oc = open_out "index.html" in
+and add_to_index m_name info =
+  let html_page = m_name^".html" in
+  let content = 
+    <:html<<tr><td class="module"><a href="$str:html_page$">$str:m_name$</a></td><td>
+		     $make_info info$
+			</td></tr>&>> in
+  index_content := (m_name,content)::(!index_content)
+
+let generate_module_index () = 
+  match !index_content with
+      [] -> ()
+    | l -> 
+      begin
+	let full_content = 
+	  List.fold_left
+	    (fun acc (_,content) -> <:html<$acc$$content$>>) 
+	    Html.nil
+	    (List.sort (fun (n,_) (n2, _) -> compare n n2) l)
+	in
+	let oc = open_out "index.html" in
+	output_string oc doctype;
+	let html_content = 
+	  <:html<
+	  <html>
+	  <head> 
+	  <link rel="stylesheet" href="$str:style_file$" type="text/css" />
+	  <title>Modules index</title>
+	  </head>
+	  <body>
+	  <h1>Modules</h1>
+	  <table class="indextable">
+	     $full_content$
+          </table>
+	  </body>
+	  </html>&>>
+      in
+      output_string oc (string_of_html html_content);
+      close_out oc
+      end
+
+let print_error_page m_name =
+  let oc = open_out (m_name^".html") in
   output_string oc doctype;
-  let modules_links = List.fold_left 
-    (fun acc filepath -> 
-      let module_name = String.capitalize (Filename.basename filepath) in
-      let ref_x = h (module_name^".html") in
-      <:html<$acc$<li><a href="$ref_x$">$str:module_name$</a></li><br/>
-      >>)
-    Html.nil
-    modules_list
-  in
   let html_content = 
     <:html<
     <html>
-    <head> 
-    <title>Simple index</title>
-    </head>
+      <head><title>:(</title></head>
     <body>
-    <h1>Module index</h1>
-    <ul>
-      $modules_links$
-    </ul>
+      Error - Couldn't generate the documentation.<br/>
+      Are the cmt/cmd correctly builded? 
     </body>
-    </html>
-    >>
-  in
-  output_string oc (string_of_html html_content);
-  close_out oc
+    </html>&>> in
+    output_string oc (string_of_html html_content);
+    close_out oc

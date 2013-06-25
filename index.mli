@@ -17,13 +17,14 @@ val create_local: global -> (string * Digest.t) list -> local
    Hence, you will need to lookup the module after the first dot
    (this should be improve)
 *)
-val local_lookup: local -> string -> string option
+val local_lookup: local -> string list -> string
 
 val get_global_modules: global -> string list
 
 (* debug *)
 val global_print: global -> unit
 val local_print: local -> unit
+val global_find_key: global -> string -> unit
 
 val read_global_file: string -> global
 

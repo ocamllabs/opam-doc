@@ -1,6 +1,6 @@
 type t_value = 
   | Direct_path of string
-  | Packed_module of (string * Digest.t) list (* sub modules ? *)
+  | Packed_module of (string * Digest.t) list
 
 (** 
     key : (Module name, Digest)
@@ -16,11 +16,19 @@ module CrcMap =
       else sc
   end)
 
-module StringMap = Map.Make(String)
+module LocalMap = Map.Make(
+  struct
+    type t = string option * string (* Packer * name *)
+    let compare (s1, d1) (s2,d2) =
+      let sc = compare s1 s2 in
+      if sc = 0 then
+	compare d1 d2
+      else sc
+  end)
 
 type global = t_value CrcMap.t
 
-type local = t_value StringMap.t
+type local = t_value LocalMap.t
 
 let read_global_file path =
   try 
@@ -69,6 +77,7 @@ let update_global global filenames =
 	raise (Failure "Index.update_global: Wrong cmt file handed")
   in
   List.fold_left doFile global filenames
+
     
 let write_global_file global path =
   let oc = open_out path in
@@ -85,39 +94,88 @@ let global_print table =
 	  | Direct_path str -> "Direct path : "^str))
     table
 
-let local_print table =
-  StringMap.iter
-    (fun x z -> 
-      Printf.printf "key : %s - value: %s\n" x
-	(match z with
-	    Packed_module crc -> 
-	      "Packed\n"
-	      ^(List.fold_left (fun acc (x,y) -> acc^"\n\t"^x^" - "^(Digest.to_hex y)) ""
-		  crc)
-	  | Direct_path str -> "Direct path : "^str))
-    table
+let global_find_key (global:global) key =
+  CrcMap.iter
+    (fun (x,y) z ->
+      if x = key then
+	Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y) 
+	  (match z with
+	      Packed_module sub_modules -> "Packed\n"^
+		(List.fold_left 
+		   (fun acc (x,y) -> 
+		     acc^"\t Modname:"^x^" - Digest : "
+		     ^(Digest.to_hex y)^"\n") 
+		   ""
+		   sub_modules)
+	    | Direct_path str -> "Direct path : "^str))
+    global
+
+let local_print table = ()
 
 let global_lookup global md = CrcMap.find md global
 
-let rec create_local global mds = 
-  let doMod acc ((name, _) as md) =
+let create_local global mds = 
+  let rec doMod pack acc ((name, _) as md)  =
     try
       let value = CrcMap.find md global in
       match value with
 	| Packed_module crcs -> 
-	  StringMap.add name value (create_local global crcs)
+	  let acc = List.fold_left (doMod (Some name)) acc crcs in
+	  LocalMap.add (pack, name) value acc
 	| Direct_path str ->
-	  (* Is it true that names are unique in the local index? *)
-	  StringMap.add name value acc
+	  LocalMap.add (pack, name) value acc
     with Not_found -> acc
   in
-  List.fold_left doMod StringMap.empty mds
-    
-let local_lookup local md = 
-  match StringMap.find md local with
-    | Packed_module _ -> None
-    | Direct_path str -> Some str
-      
+  List.fold_left (doMod None) LocalMap.empty mds
+
+let is_module name =
+  name.[0] >= 'A' && name.[0] <= 'Z'
+
+(* assuming that if a type name is present, it is at the list's end *)
+let rec assemble_path path = function 
+  | [] -> path^".html"
+  | h::[] ->
+    if is_module h then
+      path^"."^h^".html"
+    else 
+      path^".html#TYPE"^h
+  | h::t ->
+    if not (is_module h) then raise (Failure "Incorrect signature");
+    assemble_path (path^"."^h) t
+
+
+let local_lookup local path_elems =
+  let rec loop pack = function
+    | m1::m2::r ->
+      let f () = 
+	try 
+	  (match LocalMap.find (pack, m1) local with
+	    | Direct_path str -> str, (m2::r)
+	    | Packed_module _ -> 
+	      loop (Some m1) (m2::r)
+	  )
+	with 
+	  | Not_found -> 
+		   (* try harder *)
+	    loop pack (m2::r)
+      in
+      if m1 = "Std" then
+	try 
+	  loop pack (m2::r)
+	with
+	    Not_found -> f ()
+      else
+	f ()
+
+    | m1::[] ->
+      (match LocalMap.find (pack, m1) local with
+	| Packed_module _ -> raise Not_found
+	| Direct_path str -> str, []
+      )
+    | [] -> raise Not_found    
+  in
+  let (path, rest) = loop None path_elems in
+  assemble_path (Filename.chop_suffix path ".html") rest
 
 let get_global_modules global =
   List.map (fun ((x,_),_) -> x) (CrcMap.bindings global)  

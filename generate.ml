@@ -865,8 +865,8 @@ and generate_class_field local dclfexpr clfexpr =
     | _,_ -> raise (Failure "generate_class_field: Mismatch")
     
 let generate_file_from_interface local dintf intf =
-  let dintf = match dintf with Dfile_intf intf -> intf | _ -> 
-    raise (Invalid_argument "not an interface") in
+  let dintf = match dintf with Dfile_intf intf -> intf 
+    | _ -> raise (Invalid_argument "not an interface") in
   let jitems = generate_signature_item_list local dintf.dintf_items intf.sig_items in
   let jinfo = generate_info_opt local dintf.dintf_info in
   file jitems jinfo

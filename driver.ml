@@ -89,20 +89,27 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
-(*      print_endline ("printing local for "^cmd);
-      local_print local;*)
-      let jfile = 
-	match cmt.Cmt_format.cmt_annots with
-          | Cmt_format.Interface intf ->   
-	    generate_file_from_interface local doc_file intf
-          | Cmt_format.Implementation impl ->  
-	    generate_file_from_structure local doc_file impl
-          | _ -> raise (Failure "Wrong kind of cmt file") 
-      in
+      (*      print_endline ("printing local for "^cmd);
+	      local_print local;*)
+      try 
+	let jfile = 
+	  match cmt.Cmt_format.cmt_annots with
+            | Cmt_format.Interface intf ->   
+	      generate_file_from_interface local doc_file intf
+            | Cmt_format.Implementation impl ->  
+	      generate_file_from_structure local doc_file impl
+            | _ -> raise (Failure "Wrong kind of cmt file") 
+	in
       (*generate_json cmd jfile;*)
-      let module_name = String.capitalize 
-	(Filename.chop_extension (Filename.basename cmd)) in
-      ignore(Doc_html.generate_html module_name jfile)
+	let module_name = String.capitalize 
+	  (Filename.chop_extension (Filename.basename cmd)) in
+	ignore(Doc_html.generate_html ~is_root_module:true module_name jfile);
+      with
+	| Invalid_argument s ->
+	  let m_name  = String.capitalize
+	    (Filename.chop_extension (Filename.basename cmd)) in
+	  Doc_html.print_error_page m_name;
+	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s m_name
 
 let _ = 
   let global_path = ref "global.index"  in
@@ -150,17 +157,19 @@ let _ =
   (* updates the global table with the new references - 
      should also contain the possibles '-pack' cmt modules *)
   let global = update_global global cmt_files in
+
 (*
   print_endline "[debug] global table after update :";
   global_print global;
 *)
       
-  Doc_html.generate_html_index_from_global (List.map Filename.chop_extension cmt_files);
   List.iter 
-    (fun cmd -> let cmt = get_cmt cmd cmt_files in 
+    (fun cmd -> let cmt = get_cmt cmd cmt_files in
 		try process_file global cmd cmt with e -> raise e)
     cmd_files;
-
+  
+  Doc_html.generate_module_index ();
+  
   (* write down the updated global table *)
   write_global_file global !global_path
     
