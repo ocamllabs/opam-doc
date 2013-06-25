@@ -597,7 +597,6 @@ and generate_structure_item_list local dimpl_items impl_items =
       | ditem :: drest, item :: rest ->
         let jitem = generate_structure_item local ditem item in
         loop drest rest (jitem :: acc)  
-      | _, _ -> raise (Failure "generate_structure_item_list: Mismatch")
   in
   loop dimpl_items impl_items []
 

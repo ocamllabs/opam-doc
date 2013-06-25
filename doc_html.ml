@@ -5,8 +5,8 @@ let current_module_name = ref ""
 let index_content = ref []
 
 let html_reference_of_module sub_module_name =
-  let html_page = !current_module_name^"."^sub_module_name^".html" in
-  <:html<<a href="$str:html_page$">$str:sub_module_name$</a>&>>
+  let html_page = <:html<$str:(!current_module_name^"."^sub_module_name^".html")$>> in
+  <:html<<a href="$html_page$">$str:sub_module_name$</a>&>>
 
 let mark_type = "TYPE"
   
@@ -27,8 +27,6 @@ let mark_attribute = "ATT"
 
 (** The prefix for methods marks. *)
 let mark_method = "METHOD"
-
-
 
 let create_div s =
   <:html<<div>$str:s$</div> &>>
@@ -131,6 +129,17 @@ let style_tag = <:html<
 >>
 
 let h s = <:html<$str:s$>>
+
+(* mouais.*)
+let create_redirect_page html_page redirect_url =
+  let oc = open_out html_page in
+  output_string oc doctype;
+  let content_content = h ("0; url="^redirect_url) in
+  let html_content = 
+    let meta = <:html< <meta http-equiv="refresh" content="$content_content$"/> >> in
+    <:html<<html><head>$meta$</head><body></body></html>&>> in
+  output_string oc (Docjson.string_of_html html_content);
+  close_out oc
   
 let generate_style_file () =
   if not (Sys.file_exists style_file) then
@@ -497,14 +506,22 @@ and html_body_of_module mty =
   | `Apply   -> html_of_module_apply
   | `TypeOf  -> html_of_module_typeof) mty
 
-
 and html_of_module = function 
   | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} ->
     sub_module_name := name;
     sub_module_info := info;
     let path = html_reference_of_module name in
-    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $html_body_of_module mty$>>)
-    in <:html<$sig_mod$$make_info info$&>>
+    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $html_body_of_module mty$>>) 
+    in
+    let html_page = !current_module_name^"."^name^".html" in
+    if not (Sys.file_exists html_page) then
+      (match mty with
+	| {mt_kind= `Ident; mt_path = Some path} -> 
+	  create_redirect_page html_page (!current_module_name^".html#")
+	| _ -> create_redirect_page html_page (!current_module_name^".html#"));
+    
+    <:html<$sig_mod$$make_info info$&>>
+
   | _ -> assert false
 
 (* Module types generation *)
@@ -628,3 +645,4 @@ let print_error_page m_name =
     </html>&>> in
     output_string oc (string_of_html html_content);
     close_out oc
+      

@@ -1,3 +1,11 @@
+(** Comm module
+
+test
+
+test
+ *)
+
+(** comm avant *)
 module M = struct
   let x = 3
   let y = 4
@@ -6,10 +14,13 @@ module M = struct
   module SubM = struct let z = 3 module SubSubM = struct let xx = 4 end end
 end
 
+(** comm type *)
 type tabc = M.t
 
 type tbcd = tabc
+(** comm type après *)
 
+(** comm type avant *)
 type testc = int
 
 module type S = sig

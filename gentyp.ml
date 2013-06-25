@@ -45,10 +45,6 @@ let index = ref None
 
 let rec print_ident ppf id = 
   
-  let is_module name =
-    name.[0] >= 'A' && name.[0] <= 'Z'
-  in
-  
   let rec loop (elems:string list) = function
     (* lib externe, index a interrogé *)
     | Oide_ident (true, name) ->
@@ -63,7 +59,10 @@ let rec print_ident ppf id =
 	  
 	  Some (Index.local_lookup local (name::elems))
 	with 
-	    Not_found -> None
+	    Not_found -> 
+	      (* debug *)
+	      Printf.eprintf "Reference to %s : unresolved\n%!" (String.concat "." (name::elems));
+	      None
       in
       
       let concrete_name = String.concat "." (name::elems) in
@@ -126,8 +125,7 @@ and print_out_type_1 ppf =
 and print_out_type_2 ppf =
   function
   Otyp_tuple tyl ->
-      (* parenthesis hax for pretty hmtl printing *)
-    fprintf ppf "@[<0>(%a)@]" (print_typlist print_simple_out_type " *") tyl
+    fprintf ppf "@[<0>%a@]" (print_typlist print_simple_out_type " *") tyl
     | ty -> print_simple_out_type ppf ty
 and print_simple_out_type ppf =
   function
