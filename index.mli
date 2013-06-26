@@ -31,3 +31,9 @@ val read_global_file: string -> global
 val update_global: global -> string list -> global
 
 val write_global_file : global -> string -> unit
+
+
+(* for internal referencing support *)
+val reset_internal_references : string -> unit
+val add_internal_reference : Ident.t -> string list -> unit
+val lookup_internal_reference : Ident.t -> string list

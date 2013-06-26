@@ -30,6 +30,8 @@ type global = t_value CrcMap.t
 
 type local = t_value LocalMap.t
 
+
+
 let read_global_file path =
   try 
     let ic = open_in path in
@@ -179,3 +181,20 @@ let local_lookup local path_elems =
 
 let get_global_modules global =
   List.map (fun ((x,_),_) -> x) (CrcMap.bindings global)  
+
+(* Internal references part *)
+open Hashtbl 
+
+let internal_table = create 16
+
+let current_module = ref ""
+
+let reset_internal_references module_name = 
+  current_module := module_name;
+  reset internal_table
+    
+let add_internal_reference = add internal_table
+   
+let lookup_internal_reference id = !current_module::(find internal_table id)
+  
+    

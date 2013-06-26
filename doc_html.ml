@@ -200,7 +200,7 @@ let rec insert_between sep = function
 
 
 let make_field_comment comm =
-  <:html<<td class="typefieldcomment" align="left" >$comm$</td>&>>
+  <:html<<td class="typefieldcomment" align="left">$comm$</td>&>>
 
 let generate_id_mark mark name html =
   <:html<<span id="$str:mark^name$">$html$</span>&>>
@@ -418,16 +418,34 @@ let html_of_class is_class_type = function
 
 (* Do we print normal comments? *)
 let html_of_comment = function 
-  | { si_item = `Comment; si_info = info} -> make_info info
+  | { si_item = `Comment; si_info = info} -> 
+    (match info with 
+      | Some i -> <:html<<br/>$i$<br/>
+	  >>
+      | None -> Html.nil)
   | _ -> assert false
 
 let generate_page_header info module_name = 
-  let title_module_name = String.(let pos = try rindex module_name '.' + 1 with Not_found -> 0 in 
-			    sub module_name pos ((length module_name) - pos)) in
+  let title_module_name = 
+    String.(let pos = try rindex module_name '.' + 1 with Not_found -> 0 in 
+	    sub module_name pos ((length module_name) - pos)) in
   let pre = make_pre 
     (<:html<$keyword "module"$ $str:title_module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>)
   in
+  let up_module =
+    String.(
+      try
+	let pos = rindex module_name '.' + 1 in
+	sub module_name 0 (pos-1)
+      with Not_found -> "index"
+    )
+  in
+  let uplink = h (up_module^".html") in
+  let up_module = h up_module in
+  let up_nav = <:html<<div class="navbar"><a class="up" href="$uplink$" title="$up_module$">Up</a></div>&>>
+  in
   <:html<
+    $up_nav$
   <h1>Module $str:module_name$</h1>
     $pre$
     $make_info info$
@@ -510,16 +528,21 @@ and html_of_module = function
   | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} ->
     sub_module_name := name;
     sub_module_info := info;
-    let path = html_reference_of_module name in
-    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $html_body_of_module mty$>>) 
+    (* should create the page here *)
+    let body = html_body_of_module mty in
+    let path = 
+      let html_page = !current_module_name^"."^name^".html" in
+      (* if it hasn't been created then force the creation with a redirect link 
+	 to the parent module *)
+      if not (Sys.file_exists html_page) then
+	begin
+	  create_redirect_page html_page (!current_module_name^".html#");
+	  h name
+	end
+      else
+	html_reference_of_module name in
+    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $body$>>) 
     in
-    let html_page = !current_module_name^"."^name^".html" in
-    if not (Sys.file_exists html_page) then
-      (match mty with
-	| {mt_kind= `Ident; mt_path = Some path} -> 
-	  create_redirect_page html_page (!current_module_name^".html#")
-	| _ -> create_redirect_page html_page (!current_module_name^".html#"));
-    
     <:html<$sig_mod$$make_info info$&>>
 
   | _ -> assert false
@@ -532,8 +555,19 @@ and html_of_modtype = function
     ; si_info = info } -> 
     sub_module_name := name;
     sub_module_info := info;
-    let path = html_reference_of_module name in
-    let sig_mod = make_pre (<:html<$keyword "module type"$ $path$ = $code "type" (html_body_of_module module_type)$>>)
+    let body = html_body_of_module module_type in
+    let path = 
+      let html_page = !current_module_name^"."^name^".html" in
+      (* if it hasn't been created then force the creation with a redirect link 
+	 to the parent module *)
+      if not (Sys.file_exists html_page) then
+	begin
+	  create_redirect_page html_page (!current_module_name^".html#");
+	  h name
+	end
+      else
+	html_reference_of_module name in
+    let sig_mod = make_pre (<:html<$keyword "module type"$ $path$ = $code "type" body$>>)
     in
     <:html<$sig_mod$$make_info info$>>
   | _ -> assert false

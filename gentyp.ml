@@ -20,7 +20,8 @@ type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
   (* Added the identifier's persistence *)
-  | Oide_ident of bool * string
+  | Oide_internal_ident of string * Ident.t
+  | Oide_external_ident of string
 
 type out_type =
   | Otyp_alias of out_type * string
@@ -43,11 +44,13 @@ and out_variant =
 (* Added semantic tags to identifiers and special handling of pervasives *)
 let index = ref None
 
+let filter_pervasives = ref false
+
 let rec print_ident ppf id = 
   
   let rec loop (elems:string list) = function
     (* lib externe, index a interrogé *)
-    | Oide_ident (true, name) ->
+    | Oide_external_ident name ->
       (* A.B.c *)
       (* elems : contient ["B";"c"] *) 
       
@@ -64,20 +67,41 @@ let rec print_ident ppf id =
 	      Printf.eprintf "Reference to %s : unresolved\n%!" (String.concat "." (name::elems));
 	      None
       in
-      
-      let concrete_name = String.concat "." (name::elems) in
+      let concrete_name = String.concat "."
+	(* TODO : add to config_file *)
+	(if name = "Pervasives" && !filter_pervasives then elems else name::elems)
+      in
       begin
       match html_path with
 	| Some path ->
+
 	  fprintf ppf "@{<path:%s>%s@}" path concrete_name
 	| None -> fprintf ppf "@{<unresolved>%s@}" concrete_name
       end
 	
-    | Oide_ident (false, name) ->
-      (* TODO : internal references *)
-      let concrete_name = String.concat "." (name::elems) in
-      fprintf ppf "@{<unresolved>%s@}" concrete_name
-
+    | Oide_internal_ident (name,id) ->
+      (* Soooo fucked up*)
+      begin
+	  try
+	    let module_list = Index.lookup_internal_reference id in
+	    if name.[0] >= 'A' && name.[0] <= 'Z' then
+	      let base_path = String.concat "." module_list in
+	      let html_path =
+		if List.length elems = 0 then 
+		  base_path^"."^name^".html"
+		else
+		  let res, last_item = 
+		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
+		  base_path^"."^name^(List.fold_left (^) "" res)^".html#TYPE"^last_item 
+	      in
+	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
+	    else
+	      let html_path = (String.concat "." (elems@module_list))^".html#TYPE"^name in
+	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
+	  with 
+	      Not_found ->       
+		fprintf ppf "@{<unresolved>%s@}" (String.concat "." (name::elems))
+	end	
     | Oide_dot (sub_id, name) ->
       loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->
@@ -231,7 +255,10 @@ let rec tree_of_path p =
   | Path.Pident id ->
     let pers = Ident.persistent id in
     let name = Ident.name id in
-    Oide_ident(pers, name)
+    if pers then
+      Oide_external_ident (name)
+    else
+      Oide_internal_ident (name, id)
   | Path.Pdot(p, s, pos) ->
     Oide_dot (tree_of_path p, s)
   | Path.Papply(p1, p2) ->

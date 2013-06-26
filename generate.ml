@@ -12,6 +12,17 @@ open Types
 
 let title_id_tag = "TITLE"
 
+let internal_path = ref []
+
+let generate_submodule name f =
+  internal_path:=name::(!internal_path);
+  let res = f () in
+  internal_path:=List.tl !internal_path;  
+  res
+
+let add_internal_reference id =
+  Index.add_internal_reference id (List.rev !internal_path)
+
 (* TODO add support for references *)
 let rec generate_text_element local elem =
   match elem with
@@ -20,8 +31,8 @@ let rec generate_text_element local elem =
   | PreCode s -> <:html<<span class="precode">$str:s$</span>&>>
   | Verbatim s -> <:html<<span class="verbatim">$str:s$</span>&>>
   | Style(sk, t) -> generate_style local sk t
-  | List items -> <:html<<span class="list">$generate_list_items local items$</span>&>>
-  | Enum items -> <:html<<span class="enum">$generate_list_items local items$</span>&>>
+  | List items -> <:html<<ul>$generate_list_items local items$</ul>&>>
+  | Enum items -> <:html<<ol>$generate_list_items local items$</ol>&>>
   | Newline -> <:html<<br />&>>(*<:html<<span class="newline"/>&>>*)
   | Block _ -> raise (Failure "To be removed")
   | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
@@ -38,7 +49,7 @@ and generate_text local text =
 
 and generate_list_items local items =
   List.fold_left 
-    (fun acc item -> <:html<$acc$<span class="item">$generate_text local item$</span>&>>)
+    (fun acc item -> <:html<$acc$<li>$generate_text local item$</li>&>>)
     Html.nil
     items
 
@@ -298,7 +309,7 @@ let rec generate_class_type local dclty clty =
     match dclty, clty.cltyp_desc with
       | Dcty_constr, Tcty_constr(path, _, cor_list) ->
 	let params = List.map 
-	  (fun core_typ -> Gentyp.type_scheme local core_typ.ctyp_type)
+	  (generate_typ local)
 	  cor_list in
 	let path = Gentyp.path local path in
 	kClassIdent (List.rev args_acc) params path
@@ -309,7 +320,7 @@ let rec generate_class_type local dclty clty =
 	  (List.rev class_sig.csig_fields) in
 	kClassSig (List.rev args_acc) jfields
       | Dcty_fun dclass_type, Tcty_fun (label, core_type, sub_class_type) ->
-	let arg = Gentyp.type_scheme local core_type.ctyp_type in
+	let arg = generate_typ local core_type in
 	loop local dclass_type sub_class_type (arg::args_acc)
       | _,_ -> assert false
   in
@@ -323,24 +334,24 @@ and generate_class_field local dclsig tclsig =
       let jinfo = generate_info_opt local dclsig.dctf_info in
       fInherit jctyp jinfo
     | Dctf_val name, Tctf_val (_, mut_f, virt_f, co_typ) ->
-      let jtyp = Gentyp.type_scheme local co_typ.ctyp_type in
+      let jtyp = generate_typ local co_typ in
       let jinfo = generate_info_opt local dclsig.dctf_info in
       let mut = match mut_f with | Mutable -> true | Immutable -> false in
       let virt = match virt_f with | Virtual -> true | Concrete -> false in
       fVal name mut virt jtyp jinfo
     | Dctf_meth dname, Tctf_meth (_,priv_f, co_typ) -> 
-      let jtyp = Gentyp.type_scheme local co_typ.ctyp_type in
+      let jtyp = generate_typ local co_typ in
       let jinfo = generate_info_opt local dclsig.dctf_info in
       let priv = match priv_f with Private -> true | Public -> false in
       fMethod dname false priv jtyp jinfo
     | Dctf_meth dname, Tctf_virt (_,priv_f, co_typ) ->
-      let jtyp = Gentyp.type_scheme local co_typ.ctyp_type in
+      let jtyp = generate_typ local co_typ in
       let jinfo = generate_info_opt local dclsig.dctf_info in
       let priv = match priv_f with Private -> true | Public -> false in
       fMethod dname true priv jtyp jinfo
     | Dctf_cstr, Tctf_cstr (co_typ1, co_typ2) -> 
-      let jtyp1 = Gentyp.type_scheme local co_typ1.ctyp_type in
-      let jtyp2 = Gentyp.type_scheme local co_typ2.ctyp_type in
+      let jtyp1 = generate_typ local co_typ1 in
+      let jtyp2 = generate_typ local co_typ2 in
       let jinfo = generate_info_opt local dclsig.dctf_info in
       fConstraint jtyp1 jtyp2 jinfo
     | _,_ -> raise (Failure "generate_class_field: Mismatch")
@@ -439,7 +450,10 @@ and generate_signature_item local ditem item =
             let jinfo = generate_info_opt local ditem.dsig_info in
             iPrimitive name jtyp primitive jinfo
       end
-    | Dsig_type(name, dkind), Tsig_type [_, _, tdecl] ->
+    | Dsig_type(name, dkind), Tsig_type [id, _, tdecl] ->
+      (* add to internal type table *)
+      add_internal_reference id;
+
       let jparams = List.map generate_typ_param tdecl.typ_params in
       let jcstrs = 
         List.map 
@@ -465,19 +479,28 @@ and generate_signature_item local ditem item =
       let jargs = List.map (generate_typ local) edecl.exn_params in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iException name jargs jinfo
-    | Dsig_module(name, dmty), Tsig_module(_, _, mty) -> 
-      let jmty = generate_module_type local dmty mty in
+    | Dsig_module(name, dmty), Tsig_module(id, _, mty) -> 
+      add_internal_reference id;
+            
+      let jmty = generate_submodule name (fun () ->
+	generate_module_type local dmty mty) in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iModule name jmty jinfo
-    | Dsig_recmodule (name, dmty) , Tsig_recmodule [_,_,mty;_] -> 
-      let jmty = generate_module_type local dmty mty in
+    | Dsig_recmodule (name, dmty) , Tsig_recmodule [id,_,mty;_] -> 
+      add_internal_reference id;
+      
+      let jmty = generate_submodule name (fun () ->
+	  generate_module_type local dmty mty) in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iModule name jmty jinfo
-    | Dsig_modtype(name, dmtyo), Tsig_modtype(_, _, mtydecl) ->
+    | Dsig_modtype(name, dmtyo), Tsig_modtype(id, _, mtydecl) ->
+      add_internal_reference id;
+      
       let jmtyo = 
         match dmtyo, mtydecl with
             Some dmty, Tmodtype_manifest mty -> 
-              Some (generate_module_type local dmty mty)
+              Some (generate_submodule name (fun () ->
+		generate_module_type local dmty mty))
           | None, Tmodtype_abstract -> None
           | _, _ -> raise (Failure "generate_signature_item>mod_type: Mismatch")
       in
@@ -600,7 +623,7 @@ and generate_structure_item_list local dimpl_items impl_items =
   in
   loop dimpl_items impl_items []
 
-and generate_structure_item local ditem item =  
+and generate_structure_item local ditem item =
   match ditem.dstr_desc, item.str_desc with
     | Dstr_value (Some name), Tstr_value (rec_flag, [(patt,_)])  ->
       let jtyp = Gentyp.type_scheme local patt.pat_type in
@@ -608,13 +631,16 @@ and generate_structure_item local ditem item =
       iValue name jtyp jinfo
 
     | Dstr_value None, Tstr_value (rec_flag, [(patt, _)]) ->
-      (* TODO: why does this happen?x *)
+      (* TODO: why does this happen? *)
       iComment None
     | Dstr_value _, Tstr_value (rec_flag, _) ->
-      (* TODO: why does this happen?x *)
+      (* TODO: why does this happen? *)
       iComment None
 
-    | Dstr_type(name, dkind), Tstr_type [_, _, tdecl] ->
+    | Dstr_type(name, dkind), Tstr_type [id, _, tdecl] ->
+      (* add to internal type table *)
+      add_internal_reference id;
+
       let jparams = List.map generate_typ_param tdecl.typ_params in
       let jcstrs = 
         List.map 
@@ -640,30 +666,50 @@ and generate_structure_item local ditem item =
       let jargs = List.map (generate_typ local) edecl.exn_params in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iException name jargs jinfo
-    | Dstr_module(name, dmexpr), Tstr_module(_, _, mexpr) ->
-      let jmty = generate_module_str_type local dmexpr mexpr in
+    | Dstr_module(name, dmexpr), Tstr_module(id, _, mexpr) ->
+
+      add_internal_reference id;
+
+      let jmty = generate_submodule name
+	(fun () -> generate_module_str_type local dmexpr mexpr) in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModule name jmty jinfo
-    | Dstr_recmodule (name, dmty, _), Tstr_recmodule ((_,_,mty,_)::_) -> 
-      let jmty = generate_module_type local dmty mty in
+
+    | Dstr_recmodule (name, dmty, _), Tstr_recmodule ((id,_,mty,_)::_) -> 
+
+      add_internal_reference id;
+      
+      let jmty = generate_submodule name
+	(fun () -> generate_module_type local dmty mty) in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModule name jmty jinfo
 	
-    | Dstr_modtype(name, dmty), Tstr_modtype(_, _, mtydecl) ->
-      let jmtyo = generate_module_type local dmty mtydecl in
+    | Dstr_modtype(name, dmty), Tstr_modtype(id, _, mty) ->
+
+      add_internal_reference id;
+
+      let jmty = generate_submodule name
+	(fun () -> generate_module_type local dmty mty) in
       let jinfo = generate_info_opt local ditem.dstr_info in
-      iModType name (Some jmtyo) jinfo
+      iModType name (Some jmty) jinfo
 	
    | Dstr_open, Tstr_open _ -> 
      (* TODO *)
      iComment None
    (*raise (Failure "Not supported")*)
    | Dstr_include dmty, Tstr_include(mty, _) ->
+     (* TODO : SOMETHING HERE FOR THE INCLUDES *)
      let jmty = generate_module_str_type local dmty mty in
      let jinfo = generate_info_opt local ditem.dstr_info in
      iInclude jmty jinfo
 
    | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] -> 
+     (* add to internal type table *)
+     (match cl_desc with
+	 { ci_id_class = id_c; ci_id_class_type = id_ct;
+	   ci_id_object = id_o; ci_id_typesharp = id_t; _} -> 
+	   List.iter add_internal_reference [id_c; id_ct; id_o; id_t]);
+
      let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
      let jvariance = List.map generate_variance cl_desc.ci_variance in
      let virt = 
@@ -674,7 +720,10 @@ and generate_structure_item local ditem item =
      let jclty = generate_class_struct local dclty cl_desc.ci_expr in
      let jinfo = generate_info_opt local ditem.dstr_info in
      iClass name jparams jvariance virt jclty jinfo
-   | Dstr_class_type(name, dclty), Tstr_class_type [(_, _, clty_decl)] ->
+   | Dstr_class_type(name, dclty), Tstr_class_type [(id, _, clty_decl)] ->
+     (* add to internal type table *)
+     add_internal_reference id;
+
      let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
      let jvariance = List.map generate_variance clty_decl.ci_variance in
      let virt = 
@@ -810,7 +859,7 @@ and generate_class_struct local dclexpr ci_expr =
 	  match class_expr.cl_desc with 
 	    | Tcl_ident (path, _, co_typ_list) -> 
 	      let params = List.map 
-		(fun core_typ -> Gentyp.type_scheme local core_typ.ctyp_type)
+		(generate_typ local)
 		co_typ_list in
 	      let path = Gentyp.path local path in	      
 	      params, path
@@ -831,7 +880,7 @@ and generate_class_struct local dclexpr ci_expr =
 and generate_class_field local dclfexpr clfexpr =
   let extract_type_and_virtual_from_kind = function
     | Tcfk_virtual co_typ -> 
-      Gentyp.type_scheme local co_typ.ctyp_type, true
+      generate_typ local co_typ, true
     | Tcfk_concrete expr -> 
       Gentyp.type_scheme local expr.exp_type,false
   in
@@ -855,8 +904,8 @@ and generate_class_field local dclfexpr clfexpr =
 	
     | Dcf_constr, Tcf_constr (co_typ1, co_typ2) ->
       (* Doesn't matter much, really -> won't be printed *)
-      let jtyp1 = Gentyp.type_scheme local co_typ1.ctyp_type in
-      let jtyp2 = Gentyp.type_scheme local co_typ2.ctyp_type in
+      let jtyp1 = generate_typ local co_typ1 in
+      let jtyp2 = generate_typ local co_typ2 in
       let jinfo = generate_info_opt local dclfexpr.dcf_info in
       fConstraint jtyp1 jtyp2 jinfo
 	

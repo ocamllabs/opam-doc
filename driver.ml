@@ -81,6 +81,8 @@ let generate_json cmd jfile =
     
 let process_file global cmd cmt = 
   print_endline ("Processing : "^cmt^" and "^cmd);
+  let module_name = String.capitalize 
+    (Filename.chop_extension (Filename.basename cmd)) in
   let doc_file = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
@@ -89,8 +91,7 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
-      (*      print_endline ("printing local for "^cmd);
-	      local_print local;*)
+      Index.reset_internal_references module_name;
       try 
 	let jfile = 
 	  match cmt.Cmt_format.cmt_annots with
@@ -100,16 +101,12 @@ let process_file global cmd cmt =
 	      generate_file_from_structure local doc_file impl
             | _ -> raise (Failure "Wrong kind of cmt file") 
 	in
-      (*generate_json cmd jfile;*)
-	let module_name = String.capitalize 
-	  (Filename.chop_extension (Filename.basename cmd)) in
+	(*generate_json cmd jfile;*)
 	ignore(Doc_html.generate_html ~is_root_module:true module_name jfile);
       with
 	| Invalid_argument s ->
-	  let m_name  = String.capitalize
-	    (Filename.chop_extension (Filename.basename cmd)) in
-	  Doc_html.print_error_page m_name;
-	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s m_name
+	  Doc_html.print_error_page module_name;
+	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name
 
 let _ = 
   let global_path = ref "global.index"  in
@@ -121,6 +118,7 @@ let _ =
     parse
     [ ("-d", String(fun p -> path:=p; (*check "/" *) print_endline p), "")
     ; ("-index-file", Set_string (global_path), "Load a specific index file")
+    ; ("-filter-pervasives", Set (Gentyp.filter_pervasives), "Removes 'Pervasives' ")
     ]
       (fun file -> files := file :: !files)
       "Bad usage");
