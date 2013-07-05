@@ -11,6 +11,8 @@ let string_of_html = Docjson.string_of_html
 let html_of_string s = <:html<$str:s$>>
 
 (** {3 Tags generators} *)
+
+module TagsGenerators = struct
 let make_info = 
   function 
     | Some i when i != Html.nil -> 
@@ -62,11 +64,15 @@ let make_field_comment comm =
 let generate_id_mark mark name html =
   <:html<<span id="$str:mark^name$">$html$</span>&>>
 
+let make_reference name path = 
+  <:html<<a href="$str:path$">$str:name$</a>&>>
       
 let create_content_to_load_tag content_path =
-  <:html<<div file="$str:content_path$" class="$str:Opam_doc_config.content_to_load_class$"> </div>&>>					
+  <:html<<div file="$str:content_path$" class="$str:Opam_doc_config.content_to_load_class$"> </div>&>>	
+end
 
-		
+open TagsGenerators		
+
 (** {3 Html pages generators} *)
 
 let create_html_skeleton filename (headers : Html.t list) (body : Html.t list) =

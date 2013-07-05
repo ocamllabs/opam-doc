@@ -1,5 +1,7 @@
 open Docjson
 open Cow
+open Html_utils
+open TagsGenerators
 
 (** {2 Environnement handling}  *)
 
@@ -19,11 +21,95 @@ let get_full_path_name env =
 
 (** {2 Html generation} *)
 
+let html_of_value env = function 
+  | {si_item = `Value;
+     si_name = Some name;
+     si_typ = Some typ;
+     si_info = info; _ } ->  
+    let node_val = 
+      <:html<$keyword "val"$ $str:name$ : $code "type" typ$>>
+    in
+    <:html< 
+      $make_pre (make_span node_val)$
+      $make_info info$
+    >>
+    | _ -> assert false
+
+
+(* Do we print normal comments? *)
+let html_of_comment env = function 
+  | { si_item = `Comment; si_info = info} -> 
+    (match info with 
+      | Some i -> <:html<<br/>$i$<br/>
+	  >>
+      | None -> Html.nil)
+  | _ -> assert false
+
+
 let rec to_be_removed () = () 
 
-(* doc_env -> Docjson.module_type -> Html.t *)
-and html_of_module_body env item = 
-  Html.nil
+and html_of_module_ident env = function
+  | { mt_kind = `Ident; mt_path = Some path} -> 
+    <:html<$code "code" path$&>>
+  | _ -> <:html<HTML_OF_MODULE_IDENT BUG>>
+    (* assert false *)
+
+(** Generate the submodule file at this point *)
+and html_of_module_sig env = function
+  | { mt_kind = `Sig; mt_items = Some items } ->
+    let path = get_full_path_name env^".html" in
+    <:html<$code "code" (html_of_string "sig")$ <a href="$str:path$">..</a> $code "code" (html_of_string "end")$>>
+  | _ -> assert false
+
+and html_of_module_functor env = function 
+  | { mt_kind = `Functor
+    ; mt_arg_name = Some arg_name
+    ; mt_arg_type = Some arg_type
+    ; mt_base = Some base} ->
+    let path = match arg_type.mt_path with 
+      | Some p -> code "type" p
+      | None -> Html.nil in (* find a nice way of including the structural modules *)
+    let body = 
+      <:html<$code "code" (html_of_string "functor (")$$code "code" (html_of_string arg_name)$<code class="code"> : </code>$path$$code "code" (html_of_string ") -> ")$&>> in
+    <:html<<div class="sig_block">$body$$html_of_module_body env base$</div>&>>
+  | _ -> raise (Failure "html_of_functor: Mismatch")
+    
+and html_of_module_with env = function
+  | { mt_kind = `With; 
+      mt_cnstrs = Some cnstrs; 
+      mt_base = Some base } ->
+    let l = List.map 
+      (function 
+	| {wc_typeq = Some typ; wc_path = path} ->  <:html<type $path$ = $typ$>> 
+        | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
+	| _ -> assert false)
+      cnstrs in
+    <:html<$html_of_module_body env base$ with $insert_between " and " l$>>
+  | _ -> assert false
+    
+
+and html_of_module_typeof env = function 
+  | { mt_kind = `TypeOf; mt_expr = Some ({me_path=Some p; _})} ->
+    <:html<module type of $p$>>
+  | _ -> assert false
+
+and html_of_module_apply env = function
+  | { mt_kind = `Apply; 
+      mt_arg_type = Some arg_type; 
+      mt_base = Some base } -> 
+    let base_html = html_of_module_ident env base in
+    let arg_html = html_of_module_body env arg_type in
+    <:html<$base_html$($arg_html$)>>    
+  | _ -> assert false
+
+and html_of_module_body env mty =
+  (match mty.mt_kind with 
+  | `Ident   -> html_of_module_ident  
+  | `Sig     -> html_of_module_sig
+  | `Functor -> html_of_module_functor 
+  | `With    -> html_of_module_with   
+  | `Apply   -> html_of_module_apply
+  | `TypeOf  -> html_of_module_typeof) env mty
 
 (** Modules output *)
 and html_of_module env =
@@ -31,14 +117,20 @@ and html_of_module env =
 	    si_name=Some name;
 	    si_module_type = Some mty;
 	    si_info = info; _} ->
-    (* signature generation *)
-    let base_mty = Html_utils.grab_base_module mty in (* ident | sig *)
-
-    let signature = Html.nil in
-    
-
-    (* recursive module generation *)
     let updated_env = add_to_env env name in
+    let base_mty = Html_utils.grab_base_module mty in (* ident | sig *)
+    
+    (* signature generation *)
+    let reference = make_reference name (get_full_path_name updated_env ^ ".html") in
+    let body = html_of_module_body updated_env mty in
+    let signature = make_pre
+      (if m_kind = `Module then
+	  <:html<$keyword "module"$ $reference$ : $body$$make_info info$>>
+       else
+	  <:html<$keyword "module type"$ $reference$ = $code "type" body$$make_info info$>>
+      ) in
+    
+    (* recursive module generation *)
     (match base_mty with
       | {mt_kind=`Ident; mt_path=Some path; _} ->
 	generate_html_symlink 
@@ -79,22 +171,27 @@ and html_of_include env = function
 	  path
 	  (Index.lookup_include_module_type key);
 	
-	make_pre <:html<$keyword "include"$ $signature$>>
+	let signature = make_pre <:html<$keyword "include"$ $signature$>>
+	in
+	<:html<<div style="border:1px solid black">$signature$
+	  $create_content_to_load_tag (path^Opam_doc_config.page_contents_extension)$
+	</div>&>>
+		  
       
   | _ -> assert false
 
 and html_of_signature_item env item =
-  let f = match item.si_item with 
-    | `Module
-    | `ModType -> html_of_module
-    | `Include -> html_of_include
-    | `Value 
-    | `Primitive -> fun _ _ -> <:html<a value !>>
-    | `Type -> fun _ _ -> <:html<a type !>>
-    | `Exception -> fun _ _ -> <:html<an exc !>>
-    | `Class 
-    | `ClassType -> fun _ _ -> <:html<a class !>>
-    | `Comment -> fun _ _ -> <:html<a comment !>>
+      let f = match item.si_item with 
+	| `Module
+	| `ModType -> html_of_module
+	| `Include -> html_of_include
+	| `Value -> html_of_value
+	| `Primitive -> (fun env item -> html_of_value env {item with si_item = `Value})
+	| `Type -> fun _ _ -> <:html<todo : types>> (*html_of_type*)
+	| `Exception -> fun _ _ -> <:html<todo exception>> (*html_of_exception*)
+	| `Class  
+	| `ClassType -> fun _ _ -> <:html<todo classes>> (*html_of_class*)
+	| `Comment -> html_of_comment
   in f env item
 
 (* module_name can also be a submodule

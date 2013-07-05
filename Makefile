@@ -32,12 +32,12 @@ run:opam-doc
 opam_doc_config.cmo:
 docjson.cmi :
 doctree.cmi : info.cmi
-html_utils.cmi: docjson.cmi docjson.cmi
+html_utils.cmi: docjson.cmi docjson.cmi opam_doc_config.cmi
 gentyp.cmi : index.cmi
 index.cmi : docjson.cmi
 info.cmi :
 cmd_format.cmo : doctree.cmi
-doc_html_bis.cmo : docjson.cmi html_utils.cmi opam_doc_config.cmi
+doc_html_bis.cmo : docjson.cmi html_utils.cmi
 doc_html.cmo : docjson.cmi
 docjson.cmo : docjson.cmi
 doctree.cmo : info.cmi doctree.cmi

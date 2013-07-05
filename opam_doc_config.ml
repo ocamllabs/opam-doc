@@ -154,18 +154,21 @@ let style_tag =
 
 (* Ajax loading *)
 
+let content_to_load_onclick_class = "wait_to_load"
+let content_to_load_class = "content_to_load"
+
 let default_script = 
-  "function rec_content_load (){
+  "function load_content (){
     $(document).ready(function(){
-        var nb_elem = $('div.ocaml_module_content').toArray().length;
-	$('div.ocaml_module_content').each(function(){
+        var nb_elem = $('div."^content_to_load_class^"').toArray().length;
+	$('div."^content_to_load_class^"').each(function(){
             $(this).attr('class', 'module_loaded');
 	    $(this).load($(this).attr('file'),
-			 function(){ if (--nb_elem == 0){ rec_content_load() } });
+			 function(){ if (--nb_elem == 0){ load_content() } });
 	});
     })
 }
-rec_content_load();"
+load_content();"
 
 let script_filename = "doc_loader.js"
 
@@ -174,7 +177,4 @@ let script_tag =
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
 let page_contents_extension = ".contents"
-
-let content_to_load_class = "ocaml_module_content"
-
 
