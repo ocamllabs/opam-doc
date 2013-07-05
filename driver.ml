@@ -102,7 +102,8 @@ let process_file global cmd cmt =
             | _ -> raise (Failure "Wrong kind of cmt file") 
 	in
 	(*generate_json cmd jfile;*)
-	ignore(Doc_html.generate_html ~is_root_module:true module_name jfile);
+	Doc_html.generate_html ~is_root_module:true module_name jfile;
+	(*ignore (Doc_html_bis.generate_html module_name jfile)*)
       with
 	| Invalid_argument s ->
 	  Doc_html.print_error_page module_name;
@@ -128,6 +129,7 @@ let _ =
 (* 
    print_endline "[debug] global table before update :";
    global_print global;
+
 *)
 
   let cmt_files = List.filter

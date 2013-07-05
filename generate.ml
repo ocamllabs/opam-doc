@@ -372,7 +372,7 @@ let rec generate_module_type local dmty mty =
         kModTypeWith jcnstrs jbase
   | Dmty_typeof dexpr, Tmty_typeof expr ->
     let jexpr = generate_module_expr local dexpr expr in
-        kModTypeTypeOf jexpr
+    kModTypeTypeOf jexpr
   | _, _ -> raise (Failure "generate_module_type: Mismatch")
 
 (* TODO remove assumption that typedtree and doctree perfectly match *)
@@ -513,7 +513,10 @@ and generate_signature_item local ditem item =
     | Dsig_include dmty, Tsig_include(mty, _) ->
       let jmty = generate_module_type local dmty mty in
       let jinfo = generate_info_opt local ditem.dsig_info in
-      iInclude jmty jinfo
+      let mty_type = mty.mty_type in
+      let obj = iInclude jmty jinfo in
+      Index.add_include_module_type obj mty_type;
+      obj
     | Dsig_class(name, dclty), Tsig_class [cl_desc] ->
       (* jparams = class ->['a, 'b]<- point *)
       let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
@@ -698,10 +701,14 @@ and generate_structure_item local ditem item =
      iComment None
    (*raise (Failure "Not supported")*)
    | Dstr_include dmty, Tstr_include(mty, _) ->
-     (* TODO : SOMETHING HERE FOR THE INCLUDES *)
+     
      let jmty = generate_module_str_type local dmty mty in
      let jinfo = generate_info_opt local ditem.dstr_info in
-     iInclude jmty jinfo
+     let mty_type = mty.mod_type in
+     let obj = iInclude jmty jinfo in
+     Index.add_include_module_type obj mty_type;
+     obj
+     
 
    | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] -> 
      (* add to internal type table *)
@@ -745,6 +752,7 @@ and generate_structure_item local ditem item =
      iComment (Some <:html<"structure item: Mismatch">>)
      (*raise (Failure "structure item: Mismatch")*)
 
+(* debug *)
 and print_item_desc = function 
   | Dstr_eval -> print_endline "Dstr_eval"
   | Dstr_value _ -> print_endline "Dstr_value _"
@@ -761,7 +769,6 @@ and print_item_desc = function
   | Dstr_include _ -> print_endline "Dstr_include _"
   | Dstr_comment -> print_endline "Dstr_comment"
   | Dstr_stop -> print_endline "Dstr_stop"
-
 and print_item_desc_t = function
   | Tstr_eval _ -> print_endline "Tstr_eval"
   | Tstr_value _ -> print_endline "Tstr_value"
@@ -867,8 +874,9 @@ and generate_class_struct local dclexpr ci_expr =
 	in
 	kClassIdent (List.rev args_acc) params path
       
-      | Dcl_constraint (dcexpr, dctyp), (* ie : Dcl_constraint contient un Dcl_constr *)
+      | Dcl_constraint (dcexpr, dctyp), 
 	Tcl_constraint (class_expr, Some ctyp, _, _, _) ->
+	(* ie : Dcl_constraint contains a Dcl_constr *)
 	let cty1 = loop local dcexpr class_expr [] in
 	let cty2 = generate_class_type local dctyp ctyp in
 	kClassConstraint (List.rev args_acc) (cty1, cty2)
@@ -908,7 +916,6 @@ and generate_class_field local dclfexpr clfexpr =
       let jtyp2 = generate_typ local co_typ2 in
       let jinfo = generate_info_opt local dclfexpr.dcf_info in
       fConstraint jtyp1 jtyp2 jinfo
-	
     | Dcf_init, Tcf_init _ | Dcf_comment, _ | Dcf_stop, _ -> assert false
     | _,_ -> raise (Failure "generate_class_field: Mismatch")
     

@@ -19,7 +19,6 @@ open Ctype
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
-  (* Added the identifier's persistence *)
   | Oide_internal_ident of string * Ident.t
   | Oide_external_ident of string
 
@@ -41,11 +40,11 @@ and out_variant =
   | Ovar_fields of (string * bool * out_type list) list
   | Ovar_name of out_ident * out_type list
 
-(* Added semantic tags to identifiers and special handling of pervasives *)
 let index = ref None
 
 let filter_pervasives = ref false
-
+  
+(* Added semantic tags to identifiers and special handling of pervasives *)
 let rec print_ident ppf id = 
   
   let rec loop (elems:string list) = function
@@ -92,7 +91,11 @@ let rec print_ident ppf id =
 		else
 		  let res, last_item = 
 		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
-		  base_path^"."^name^(List.fold_left (^) "" res)^".html#TYPE"^last_item 
+		  base_path
+		  ^"."
+		  ^name
+		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
+		  ^".html#TYPE"^last_item 
 	      in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	    else
@@ -100,6 +103,7 @@ let rec print_ident ppf id =
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	  with 
 	      Not_found ->       
+		print_endline "Pas trouvé";
 		fprintf ppf "@{<unresolved>%s@}" (String.concat "." (name::elems))
 	end	
     | Oide_dot (sub_id, name) ->

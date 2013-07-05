@@ -34,9 +34,8 @@ let create_div s =
 (* parsing error with Cow *)    
 let doctype = "<!DOCTYPE HTML>\n"
 
-let character_encoding = <:html<
-  <meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" /> 
-	       &>>
+let character_encoding = 
+  <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 	
 (** The default style options. *)
 let default_style_options =
@@ -124,13 +123,22 @@ let default_style_options =
 (** Style filename *)
 let style_file = "style.css"
 
+
 let style_tag = <:html<
   <link rel="stylesheet" href="$str:style_file$" type="text/css" />
 >>
 
+let jquery_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"
+
 let h s = <:html<$str:s$>>
 
-(* mouais.*)
+let script body_url =
+  let script_content =  h ("$(document).ready(function(){$('#module_body').load('"^body_url^"');})") in
+  print_endline (Docjson.string_of_html script_content);
+  <:html<<script>$script_content$</script>&>>
+
+
+(* tmp*)
 let create_redirect_page html_page redirect_url =
   let oc = open_out html_page in
   output_string oc doctype;
@@ -475,7 +483,7 @@ and html_of_module_functor = function
     ; mt_base = Some base} ->
     let path = match arg_type.mt_path with 
       | Some p -> code "type" p
-      | None -> Html.nil in
+      | None -> Html.nil in (* find a graceful way of including the structural modules *)
     let body = 
       <:html<$code "code" (h "functor (")$$code "code" (h arg_name)$<code class="code"> : </code>$path$$code "code" (h ") -> ")$&>> in
     <:html<<div class="sig_block">$body$$html_body_of_module base$</div>&>>
@@ -494,10 +502,10 @@ and html_of_module_with = function
     <:html<$html_body_of_module base$ with $insert_between " and " l$>>
   | _ -> assert false
     
-(* TODO ? *)
+
 and html_of_module_typeof = function 
-  | { mt_kind = `TypeOf; mt_expr = Some expr } -> 
-    <:html<module typeof>>
+  | { mt_kind = `TypeOf; mt_expr = Some ({me_path=Some p; _})} ->
+    <:html<module type of $p$>>
   | _ -> assert false
 
 and html_of_module_apply = function
@@ -515,7 +523,7 @@ and html_of_module_apply = function
     in <:html<$base_html$($arg_html$)>>    
   | _ -> assert false
 
-and html_body_of_module mty = 
+and html_body_of_module mty =
   (match mty.mt_kind with 
   | `Ident   -> html_of_module_ident  
   | `Sig     -> html_of_module_sig
@@ -578,18 +586,18 @@ and html_of_include = function
   | _ -> assert false
 
 and html_of_signature_item sig_item =
-  (match sig_item.si_item with
-    | `Value -> html_of_value
-    | `Primitive -> (fun item -> html_of_value {item with si_item = `Value})
-    | `Type -> html_of_type
-    | `Exception -> html_of_exception
-    | `Module -> html_of_module
-    | `ModType -> html_of_modtype
-    | `Include -> html_of_include
-    | `Class -> html_of_class false
-    | `ClassType -> html_of_class true
-    | `Comment -> html_of_comment) sig_item
-    
+	     (match sig_item.si_item with
+	       | `Value -> html_of_value
+	       | `Primitive -> (fun item -> html_of_value {item with si_item = `Value})
+	       | `Type -> html_of_type
+	       | `Exception -> html_of_exception
+	       | `Module -> html_of_module
+	       | `ModType -> html_of_modtype
+	       | `Include -> html_of_include
+	       | `Class -> html_of_class false
+	       | `ClassType -> html_of_class true
+	       | `Comment -> html_of_comment) sig_item
+	       
 and html_of_file module_name =
   function {f_items=sig_items;
 	    f_info=info} ->
@@ -603,7 +611,7 @@ and html_of_file module_name =
       <head>
 	$generate_head module_name$
       </head>
-      <body>     
+      <body>
 	$generate_page_header info module_name$
       <hr width="100%" /> 
       $items$
@@ -617,13 +625,21 @@ and generate_html ?(is_root_module=false) module_name jfile =
  if is_root_module then
    add_to_index module_name jfile.f_info;
 
- current_module_name := module_name;
- let html = html_of_file module_name jfile in
- let html_name = module_name ^ ".html" in
- let oc = open_out html_name in
- output_string oc doctype;
- output_string oc (Docjson.string_of_html html);
- close_out oc
+  current_module_name := module_name;
+  let html = html_of_file module_name jfile in
+  let html_name = module_name ^ ".html" in
+  let oc = open_out html_name in
+  output_string oc doctype;
+  output_string oc (Docjson.string_of_html html);
+  close_out oc
+
+
+(* Il me faut une fonction pour : 
+   - générer les body
+   - générer la fake page
+   - générer le script
+   - 
+*)
 
 and add_to_index m_name info =
   let html_page = m_name^".html" in
@@ -674,7 +690,7 @@ let print_error_page m_name =
       <head><title>:(</title></head>
     <body>
       Error - Couldn't generate the documentation.<br/>
-      Are the cmt/cmd correctly builded? 
+      Are the cmt/cmd correctly built? 
     </body>
     </html>&>> in
     output_string oc (string_of_html html_content);

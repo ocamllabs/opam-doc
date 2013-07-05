@@ -37,3 +37,8 @@ val write_global_file : global -> string -> unit
 val reset_internal_references : string -> unit
 val add_internal_reference : Ident.t -> string list -> unit
 val lookup_internal_reference : Ident.t -> string list
+
+(* includes *)
+val add_include_module_type : Docjson.signature_item -> Types.module_type -> unit
+val lookup_include_module_type : Docjson.signature_item -> Types.module_type
+val reset_include_table : unit -> unit 

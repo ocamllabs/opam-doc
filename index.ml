@@ -2,10 +2,6 @@ type t_value =
   | Direct_path of string
   | Packed_module of (string * Digest.t) list
 
-(** 
-    key : (Module name, Digest)
-    value : cmt path -> p-e mettre le path Html
-*)
 module CrcMap = 
   Map.Make(struct 
     type t = string * Digest.t
@@ -29,8 +25,6 @@ module LocalMap = Map.Make(
 type global = t_value CrcMap.t
 
 type local = t_value LocalMap.t
-
-
 
 let read_global_file path =
   try 
@@ -133,7 +127,7 @@ let create_local global mds =
 let is_module name =
   name.[0] >= 'A' && name.[0] <= 'Z'
 
-(* assuming that if a type name is present, it is at the list's end *)
+(* assuming that if a type name is present, it is at the end of the list *)
 let rec assemble_path path = function 
   | [] -> path^".html"
   | h::[] ->
@@ -197,4 +191,14 @@ let add_internal_reference = add internal_table
    
 let lookup_internal_reference id = !current_module::(find internal_table id)
   
-    
+
+(* Includes internal types *)
+
+let include_table = create 4
+
+let reset_include_table () = reset include_table
+  
+let add_include_module_type = add include_table
+
+let lookup_include_module_type = find include_table
+
