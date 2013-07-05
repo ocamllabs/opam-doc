@@ -224,13 +224,13 @@ and generate_html_symlink ?env module_name ?title_signature info target_filename
 
 
 let () =
-  print_endline "Generation du css";
+  print_endline "Css generation";
   let oc = open_out Opam_doc_config.style_filename in
   output_string oc (String.concat "\n" Opam_doc_config.default_stylesheet);
   close_out oc
     
 let () =
-  print_endline "Generation du script";
+  print_endline "Script generation";
   let oc = open_out Opam_doc_config.script_filename in
   output_string oc Opam_doc_config.default_script;
   close_out oc

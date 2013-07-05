@@ -103,7 +103,6 @@ let rec print_ident ppf id =
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	  with 
 	      Not_found ->       
-		print_endline "Pas trouvé";
 		fprintf ppf "@{<unresolved>%s@}" (String.concat "." (name::elems))
 	end	
     | Oide_dot (sub_id, name) ->
