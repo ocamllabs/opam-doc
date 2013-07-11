@@ -1,5 +1,3 @@
-(** TODO : HANDLE THE LABELS ~~ *)
-
 open Docjson
 open Info
 open Doctree
@@ -23,23 +21,24 @@ let generate_submodule name f =
 let add_internal_reference id =
   Index.add_internal_reference id (List.rev !internal_path)
 
+
 (* TODO add support for references *)
 let rec generate_text_element local elem =
   match elem with
-    Raw s -> <:html<$str:s$>>
-  | Code s -> <:html<<span class="code">$str:s$</span>&>>
-  | PreCode s -> <:html<<span class="precode">$str:s$</span>&>>
-  | Verbatim s -> <:html<<span class="verbatim">$str:s$</span>&>>
-  | Style(sk, t) -> generate_style local sk t
-  | List items -> <:html<<ul>$generate_list_items local items$</ul>&>>
-  | Enum items -> <:html<<ol>$generate_list_items local items$</ol>&>>
-  | Newline -> <:html<<br />&>>(*<:html<<span class="newline"/>&>>*)
-  | Block _ -> raise (Failure "To be removed")
-  | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
-  | Ref(rk, s, t) -> (* ref check*)
-    <:html<<span class="reference">$str:s$</span>&>>
-  | Special_ref _ -> raise (Failure "Not implemented")
-  | Target _ -> raise (Failure "Not implemented")
+    | Raw s -> <:html<$str:s$>>
+    | Code s -> <:html<<code class="code">$str:s$</code>&>>
+    | PreCode s -> <:html<<pre class="codepre"><code class="code">$str:s$</code></pre>&>>
+    | Verbatim s -> <:html<<span class="verbatim">$str:s$</span>&>>
+    | Style(sk, t) -> generate_style local sk t
+    | List items -> <:html<<ul>$generate_list_items local items$</ul>&>>
+    | Enum items -> <:html<<ol>$generate_list_items local items$</ol>&>>
+    | Newline -> <:html<<br/>&>>(*should be : <:html<<p>&>>*)
+    | Block text -> <:html<<blockquote>$generate_text local text$</blockquote>&>>
+    | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
+    | Ref(rk, s, t) -> (* ref check*)
+      <:html<TODO reference : $str:s$>>
+    | Special_ref _ -> raise (Failure "Not implemented")
+    | Target _ -> raise (Failure "Not implemented")
 
 and generate_text local text =
   List.fold_left 
@@ -54,19 +53,20 @@ and generate_list_items local items =
     items
 
 and generate_style local sk t = 
-  let s = 
+  let f elem = 
     match sk with
-    | SK_bold -> "bold"
-    | SK_italic -> "italic"
-    | SK_emphasize -> "emph"
-    | SK_center -> "center"
-    | SK_left -> "left"
-    | SK_right -> "right"
-    | SK_superscript -> "superscript"
-    | SK_subscript -> "subscript"
-    | SK_custom _ -> "custom" (*TODO raise (Failure "Not implemented: Custom styles")*)
+    | SK_bold -> <:html<<b>$elem$</b>&>>
+    | SK_italic -> <:html<<i>$elem$</i>&>>
+    | SK_emphasize -> <:html<<em>$elem$</em>&>>
+    | SK_center -> <:html<<center>$elem$</center>&>>
+    | SK_left -> <:html<<div align="left">$elem$</div>&>>
+    | SK_right -> <:html<<div align="right">$elem$</div>&>>
+    | SK_superscript -> <:html<<sup class="superscript">$elem$</sup>&>>
+    | SK_subscript -> <:html<<sub class="subscript">$elem$</sub>&>>
+    | SK_custom _ -> <:html<TODO custom>>
+  (*TODO raise (Failure "Not implemented: Custom styles")*)
   in
-    <:html<<span class="$str:s$">$generate_text local t$</span>&>>
+  f (generate_text local t)
 
 and generate_title n lbl text =
   let sn = (string_of_int n) in
@@ -110,31 +110,30 @@ let generate_sees local sees =
 
 let generate_befores local befores = 
   let gen_before (s, t) =
-    <:html<<span class="version">$str:s$</span>$generate_text local t$>>
+    <:html<<b>Before $str:s$</b> $generate_text local t$>>
   in
     List.fold_left 
-      (fun acc before -> <:html<$acc$<span class="before">$gen_before before$</span>&>>)
+      (fun acc before -> <:html<$acc$$gen_before before$<br/>&>>)
       Html.nil
       befores
 
 let generate_params local params = 
   let gen_param (s, t) =
-    <:html<<span class="name">$str:s$</span>$generate_text local t$>>
+    <:html<<div class="param_info"><code class="code">$str:s$</code> : $generate_text local t$</div>&>>
   in
     List.fold_left 
-      (fun acc param -> <:html<$acc$<span class="parameter">$gen_param param$</span>&>>)
+      (fun acc param -> <:html<$acc$$gen_param param$&>>)
       Html.nil
       params
 
 let generate_raised local raised = 
   let gen_raised (s, t) =
-    <:html<<span class="exception">$str:s$</span>$generate_text local t$>>
+    <:html<<code>$str:s$</code> $generate_text local t$<br/>&>>
   in
     List.fold_left 
-      (fun acc raised -> <:html<$acc$<span class="raised">$gen_raised raised$</span>&>>)
+      (fun acc raised -> <:html<$acc$$gen_raised raised$>>)
       Html.nil
       raised
-      
 
 
 (* TODO add support for custom tags *)
@@ -166,19 +165,19 @@ let generate_info local info =
     match info.i_since with
       | None -> jinfo
       | Some s -> 
-        <:html<$jinfo$<div class="since">$str:s$</div>&>>
+        <:html<$jinfo$<b>Since</b> $str:s$&>>
   in
   let jinfo = 
     match info.i_before with
       | [] -> jinfo
       | befores -> 
-        <:html<$jinfo$<div class="before">$generate_befores local befores$</div>&>>
+        <:html<$jinfo$$generate_befores local befores$>>
   in
   let jinfo = 
     match info.i_deprecated with
       | None -> jinfo
       | Some t -> 
-        <:html<$jinfo$<div class="deprecated">$generate_text local t$</div>&>>
+        <:html<$jinfo$<span class="warning">Deprecated.</span> $generate_text local t$<br/>&>>
   in
   let jinfo = 
     match info.i_params with
@@ -190,13 +189,13 @@ let generate_info local info =
     match info.i_raised_exceptions with
       | [] -> jinfo
       | raised -> 
-        <:html<$jinfo$<div class="raised">$generate_raised local raised$</div>&>>
+        <:html<$jinfo$<b>Raises</b> $generate_raised local raised$&>>
   in
   let jinfo = 
     match info.i_return_value with
       | None -> jinfo
       | Some t -> 
-	<:html<$jinfo$<div class="return">$generate_text local t$</div>&>>
+	<:html<$jinfo$<b>Returns</b> $generate_text local t$>>
   in
   jinfo
     
@@ -316,7 +315,7 @@ let rec generate_class_type local dclty clty =
       | Dcty_signature dclass_sig, Tcty_signature class_sig ->
 	let jfields = List.map2 (generate_class_field local) 
 	  dclass_sig
-	  (* The fields reversed... Why? *)
+	  (* The fields are reversed... Why? *)
 	  (List.rev class_sig.csig_fields) in
 	kClassSig (List.rev args_acc) jfields
       | Dcty_fun dclass_type, Tcty_fun (label, core_type, sub_class_type) ->
@@ -511,10 +510,15 @@ and generate_signature_item local ditem item =
       iComment None
 	(*raise (Failure "Not supported")*)
     | Dsig_include dmty, Tsig_include(mty, _) ->
+      (** Cannot make cross-referencing links between a module and its included types 
+	  -> They don't have the same Ident.t
+      *)
+      
       let jmty = generate_module_type local dmty mty in
       let jinfo = generate_info_opt local ditem.dsig_info in
       let mty_type = mty.mty_type in
       let obj = iInclude jmty jinfo in
+
       Index.add_include_module_type obj mty_type;
       obj
     | Dsig_class(name, dclty), Tsig_class [cl_desc] ->
@@ -696,19 +700,21 @@ and generate_structure_item local ditem item =
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModType name (Some jmty) jinfo
 	
-   | Dstr_open, Tstr_open _ -> 
+    | Dstr_open, Tstr_open _ -> 
      (* TODO *)
-     iComment None
+      iComment None
    (*raise (Failure "Not supported")*)
-   | Dstr_include dmty, Tstr_include(mty, _) ->
-     
+    | Dstr_include dmty, Tstr_include(mty, _) ->
+     (** Cannot make cross-referencing links between a module and its included types 
+	 -> They don't have the same Ident.t
+     *)
+
      let jmty = generate_module_str_type local dmty mty in
      let jinfo = generate_info_opt local ditem.dstr_info in
      let mty_type = mty.mod_type in
      let obj = iInclude jmty jinfo in
      Index.add_include_module_type obj mty_type;
      obj
-     
 
    | Dstr_class(name, dclty), Tstr_class [cl_desc, _, _] -> 
      (* add to internal type table *)

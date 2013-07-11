@@ -102,30 +102,21 @@ let process_file global cmd cmt =
             | _ -> raise (Failure "Wrong kind of cmt file") 
 	in
 	(*generate_json cmd jfile;*)
-	(*Doc_html.generate_html ~is_root_module:true module_name jfile;*)
-	ignore (Doc_html_bis.generate_html module_name jfile)
+	Doc_html.generate_html module_name jfile
       with
 	| Invalid_argument s ->
-	  Doc_html.print_error_page module_name;
 	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name
 
-let _ = 
-  let global_path = ref "global.index"  in
-  
 
+let _ = 
   let files = ref [] in
   
-  Arg.(
-    parse
-    [ ("-d", String(fun p -> path:=p; (*check "/" *) print_endline p), "")
-    ; ("-index-file", Set_string (global_path), "Load a specific index file")
-    ; ("-filter-pervasives", Set (Gentyp.filter_pervasives), "Removes 'Pervasives' ")
-    ]
-      (fun file -> files := file :: !files)
-      "Bad usage");
-
+  Opam_doc_config.(
+    Arg.parse options (fun file -> files := file :: !files) usage
+  );
+  
   (* read the saved global table *)  
-  let global = read_global_file !global_path in
+  let global = read_global_file !(Opam_doc_config.index_file_path) in
 (* 
    print_endline "[debug] global table before update :";
    global_print global;
@@ -169,8 +160,12 @@ let _ =
     cmd_files;
   
   Doc_html.generate_module_index ();
-  
+  Doc_html.output_style_file ();
+  Doc_html.output_script_file ();
+
+  Html_utils.flatten_symlinks ();
+    
   (* write down the updated global table *)
-  write_global_file global !global_path
+  write_global_file global !(Opam_doc_config.index_file_path)
     
     

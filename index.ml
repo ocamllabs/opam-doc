@@ -36,8 +36,7 @@ let read_global_file path =
     | Sys_error _ -> CrcMap.empty
 
 let update_global global filenames =
-  (* TODO : get a better way of finding the path *)
-  let current_path = (Sys.getcwd ())^"/" in
+  let current_path = !Opam_doc_config.output_directory in
   let doFile acc fname =
     let cmio, cmto = Cmt_format.read fname in
     match cmio, cmto with
@@ -139,39 +138,33 @@ let rec assemble_path path = function
     if not (is_module h) then raise (Failure "Incorrect signature");
     assemble_path (path^"."^h) t
 
+let get_relative_path path =
+  (* DIRTY HACK... TO FIX *)
+  let open Filename in
+      if dirname path = (Filename.chop_suffix !Opam_doc_config.output_directory "/") then
+	basename path
+      else
+	"../"^path
 
 let local_lookup local path_elems =
   let rec loop pack = function
     | m1::m2::r ->
-      let f () = 
-	try 
-	  (match LocalMap.find (pack, m1) local with
-	    | Direct_path str -> str, (m2::r)
-	    | Packed_module _ -> 
-	      loop (Some m1) (m2::r)
-	  )
-	with 
-	  | Not_found -> 
-		   (* try harder *)
-	    loop pack (m2::r)
-      in
-      if m1 = "Std" then
-	try 
-	  loop pack (m2::r)
-	with
-	    Not_found -> f ()
-      else
-	f ()
-
+      begin
+	match LocalMap.find (pack, m1) local with
+	| Direct_path str -> str, (m2::r)
+	| Packed_module _ -> 
+	  loop (Some m1) (m2::r)
+      end
     | m1::[] ->
-      (match LocalMap.find (pack, m1) local with
+      begin
+      match LocalMap.find (pack, m1) local with
 	| Packed_module _ -> raise Not_found
 	| Direct_path str -> str, []
-      )
+      end
     | [] -> raise Not_found    
   in
   let (path, rest) = loop None path_elems in
-  assemble_path (Filename.chop_suffix path ".html") rest
+  get_relative_path (assemble_path (Filename.chop_suffix path ".html") rest)
 
 let get_global_modules global =
   List.map (fun ((x,_),_) -> x) (CrcMap.bindings global)  
@@ -179,7 +172,7 @@ let get_global_modules global =
 (* Internal references part *)
 open Hashtbl 
 
-let internal_table = create 16
+let internal_table = create 32
 
 let current_module = ref ""
 
@@ -200,5 +193,4 @@ let reset_include_table () = reset include_table
   
 let add_include_module_type = add include_table
 
-let lookup_include_module_type = find include_table
-
+let lookup_include_module_type = find include_table 

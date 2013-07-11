@@ -42,8 +42,6 @@ and out_variant =
 
 let index = ref None
 
-let filter_pervasives = ref false
-  
 (* Added semantic tags to identifiers and special handling of pervasives *)
 let rec print_ident ppf id = 
   
@@ -62,26 +60,27 @@ let rec print_ident ppf id =
 	  Some (Index.local_lookup local (name::elems))
 	with 
 	    Not_found -> 
-	      (* debug *)
-	      Printf.eprintf "Reference to %s : unresolved\n%!" (String.concat "." (name::elems));
+	      (*(* debug *)
+	      Printf.eprintf "Reference to %s : unresolved\n%!" 
+		(String.concat "." (name::elems));*)
 	      None
       in
       let concrete_name = String.concat "."
-	(* TODO : add to config_file *)
-	(if name = "Pervasives" && !filter_pervasives then elems else name::elems)
+	(if name = "Pervasives" && !(Opam_doc_config.filter_pervasives) then
+	    elems 
+	 else name::elems)
       in
       begin
       match html_path with
 	| Some path ->
-
 	  fprintf ppf "@{<path:%s>%s@}" path concrete_name
 	| None -> fprintf ppf "@{<unresolved>%s@}" concrete_name
       end
 	
     | Oide_internal_ident (name,id) ->
-      (* Soooo fucked up*)
       begin
 	  try
+	    (* Looking up in the internal reference base *)
 	    let module_list = Index.lookup_internal_reference id in
 	    if name.[0] >= 'A' && name.[0] <= 'Z' then
 	      let base_path = String.concat "." module_list in
@@ -102,7 +101,10 @@ let rec print_ident ppf id =
 	      let html_path = (String.concat "." (elems@module_list))^".html#TYPE"^name in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	  with 
-	      Not_found ->       
+	      Not_found -> 
+		(*(* debug *)
+		Printf.eprintf "Reference to internal %s : unresolved - stamp : %d\n%!" 
+		  name id.Ident.stamp;*)
 		fprintf ppf "@{<unresolved>%s@}" (String.concat "." (name::elems))
 	end	
     | Oide_dot (sub_id, name) ->

@@ -1,225 +1,40 @@
+open Docjson
 open Cow
+open Html_utils
+open TagsGenerators
 
-let current_module_name = ref ""
+(** {2 Environnement handling}  *)
 
+type doc_env = 
+    {current_module_name:string;
+     parent_modules:string list (** reversed list B.M.SubM -> ["M"; "B"] *) }
+      
+let new_env module_name = 
+  {current_module_name=module_name; parent_modules=[]}
+
+let add_to_env env module_name =
+  {current_module_name=module_name; 
+   parent_modules=env.current_module_name::env.parent_modules}
+
+let get_full_path_name env =
+  String.concat "." (List.rev (env.current_module_name::env.parent_modules))
+
+
+(** {2 Globals} *)
 let index_content = ref []
 
-let html_reference_of_module sub_module_name =
-  let html_page = <:html<$str:(!current_module_name^"."^sub_module_name^".html")$>> in
-  <:html<<a href="$html_page$">$str:sub_module_name$</a>&>>
+let cpt = ref 0
 
-let mark_type = "TYPE"
-  
-(** The prefix for types elements (record fields or constructors). *)
-let mark_type_elt = "TYPEELT"
-  
-(** The prefix for functions marks. *)
-let mark_function = "FUN"
+let generate_unique_id () = 
+  let name = "Anon_"^(string_of_int !cpt) in
+  incr cpt;
+  name
 
-(** The prefix for exceptions marks. *)
-let mark_exception = "EXCEPTION"
+(** {2 Html generation} *)
 
-(** The prefix for values marks. *)
-let mark_value = "VAL"
+(** {4 Values} *)
 
-(** The prefix for attributes marks. *)
-let mark_attribute = "ATT"
-
-(** The prefix for methods marks. *)
-let mark_method = "METHOD"
-
-let create_div s =
-  <:html<<div>$str:s$</div> &>>
-    
-(* parsing error with Cow *)    
-let doctype = "<!DOCTYPE HTML>\n"
-
-let character_encoding = 
-  <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
-	
-(** The default style options. *)
-let default_style_options =
-  [ ".keyword { font-weight : bold ; color : Red }" ;
-    ".keywordsign { color : #C04600 }" ;
-    ".superscript { font-size : 4 }" ;
-    ".subscript { font-size : 4 }" ;
-    ".comment { color : Green }" ;
-    ".constructor { color : Blue }" ;
-    ".type { color : #5C6585 }" ;
-    ".string { color : Maroon }" ;
-    ".warning { color : Red ; font-weight : bold }" ;
-    ".info { margin-left : 3em; margin-right: 3em }" ;
-    ".param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }" ;
-    ".code { color : #465F91 ; }" ;
-    ".typetable { border-style : hidden }" ;
-    ".paramstable { border-style : hidden ; padding: 5pt 5pt}" ;
-    "tr { background-color : White }" ;
-    "td.typefieldcomment { background-color : #FFFFFF ; font-size: smaller ;}" ;
-    "div.sig_block {margin-left: 2em}" ;
-    "*:target { background: yellow; }" ;
-
-    "body {font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0}";
-
-    "h1 { font-size : 20pt ; text-align: center; }" ;
-
-    "h2 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90BDFF ;"^
-      "padding: 2px; }" ;
-
-    "h3 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90DDFF ;"^
-      "padding: 2px; }" ;
-
-    "h4 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90EDFF ;"^
-      "padding: 2px; }" ;
-
-    "h5 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90FDFF ;"^
-      "padding: 2px; }" ;
-
-    "h6 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90BDFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h7 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #E0FFFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h8 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #F0FFFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h9 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #FFFFFF ; "^
-      "padding: 2px; }" ;
-
-    "a {color: #416DFF; text-decoration: none}";
-    "a:hover {background-color: #ddd; text-decoration: underline}";
-    "pre { margin-bottom: 4px; font-family: monospace; }" ;
-    "pre.verbatim, pre.codepre { }";
-
-    ".indextable {border: 1px #ddd solid; border-collapse: collapse}";
-    ".indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px}";
-    ".indextable td.module {background-color: #eee ;  padding-left: 2px; padding-right: 2px}";
-    ".indextable td.module a {color: 4E6272; text-decoration: none; display: block; width: 100%}";
-    ".indextable td.module a:hover {text-decoration: underline; background-color: transparent}";
-    ".deprecated {color: #888; font-style: italic}" ;
-
-    ".indextable tr td div.info { margin-left: 2px; margin-right: 2px }" ;
-
-    "ul.indexlist { margin-left: 0; padding-left: 0;}";
-    "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
-  ]
-
-(** Style filename *)
-let style_file = "style.css"
-
-
-let style_tag = <:html<
-  <link rel="stylesheet" href="$str:style_file$" type="text/css" />
->>
-
-let jquery_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"
-
-let h s = <:html<$str:s$>>
-
-let script body_url =
-  let script_content =  h ("$(document).ready(function(){$('#module_body').load('"^body_url^"');})") in
-  print_endline (Docjson.string_of_html script_content);
-  <:html<<script>$script_content$</script>&>>
-
-
-(* tmp*)
-let create_redirect_page html_page redirect_url =
-  let oc = open_out html_page in
-  output_string oc doctype;
-  let content_content = h ("0; url="^redirect_url) in
-  let html_content = 
-    let meta = <:html< <meta http-equiv="refresh" content="$content_content$"/> >> in
-    <:html<<html><head>$meta$</head><body></body></html>&>> in
-  output_string oc (Docjson.string_of_html html_content);
-  close_out oc
-  
-let generate_style_file () =
-  if not (Sys.file_exists style_file) then
-    let oc = open_out style_file in
-    output_string oc (String.concat "\n" default_style_options);
-    close_out oc
-
-let generate_head module_name = 
-  generate_style_file ();
-  <:html<
-  <title>$str:module_name$</title>
-    $style_tag$
-  >>
-
-let make_pre data =
-  <:html<<pre>$data$</pre>&>>
-
-let make_span ?css_class data = 
-  match css_class with
-    | Some clazz -> <:html<<span class="$str:clazz$">$data$</span>&>>
-    | None -> <:html<<span>$data$</span>&>>
-
-(** Return html code with the given string in the keyword style.*)
-let keyword str =
-  make_span ~css_class:"keyword" (h str)
-
-(** Return html code with the given string in the constructor style. *)
-let constructor str =
-  make_span ~css_class:"constructor" (h str)
-
-(* can't parse optional arg in called f° in html tags *)
-let code css_class data =
-  match css_class with
-      "" -> <:html<<code>$data$</code>&>>
-    | css -> <:html<<code class="$str:css$">$data$</code>&>>
-
-let make_info = 
-  function 
-    | Some i when i != Html.nil -> 
-	<:html<<div class="info">$i$</div>&>>
-    | _ -> Html.nil
-      
-let make_type_table f l =
-  let table rows =
-    <:html<<table class="typetable">
-		    $rows$</table>&>> 
-  in 
-  table 
-    (List.fold_left 
-       (fun acc x -> <:html<$acc$<tr>$f x$</tr>&>>)
-       Html.nil 
-       l)
-
-let rec insert_between sep = function
-  | [] -> Html.nil
-  | [h] -> h
-  | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
-
-
-let make_field_comment comm =
-  <:html<<td class="typefieldcomment" align="left">$comm$</td>&>>
-
-let generate_id_mark mark name html =
-  <:html<<span id="$str:mark^name$">$html$</span>&>>
-
-(****************************************)
-
-(* TODO ajouter les id (à voir plus tard) *)
-
-open Docjson
-
-let html_of_value = function 
+let html_of_value env = function 
   | {si_item = `Value;
      si_name = Some name;
      si_typ = Some typ;
@@ -233,30 +48,20 @@ let html_of_value = function
     >>
     | _ -> assert false
 
-let html_of_type_param_list params variances =
-    let lstrparam = (List.map2 
-		     (fun param -> function
-		       | `None -> param
-		       | `Positive -> <:html<+$param$>>
-		       | `Negative -> <:html<-$param>>)
-		     params variances) in
-    match lstrparam with
-	[] -> Html.nil
-      | [h] -> code "type" <:html<$h$ >>
-      | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
+(** {4 Comments} *)
 
-let html_of_type_class_param_list params variances =
-  let lstrparam = (List.map2 
-		     (fun param -> function
-		       | `None -> param
-		       | `Positive -> <:html<+$param$>>
-		       | `Negative -> <:html<-$param>>)
-		     params variances) in
-  match lstrparam with
-      [] -> Html.nil
-    | [h] -> code "type" <:html<[$h$] >>
-    | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
-      
+(* Do we print normal comments? *)
+let html_of_comment env = function 
+  | { si_item = `Comment; si_info = info} -> 
+    (match info with 
+      | Some i -> <:html<<br/>$i$<br/>
+	  >>
+      | None -> Html.nil)
+  | _ -> assert false
+
+
+(** {4 Types} *)
+
 let html_of_type_variant father_name = function 
   | {tk_constructors = Some cstrs; _} ->
     make_type_table 
@@ -264,7 +69,7 @@ let html_of_type_variant father_name = function
 	let cell typ = <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$typ$</code></td>&>>
 	in 
 	let constr_name = 
-	  generate_id_mark mark_type_elt (father_name^"."^name)
+	  generate_id_mark Opam_doc_config.mark_type_elt (father_name^"."^name)
 	  (<:html<<span class="constructor">$str:name$</span>&>>)
 	in 
 	let constr = 
@@ -289,14 +94,14 @@ let html_of_type_record father_name = function
   | {tk_labels = Some lbls; _} ->
     make_type_table 
       (function {rl_name=name; rl_mut=mut; rl_typ=typ; rl_info=info} ->
-	(* bug on &nbsp -> scotch tape : simple space *)
-	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_id_mark mark_type_elt (father_name^"."^name) (h name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
+	(* bug on &nbsp -> duck tape : simple space *)
+	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_id_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
 	  &>>
       )
       lbls
   | _ -> assert false
     
-let html_of_type = function 
+let html_of_type env = function 
   | { si_item = `Type
     ; si_name = Some name
     ; si_params = Some params
@@ -316,7 +121,7 @@ let html_of_type = function
     let name_html = 
       <:html<$keyword "type"$ $html_of_type_param_list params variances$$str:name$ >>
     in    
-    let name_html = generate_id_mark mark_type name name_html in
+    let name_html = generate_id_mark Opam_doc_config.mark_type name name_html in
     let manifest = 
       match manifest, type_kind.tk_kind with 
 	| Some typ,`Record -> <:html<= {$code "type" typ$ >>
@@ -324,7 +129,6 @@ let html_of_type = function
 	| None, `Record -> <:html<= {>>
         | None, `Abstract -> Html.nil
         | None, _ -> <:html<= >>
-
     in
     let signature =
       let priv = <:html<$if priv then keyword "private" else Html.nil$>>  in
@@ -340,21 +144,7 @@ let html_of_type = function
     >>
   | _ -> assert false
 
-let html_of_exception = function 
-  | { si_item = `Exception; si_name = Some name; 
-      si_args = Some args; si_info = info} -> 
-    let id = generate_id_mark mark_exception name <:html<$keyword "exception"$ $str:name$>> 
-    in let args = match args with 
-      | [] -> Html.nil 
-      | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
-    let signature = make_pre <:html<$id$$args$>> in
-    <:html<$signature$$make_info info$>>
-  | _ -> assert false
 
-(* Modules generation *)
-let sub_module_name = ref ""
-let sub_module_info = ref None
-    
 let rec html_of_class_type_ident = function
   | { ct_kind = `Ident; 
       ct_args = args;
@@ -379,7 +169,7 @@ and html_of_class_type_sig = function
 	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
     in 
     let ref_link = <:html<..>> (*add link *) in
-    <:html<$args$$code "code" (h "object")$ $ref_link$ $code "code" (h "end")$>>
+    <:html<$args$$code "code" (html_of_string "object")$ $ref_link$ $code "code" (html_of_string "end")$>>
   | _ -> assert false
     
 and html_of_class_type_constraint = function
@@ -404,92 +194,80 @@ and html_of_class_type class_type =
     | `Constraint -> html_of_class_type_constraint) class_type
 
 (* url = CurrentModule.ClassName-c.html *)
-let html_of_class is_class_type = function 
-  | { si_name = Some name;
-      si_params = Some params;
-      si_variance = Some variances;
-      si_virt = Some virt;
-      si_class_type = Some class_type;
-      si_info = info } -> 
-    let id = generate_id_mark mark_type name in
+let html_of_class env = function 
+  | { si_item = typ
+    ; si_name = Some name
+    ; si_params = Some params
+    ; si_variance = Some variances
+    ; si_virt = Some virt
+    ; si_class_type = Some class_type
+    ; si_info = info; _ } -> 
+    let id = generate_id_mark Opam_doc_config.mark_type name in
     let params_html = html_of_type_class_param_list params variances in
     let ref = <:html<$str:name$>> (* todo : referencing link *) in
     let header = 
-      <:html<$keyword (if is_class_type then "class type" else "class")$$
+      <:html<$keyword (if typ = `Class then  "class" else "class type")$$
 	if virt then keyword " virtual" 
 	else Html.nil$ $params_html$$ref$>> in
-    let sign = if is_class_type then "=" else ":" in
+    let sign = if typ = `Class then "=" else ":" in
     let pre = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
     <:html<$pre$$make_info info$
     >>    
   | _ -> assert false 
 
-(* Do we print normal comments? *)
-let html_of_comment = function 
-  | { si_item = `Comment; si_info = info} -> 
-    (match info with 
-      | Some i -> <:html<<br/>$i$<br/>
-	  >>
-      | None -> Html.nil)
+(** {4 Exceptions} *)
+
+let html_of_exception env = function 
+  | { si_item = `Exception; si_name = Some name; 
+      si_args = Some args; si_info = info} -> 
+    let id = generate_id_mark Opam_doc_config.mark_exception name <:html<$keyword "exception"$ $str:name$>> 
+    in let args = match args with 
+      | [] -> Html.nil 
+      | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
+    let signature = make_pre <:html<$id$$args$>> in
+    <:html<$signature$$make_info info$>>
   | _ -> assert false
 
-let generate_page_header info module_name = 
-  let title_module_name = 
-    String.(let pos = try rindex module_name '.' + 1 with Not_found -> 0 in 
-	    sub module_name pos ((length module_name) - pos)) in
-  let pre = make_pre 
-    (<:html<$keyword "module"$ $str:title_module_name$: $code "code" (h "sig")$ .. $code "code" (h "end")$>>)
-  in
-  let up_module =
-    String.(
-      try
-	let pos = rindex module_name '.' + 1 in
-	sub module_name 0 (pos-1)
-      with Not_found -> "index"
-    )
-  in
-  let uplink = h (up_module^".html") in
-  let up_module = h up_module in
-  let up_nav = <:html<<div class="navbar"><a class="up" href="$uplink$" title="$up_module$">Up</a></div>&>>
-  in
-  <:html<
-    $up_nav$
-  <h1>Module $str:module_name$</h1>
-    $pre$
-    $make_info info$
-  >>
+(** {4 Classes} *)
 
-let rec html_of_module_ident = function
+
+
+(** {4 Modules} *)
+
+let rec  html_of_module_ident env = function
   | { mt_kind = `Ident; mt_path = Some path} -> 
     <:html<$code "code" path$&>>
   | _ -> <:html<HTML_OF_MODULE_IDENT BUG>>
     (* assert false *)
 
 (** Generate the submodule file at this point *)
-and html_of_module_sig = function
+and html_of_module_sig env = function
   | { mt_kind = `Sig; mt_items = Some items } ->
-    let parent_name = !current_module_name in
-    current_module_name := parent_name^"."^(!sub_module_name);
-    (*print_endline !current_module_name;*)
-    generate_html !current_module_name (file items !sub_module_info);
-    current_module_name := parent_name;
-    <:html<$code "code" (h "sig")$ .. $code "code" (h "end")$>>
+    let path = get_full_path_name env^".html" in
+    <:html<$code "code" (html_of_string "sig")$ <a href="$str:path$">..</a> $code "code" (html_of_string "end")$>>
   | _ -> assert false
 
-and html_of_module_functor = function 
+and html_of_module_functor env = function 
   | { mt_kind = `Functor
     ; mt_arg_name = Some arg_name
     ; mt_arg_type = Some arg_type
     ; mt_base = Some base} ->
-    let path = match arg_type.mt_path with 
+    let arg_signature = match arg_type.mt_path with 
       | Some p -> code "type" p
-      | None -> Html.nil in (* find a graceful way of including the structural modules *)
+      | None -> 
+	let anon_env = (add_to_env env (generate_unique_id ())) in
+	(* anonymous module html creation *)
+	generate_html ~env:anon_env (get_full_path_name anon_env) ~title_signature:Html.nil 
+	  (Docjson.file (match arg_type.mt_items with Some its -> its | None -> []) None);
+	(* signature definition *)
+	html_of_module_body anon_env arg_type;
+    in (* anonymous modules *)
     let body = 
-      <:html<$code "code" (h "functor (")$$code "code" (h arg_name)$<code class="code"> : </code>$path$$code "code" (h ") -> ")$&>> in
-    <:html<<div class="sig_block">$body$$html_body_of_module base$</div>&>>
+      <:html<$code "code" (html_of_string "functor (")$$code "code" (html_of_string arg_name)$<code class="code"> : </code>$arg_signature$$code "code" (html_of_string ") -> ")$&>> in
+    <:html<<div class="sig_block">$body$$html_of_module_body env base$</div>&>>
   | _ -> raise (Failure "html_of_functor: Mismatch")
     
-and html_of_module_with = function
+and html_of_module_with env = function
   | { mt_kind = `With; 
       mt_cnstrs = Some cnstrs; 
       mt_base = Some base } ->
@@ -499,153 +277,165 @@ and html_of_module_with = function
         | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
 	| _ -> assert false)
       cnstrs in
-    <:html<$html_body_of_module base$ with $insert_between " and " l$>>
+    <:html<$html_of_module_body env base$ with $insert_between " and " l$>>
   | _ -> assert false
     
 
-and html_of_module_typeof = function 
+and html_of_module_typeof env = function 
   | { mt_kind = `TypeOf; mt_expr = Some ({me_path=Some p; _})} ->
     <:html<module type of $p$>>
   | _ -> assert false
 
-and html_of_module_apply = function
+and html_of_module_apply env = function
   | { mt_kind = `Apply; 
       mt_arg_type = Some arg_type; 
       mt_base = Some base } -> 
-    let base_html = html_of_module_ident base in
-    let arg_html = (match arg_type.mt_kind with 
-	| `Ident -> html_of_module_ident
-	| `Sig -> html_of_module_sig
-	| _ -> 
-	  (* todo *)
-	  (fun x -> <:html<Mismatch module apply>>)
-	  (*failwith "html_of_module_apply : Mismatch"*)) arg_type
-    in <:html<$base_html$($arg_html$)>>    
+    let base_html = html_of_module_ident env base in
+    let arg_html = html_of_module_body env arg_type in
+    <:html<$base_html$($arg_html$)>>    
   | _ -> assert false
 
-and html_body_of_module mty =
+and html_of_module_body env mty =
   (match mty.mt_kind with 
   | `Ident   -> html_of_module_ident  
   | `Sig     -> html_of_module_sig
   | `Functor -> html_of_module_functor 
   | `With    -> html_of_module_with   
   | `Apply   -> html_of_module_apply
-  | `TypeOf  -> html_of_module_typeof) mty
+  | `TypeOf  -> html_of_module_typeof) env mty
 
-and html_of_module = function 
-  | { si_item = `Module; si_name=Some name; si_module_type=Some mty; si_info=info} ->
-    sub_module_name := name;
-    sub_module_info := info;
-    (* should create the page here *)
-    let body = html_body_of_module mty in
-    let path = 
-      let html_page = !current_module_name^"."^name^".html" in
-      (* if it hasn't been created then force the creation with a redirect link 
-	 to the parent module *)
-      if not (Sys.file_exists html_page) then
-	begin
-	  create_redirect_page html_page (!current_module_name^".html#");
-	  h name
-	end
-      else
-	html_reference_of_module name in
-    let sig_mod = make_pre (<:html<$keyword "module"$ $path$ : $body$>>) 
+(** Modules output *)
+and html_of_module env =
+  function {si_item=m_kind; 
+	    si_name=Some name;
+	    si_module_type = Some mty;
+	    si_info = info; _} ->
+    let updated_env = add_to_env env name in
+
+    let base_mty = Html_utils.grab_base_module mty in (* ident | sig *)
+
+    (* signature generation *)
+    let reference = make_reference name (get_full_path_name updated_env ^ ".html") in
+    let body = html_of_module_body updated_env mty in
+
+    let signature = make_pre
+      (if m_kind = `Module then
+	  <:html<$keyword "module"$ $reference$ : $body$>>
+       else
+	  <:html<$keyword "module type"$ $reference$ = $code "type" body$>>
+      ) in
+    
+    (* recursive module generation *)
+    
+    (match base_mty with
+      | {mt_kind=`Ident; mt_path=Some path; _} ->
+	generate_html_symlink 
+	  ~env:updated_env 
+	  (get_full_path_name updated_env) 
+	  signature
+	  info
+	  (Html_utils.extract_path path) (* can fail *)
+      | {mt_kind=`Sig; mt_items = Some items; _} -> 
+	generate_html 
+	  ~env:updated_env 
+	  (get_full_path_name updated_env) 
+	  ~title_signature:signature
+	  (Docjson.file items info)
+      | _ -> assert false
+    );
+    let path = get_full_path_name updated_env 
+      ^ ".html" 
     in
-    <:html<$sig_mod$$make_info info$&>>
+    let signature = <:html<$signature$$make_info info$>> in
+    wrap_module signature path
+    | _ -> assert false
+  
+and html_of_include env = function
+  | {si_item=`Include; 
+     si_module_type= Some mty;
+     si_info = info; _ } as key -> 
+    
+    let signature = html_of_module_body env mty in
 
-  | _ -> assert false
-
-(* Module types generation *)
-and html_of_modtype = function 
-  | { si_item = `ModType
-    ; si_name = Some name
-    ; si_module_type = Some module_type
-    ; si_info = info } -> 
-    sub_module_name := name;
-    sub_module_info := info;
-    let body = html_body_of_module module_type in
+    (* Pages creations *)
     let path = 
-      let html_page = !current_module_name^"."^name^".html" in
-      (* if it hasn't been created then force the creation with a redirect link 
-	 to the parent module *)
-      if not (Sys.file_exists html_page) then
-	begin
-	  create_redirect_page html_page (!current_module_name^".html#");
-	  h name
-	end
-      else
-	html_reference_of_module name in
-    let sig_mod = make_pre (<:html<$keyword "module type"$ $path$ = $code "type" body$>>)
+      match Html_utils.grab_base_module mty with
+	| {mt_kind=`Ident; mt_path=Some path; _} ->
+	  Html_utils.extract_path path
+	| _ -> (* how to get an anonymous module name? *)
+	  "FIXME.html"
+	   (* FIX ME *)
+	  (*failwith "include anonymous module_type: Not implemented yet"*)
     in
-    <:html<$sig_mod$$make_info info$>>
+    let open Html_utils in
+	create_include_pages 
+	  (get_full_path_name env)
+	  path
+	  (Index.lookup_include_module_type key);
+	
+	let signature = make_pre <:html<$keyword "include"$ $signature$>>
+	in
+	wrap_include signature path		  
+      
   | _ -> assert false
 
-and html_of_include = function 
-  | { si_item = `Include; si_module_type=Some mty} -> 
-    make_pre <:html<$keyword "include"$ $html_body_of_module mty$>>
-  | _ -> assert false
+and html_of_signature_item env item =
+      let f = match item.si_item with 
+	| `Module
+	| `ModType -> html_of_module
+	| `Include -> html_of_include 
+	| `Value -> html_of_value
+	| `Primitive -> (fun env item -> html_of_value env {item with si_item = `Value})
+	| `Type -> html_of_type 
+	| `Exception -> html_of_exception
+	| `Class  
+	| `ClassType -> html_of_class
+	| `Comment -> html_of_comment
+      in try f env item with Not_found -> <:html<FIX ME>>
 
-and html_of_signature_item sig_item =
-	     (match sig_item.si_item with
-	       | `Value -> html_of_value
-	       | `Primitive -> (fun item -> html_of_value {item with si_item = `Value})
-	       | `Type -> html_of_type
-	       | `Exception -> html_of_exception
-	       | `Module -> html_of_module
-	       | `ModType -> html_of_modtype
-	       | `Include -> html_of_include
-	       | `Class -> html_of_class false
-	       | `ClassType -> html_of_class true
-	       | `Comment -> html_of_comment) sig_item
-	       
-and html_of_file module_name =
-  function {f_items=sig_items;
-	    f_info=info} ->
-    let items = List.fold_left
-      (fun acc e -> <:html< $acc$ $html_of_signature_item e$ >>)
-      Html.nil 
-      sig_items in
-    let doc_page = (* <!doctype> should be here but parsing doesn't support it *)
-      <:html<
-      <html>
-      <head>
-	$generate_head module_name$
-      </head>
-      <body>
-	$generate_page_header info module_name$
-      <hr width="100%" /> 
-      $items$
-      </body>
-      </html>
-      >>    
-    in 
-    doc_page
-
-and generate_html ?(is_root_module=false) module_name jfile =
- if is_root_module then
-   add_to_index module_name jfile.f_info;
-
-  current_module_name := module_name;
-  let html = html_of_file module_name jfile in
-  let html_name = module_name ^ ".html" in
-  let oc = open_out html_name in
-  output_string oc doctype;
-  output_string oc (Docjson.string_of_html html);
-  close_out oc
-
-
-(* Il me faut une fonction pour : 
-   - générer les body
-   - générer la fake page
-   - générer le script
-   - 
+(* module_name can also be a submodule
+   eg: "M.Msub"
+   in this case, it should be given the item signature
 *)
+and generate_html ?env module_name ?title_signature jfile =
+  let c_env = match env with Some e -> e 
+    | None -> add_to_index module_name jfile.f_info; 
+    new_env module_name in
+  let page_filename = module_name ^ ".html" in
+  let module_html_items =
+    List.map (html_of_signature_item c_env) jfile.f_items
+  in
+  Html_utils.(
+    begin
+      create_html_concrete_page page_filename title_signature module_name jfile.f_info;
+      create_html_page_contents page_filename module_html_items
+    end
+  )
+
+(* target_filename should be : module_path.html *)
+and generate_html_symlink ?env module_name title_signature info target_filename =
+  let c_env = match env with 
+    | Some e -> e 
+    | None -> new_env module_name in
+  let page_filename = get_full_path_name c_env ^ ".html" in
+  Html_utils.(
+    begin
+      (*create_html_concrete_page page_filename title_signature module_name info;*)
+      let target_name = Filename.basename (Filename.chop_extension target_filename ) in
+      create_html_concrete_page_with_ref 
+	page_filename module_name 
+	title_signature info 
+	target_name target_filename;
+
+      create_html_symlink_contents page_filename target_filename
+    end
+  )
 
 and add_to_index m_name info =
   let html_page = m_name^".html" in
   let content = 
     <:html<<tr><td class="module"><a href="$str:html_page$">$str:m_name$</a></td><td>
-		     $make_info info$
+		     $make_first_line_info info$
 			</td></tr>&>> in
   index_content := (m_name,content)::(!index_content)
 
@@ -658,15 +448,15 @@ let generate_module_index () =
 	  List.fold_left
 	    (fun acc (_,content) -> <:html<$acc$$content$>>) 
 	    Html.nil
-	    (List.sort (fun (n,_) (n2, _) -> compare n n2) l)
+	    (List.sort (fun (n,_) (n2, _) -> String.compare n n2) l)
 	in
-	let oc = open_out "index.html" in
-	output_string oc doctype;
+	let oc = open_out (!Opam_doc_config.output_directory ^ "/index.html") in
+	output_string oc Opam_doc_config.doctype;
 	let html_content = 
 	  <:html<
 	  <html>
 	  <head> 
-	  <link rel="stylesheet" href="$str:style_file$" type="text/css" />
+	  <link rel="stylesheet" href="$str:Opam_doc_config.style_filename$" type="text/css" />
 	  <title>Modules index</title>
 	  </head>
 	  <body>
@@ -681,18 +471,16 @@ let generate_module_index () =
       close_out oc
       end
 
-let print_error_page m_name =
-  let oc = open_out (m_name^".html") in
-  output_string oc doctype;
-  let html_content = 
-    <:html<
-    <html>
-      <head><title>:(</title></head>
-    <body>
-      Error - Couldn't generate the documentation.<br/>
-      Are the cmt/cmd correctly built? 
-    </body>
-    </html>&>> in
-    output_string oc (string_of_html html_content);
-    close_out oc
-      
+let output_style_file () =
+  print_endline "Css generation";
+  let oc = open_out (!Opam_doc_config.output_directory ^ Opam_doc_config.style_filename) in
+  output_string oc (String.concat "\n" Opam_doc_config.default_stylesheet);
+  close_out oc
+    
+let output_script_file () =
+  print_endline "Script generation";
+  let oc = open_out (!Opam_doc_config.output_directory ^ Opam_doc_config.script_filename) in
+  output_string oc Opam_doc_config.default_script;
+  close_out oc
+    
+(* Générer l'index global dans driver? *)

@@ -7,20 +7,18 @@ let index_file_path = ref ((Sys.getcwd ())^"/opam-doc.idx")
 let output_directory = ref "./"
 let online_url = ref ""
 
-
-let filter_pervasives = ref true
+let filter_pervasives = ref false
 let clear_index = ref false
 let use_online_links = ref true
 
 
 let options  = 
   [
-    
-    ("-d", Set_string output_directory, "Generate the documentation in the given directory, rather than the current directory");
-    
+    ("-d", String (fun s -> output_directory := (if Filename.check_suffix s "/" then s else s^"/")), "Generate the documentation in the given directory, rather than the current directory");
+
     ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one");
     
-    ("--filter_pervasives", Clear filter_pervasives, "Add the 'Pervasives' label to Pervasives' references");
+    ("--filter-pervasives", Set filter_pervasives, "Add the 'Pervasives' label to Pervasives' references");
     
     ("--clear-index", Set clear_index, "Clear the global index before processing");
     
@@ -122,8 +120,13 @@ let default_stylesheet =
 
     "ul.indexlist { margin-left: 0; padding-left: 0;}";
     "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
+
+    (* My stuff *)
+    ".expanding_content { border-left:1px solid black; padding: 5px; margin-bottom:5px }";
+    ".expanding_content button { width:25px; float:left; margin:3px; }";
   ]
 
+(** The prefix for types declaration *)
 let mark_type = "TYPE"
   
 (** The prefix for types elements (record fields or constructors). *)
@@ -154,21 +157,29 @@ let style_tag =
 
 (* Ajax loading *)
 
-let content_to_load_onclick_class = "wait_to_load"
 let content_to_load_class = "content_to_load"
 
 let default_script = 
   "function load_content (){
     $(document).ready(function(){
-        var nb_elem = $('div."^content_to_load_class^"').toArray().length;
+        var nb_elem = $('div."^content_to_load_class^"').length;
 	$('div."^content_to_load_class^"').each(function(){
-            $(this).attr('class', 'module_loaded');
+            $(this).attr('class', 'content_loaded');
 	    $(this).load($(this).attr('file'),
 			 function(){ if (--nb_elem == 0){ load_content() } });
 	});
     })
 }
-load_content();"
+
+function expand_content(b){
+ var expand = b.innerHTML == '+'?true:false;
+ b.innerHTML = expand?'-':'+';
+ var content_node = b.parentNode.lastElementChild.style.display = expand?'block':'none';
+}
+
+load_content();
+$(document).ajaxStop(function(){ if (location.hash != '') location.hash = location.hash; });
+"
 
 let script_filename = "doc_loader.js"
 
