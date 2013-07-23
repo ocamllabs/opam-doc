@@ -27,12 +27,12 @@ let options  =
     
 (*    ("-online-url", Set_string online_url, "Give the path to an online documentation, references to this library using the -online-links option will use this url");
 *)
-    ("-online-links", Set use_online_links, "Generate online references instead of locals one");
-    
+(*    ("-online-links", Set use_online_links, "Generate online references instead of locals one");
+*)  
   ]
 
     
-let usage = "[options] <files>"
+let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
 
 
 (* Html config *)

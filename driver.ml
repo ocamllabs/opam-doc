@@ -4,8 +4,6 @@ open Cow
 
 module StringMap = Map.Make(String)
 
-let path = ref ""
-
 let (>>) h f = f h
 
 let create_package_directory () =
