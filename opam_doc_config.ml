@@ -258,6 +258,7 @@ function expand_includes(){
     
     if ($mod_includes.length != 0){
 	$mod_includes.each(function(){
+          try {
 	    $(this).removeClass('ocaml_include');
 	    
 	    if ($(this).is(\".ident\")){
@@ -277,7 +278,10 @@ function expand_includes(){
 	    }
 	    
 	    wrap_element($(this)[0], false);
-	});
+	  } catch (e){
+		console.log('Error on expanding an incude');
+	  }
+         });
 	
 	expand_includes(); // the processed includes could unwrap others includes
     }
@@ -287,12 +291,17 @@ function shrink_modules (){
     var rec_call = false;
 
     $(\"div.ocaml_module.sig\").each(function (){
+       try {
 	console.log(\"sig : \"+$(this).attr(\"name\"));
 	$(this).removeClass(\"ocaml_module sig\");
 	wrap_element($(this)[0], true);
+	} catch (e){
+	    console.log('Error on shrinking with '+$(this).attr('name'));
+	}
     });
 
     $(\"div.ocaml_module.ident\").each(function (){
+	try {
 	console.log(\"ident : \"+$(this).attr(\"name\"));
 	$(this).removeClass(\"ocaml_module ident\");
 	var path = $(this).attr(\"path\");
@@ -315,7 +324,9 @@ function shrink_modules (){
 	    
 	    console.log(\"rec_callED\");
 	    rec_call = true; // ask for a recursion
-	    
+	  }
+	} catch (e){
+	    console.log('Error on expanding : '+$(this).attr('name'));
 	}
     });
 				     

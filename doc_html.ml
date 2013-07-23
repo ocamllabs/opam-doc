@@ -87,9 +87,8 @@ let html_of_type_record father_name = function
   | {tk_labels = Some lbls; _} ->
     make_type_table 
       (function {rl_name=name; rl_mut=mut; rl_typ=typ; rl_info=info} ->
-	(* bug on &nbsp -> duck tape : simple space *)
 	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_id_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
-	  &>>
+        &>>
       )
       lbls
   | _ -> assert false
@@ -117,7 +116,7 @@ let html_of_type = function
     let name_html = generate_id_mark Opam_doc_config.mark_type name name_html in
     let manifest = 
       match manifest, type_kind.tk_kind with 
-	| Some typ,`Record -> <:html<= {$code "type" typ$ >>
+	| Some typ,`Record -> <:html<= {$code "type" typ$}>>
         | Some typ,_ -> <:html<= $code "type" typ$ >>
 	| None, `Record -> <:html<= {>>
         | None, `Abstract -> Html.nil
