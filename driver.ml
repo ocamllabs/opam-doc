@@ -6,7 +6,12 @@ module StringMap = Map.Make(String)
 
 let path = ref ""
 
-type smap = string StringMap.t
+let (>>) h f = f h
+
+let create_package_directory () =
+  let package_name = !Opam_doc_config.current_package in
+  if not Sys.(file_exists package_name && is_directory package_name) then
+    Unix.mkdir package_name 0o755  
 
 let get_cmt cmd cmt_list =
   let base = Filename.chop_extension cmd in
@@ -105,10 +110,10 @@ let process_file global cmd cmt =
 	Doc_html.generate_html module_name jfile
       with
 	| Invalid_argument s ->
-	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name
-
-
-let _ = 
+	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name;
+	  None
+	    
+let _ =
   let files = ref [] in
   
   Opam_doc_config.(
@@ -145,27 +150,31 @@ let _ =
   let cmt_files = filter_impl_files ".cmt" cmt_files in  
   let cmd_files = filter_impl_files ".cmd" cmd_files in 
 
-  (* updates the global table with the new references - 
-     should also contain the possibles '-pack' cmt modules *)
   let global = update_global global cmt_files in
-
-(*
-  print_endline "[debug] global table after update :";
-  global_print global;
-*)
-      
-  List.iter 
-    (fun cmd -> let cmt = get_cmt cmd cmt_files in
-		try process_file global cmd cmt with e -> raise e)
-    cmd_files;
   
-  Doc_html.generate_module_index ();
+  create_package_directory ();
+      
+  let processed_files =
+    List.map (fun cmd -> let cmt = get_cmt cmd cmt_files in
+			 try process_file global cmd cmt with e -> raise e)
+      cmd_files 
+    >> List.filter (function Some o -> true | None -> false)
+    >> List.map (function Some o -> o | None -> assert false)
+    >> List.sort (fun (x,_) (y,_) -> String.compare x y)
+  in
+  
+    
   Doc_html.output_style_file ();
   Doc_html.output_script_file ();
+  
+  
+  
+  Doc_html.generate_module_index processed_files;
+  
+  (* TODO : keep track of the packages *)
+  Doc_html.create_default_page global !Opam_doc_config.default_index_name;
+  
 
-  Html_utils.flatten_symlinks ();
-    
   (* write down the updated global table *)
-  write_global_file global !(Opam_doc_config.index_file_path)
-    
+  write_global_file global !Opam_doc_config.index_file_path
     

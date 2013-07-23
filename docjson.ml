@@ -2,22 +2,7 @@ open Cow
 
 type info = Html.t
 
-let rec output_html_data out = function
-  | (`Data _ as d) :: t ->
-    Xml.output out d;
-    output_html_data out t
-  | (`El _ as e) :: t ->
-    Xml.output_tree (fun x -> x) out e;
-    Xml.output out (`Dtd None);
-    output_html_data out t
-  | [] -> ()
-
-let string_of_html html = 
-  let b = Buffer.create 256 in
-  let out = Xml.make_output (`Buffer b) in
-    Xml.output out (`Dtd None);
-    output_html_data out html;
-    Buffer.contents b
+let string_of_html = Cow.Html.to_string
 
 let json_of_info i = 
   Json.String (string_of_html i)

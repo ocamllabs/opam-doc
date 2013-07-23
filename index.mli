@@ -19,7 +19,7 @@ val create_local: global -> (string * Digest.t) list -> local
 *)
 val local_lookup: local -> string list -> string
 
-val get_global_modules: global -> string list
+val get_global_packages: global -> string list
 
 (* debug *)
 val global_print: global -> unit

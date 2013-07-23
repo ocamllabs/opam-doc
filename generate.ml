@@ -12,14 +12,44 @@ let title_id_tag = "TITLE"
 
 let internal_path = ref []
 
-let generate_submodule name f =
+let generate_submodule name f arg =
   internal_path:=name::(!internal_path);
-  let res = f () in
+  let res = f arg in
   internal_path:=List.tl !internal_path;  
   res
 
 let add_internal_reference id =
   Index.add_internal_reference id (List.rev !internal_path)
+
+let rec treat_module_type id = function
+  | Mty_ident p -> () (* should do something ? *)
+  | Mty_signature msig -> generate_submodule 
+    id.Ident.name add_include_references msig
+  | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
+
+and add_include_references sig_list = 
+  List.iter 
+    (function  
+      | Sig_value (id,_)
+      | Sig_type (id, _, _) 
+      | Sig_exception (id, _) ->
+	add_internal_reference id
+	  
+      | Sig_module (id, mtyp,_) ->
+	add_internal_reference id;
+	treat_module_type id mtyp
+
+      | Sig_modtype (id, mdecl) -> 
+	add_internal_reference id;
+	(match mdecl with
+	    Modtype_abstract -> ()
+	  | Modtype_manifest mtyp -> treat_module_type id mtyp
+	)
+    (* TODO : SUPPORT FOR OBJECTS *)
+      | Sig_class (id, _, _)
+      | Sig_class_type (id, _, _) -> add_internal_reference id
+    ) 
+    sig_list
 
 
 (* TODO add support for references *)
@@ -217,7 +247,7 @@ let generate_typ_param param =
   <:html<$str:s$>>
 
 let generate_class_param param = 
-  <:html<$str:("'" ^ param.txt)$>>
+  <:html<$str:"'" ^ param.txt$>>
 
 let generate_variant_constructor local (name, info) (_, _, args, _) =
   constructor 
@@ -482,14 +512,14 @@ and generate_signature_item local ditem item =
       add_internal_reference id;
             
       let jmty = generate_submodule name (fun () ->
-	generate_module_type local dmty mty) in
+	generate_module_type local dmty mty) () in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iModule name jmty jinfo
     | Dsig_recmodule (name, dmty) , Tsig_recmodule [id,_,mty;_] -> 
       add_internal_reference id;
       
       let jmty = generate_submodule name (fun () ->
-	  generate_module_type local dmty mty) in
+	  generate_module_type local dmty mty) () in
       let jinfo = generate_info_opt local ditem.dsig_info in
       iModule name jmty jinfo
     | Dsig_modtype(name, dmtyo), Tsig_modtype(id, _, mtydecl) ->
@@ -499,7 +529,7 @@ and generate_signature_item local ditem item =
         match dmtyo, mtydecl with
             Some dmty, Tmodtype_manifest mty -> 
               Some (generate_submodule name (fun () ->
-		generate_module_type local dmty mty))
+		generate_module_type local dmty mty) ())
           | None, Tmodtype_abstract -> None
           | _, _ -> raise (Failure "generate_signature_item>mod_type: Mismatch")
       in
@@ -509,10 +539,9 @@ and generate_signature_item local ditem item =
       (* TODO *)
       iComment None
 	(*raise (Failure "Not supported")*)
-    | Dsig_include dmty, Tsig_include(mty, _) ->
-      (** Cannot make cross-referencing links between a module and its included types 
-	  -> They don't have the same Ident.t
-      *)
+    | Dsig_include dmty, Tsig_include(mty, typ_sig) ->
+      (* pre 4.02.0dev+fp => remove typ_sig *)
+      add_include_references typ_sig;
       
       let jmty = generate_module_type local dmty mty in
       let jinfo = generate_info_opt local ditem.dsig_info in
@@ -678,7 +707,7 @@ and generate_structure_item local ditem item =
       add_internal_reference id;
 
       let jmty = generate_submodule name
-	(fun () -> generate_module_str_type local dmexpr mexpr) in
+	(fun () -> generate_module_str_type local dmexpr mexpr) () in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModule name jmty jinfo
 
@@ -687,7 +716,7 @@ and generate_structure_item local ditem item =
       add_internal_reference id;
       
       let jmty = generate_submodule name
-	(fun () -> generate_module_type local dmty mty) in
+	(fun () -> generate_module_type local dmty mty) () in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModule name jmty jinfo
 	
@@ -696,7 +725,7 @@ and generate_structure_item local ditem item =
       add_internal_reference id;
 
       let jmty = generate_submodule name
-	(fun () -> generate_module_type local dmty mty) in
+	(fun () -> generate_module_type local dmty mty) () in
       let jinfo = generate_info_opt local ditem.dstr_info in
       iModType name (Some jmty) jinfo
 	
@@ -704,11 +733,10 @@ and generate_structure_item local ditem item =
      (* TODO *)
       iComment None
    (*raise (Failure "Not supported")*)
-    | Dstr_include dmty, Tstr_include(mty, _) ->
-     (** Cannot make cross-referencing links between a module and its included types 
-	 -> They don't have the same Ident.t
-     *)
-
+    | Dstr_include dmty, Tstr_include(mty, typ_sig) ->
+      (* pre 4.02.0dev+fp => remove typ_sig *)
+      add_include_references typ_sig;
+      
      let jmty = generate_module_str_type local dmty mty in
      let jinfo = generate_info_opt local ditem.dstr_info in
      let mty_type = mty.mod_type in

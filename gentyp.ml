@@ -56,7 +56,6 @@ let rec print_ident ppf id =
 	  let local = match !index with 
 	    | Some local -> local 
 	    | None -> raise Not_found in
-	  
 	  Some (Index.local_lookup local (name::elems))
 	with 
 	    Not_found -> 
@@ -71,10 +70,11 @@ let rec print_ident ppf id =
 	 else name::elems)
       in
       begin
-      match html_path with
-	| Some path ->
-	  fprintf ppf "@{<path:%s>%s@}" path concrete_name
-	| None -> fprintf ppf "@{<unresolved>%s@}" concrete_name
+	match html_path with
+	  | Some path ->
+	    fprintf ppf "@{<path:%s>%s@}" path concrete_name
+	  | None -> 
+	    fprintf ppf "@{<unresolved>%s@}" concrete_name
       end
 	
     | Oide_internal_ident (name,id) ->
@@ -86,19 +86,24 @@ let rec print_ident ppf id =
 	      let base_path = String.concat "." module_list in
 	      let html_path =
 		if List.length elems = 0 then 
-		  base_path^"."^name^".html"
+		  "?package="^ !Opam_doc_config.current_package
+		  ^ "&module="^base_path^"."^name
 		else
 		  let res, last_item = 
 		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
-		  base_path
+		  "?package="^ !Opam_doc_config.current_package
+		  ^"&module="^base_path
 		  ^"."
 		  ^name
 		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
-		  ^".html#TYPE"^last_item 
+		  ^"&type="^last_item 
 	      in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	    else
-	      let html_path = (String.concat "." (elems@module_list))^".html#TYPE"^name in
+	      let html_path = 
+		"?package=" ^ !Opam_doc_config.current_package 
+		^"&module=" ^ (String.concat "." (elems@module_list))
+		^"&type="^name in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	  with 
 	      Not_found -> 
@@ -680,8 +685,8 @@ let process_tags tag =
       let pref = String.sub tag 0 idx in 
       let arg = String.sub tag (idx + 1) (len - 1) in
       match pref with
-        | "path" -> 
-          (fun body -> <:html<<a href="$str:arg$">$body$</a>&>>)
+        | "path" ->
+	  (fun body -> <:html<<a href="$uri:Uri.of_string arg$">$body$</a>&>>)
 	| _ -> raise Not_found
 	       
 let path local p = 

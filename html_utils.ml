@@ -131,30 +131,66 @@ let html_of_type_class_param_list params variances =
 let generate_id_mark mark name html =
   <:html<<span id="$str:mark^name$">$html$</span>&>>
 
-let wrap_include signature path =
-  <:html<<div class="expanding_content">
-	<button onclick="expand_content(this)">-</button>
-	$signature$
-	<div class="content">
-	$create_content_to_load_tag (path^Opam_doc_config.page_contents_extension)$
-	</div>
-  </div>&>>
+ (*  :lllll *)
+let wrap_ident_module signature module_name path =
+  match path with 
+    | Some p -> 
+      <:html<<div class="ocaml_module ident" name="$str:module_name$" path=$uri:Uri.of_string p$>
+		    $signature$
+</div>&>>
+    | None ->       
+      <:html<<div class="ocaml_module ident" name="$str:module_name$">
+		    $signature$
+</div>&>>
 
-let wrap_module signature path =
-  <:html<<div class="expanding_content">
-	<button onclick="expand_content(this)">+</button>$signature$
-	<div class="content" style="display:none">
-	$create_content_to_load_tag (path^Opam_doc_config.page_contents_extension)$
-	</div>
-  </div>&>>
+
+let wrap_sig_module signature elements module_name =
+  <:html<<div class="ocaml_module sig" name="$str:module_name$">
+		$signature$
+		<div class="ocaml_module_content">
+		       $elements$
+		</div>
+</div>&>>
+
+let wrap_include include_item path sig_items signature =
+  let mod_type = Index.lookup_include_module_type include_item in
+  let included_items = 
+    let open Types in 
+	let msig = match mod_type with 
+	  | Mty_signature msig -> msig | _ -> [] 
+	in
+	List.fold_left 
+	  (fun acc -> function 
+	  | Sig_module (id, _, _) | Sig_modtype (id, _) 
+	  | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
+	    -> ("\"" ^ id.Ident.name ^ "\"") ::acc
+	  | _ ->acc)	   
+	[] msig
+    in
+    let js_array = "[" ^ String.concat "," included_items ^ "]" in
+    match path with
+      |	Some p ->
+	<:html<<div class="ocaml_include ident" path=$uri:Uri.of_string p$ items="$str:js_array$">
+		      $signature$
+</div>&>>
+      | None ->
+	let module_content = match sig_items with 
+	  |Some l -> <:html<<div class="ocaml_module_content">
+			    $l$</div>&>> 
+	  | None -> Html.nil in
+	<:html<<div class="ocaml_include sig" items="$str:js_array$">
+		      $signature$$module_content$
+</div>&>>
+
 end
+
 
 open TagsGenerators		
 
 (** {3 Html pages generators} *)
 
 let create_html_skeleton filename (headers : Html.t list) (body : Html.t list) =
-  let oc = open_out (!Opam_doc_config.output_directory ^ filename) in
+  let oc = open_out filename in
   let header_elements = fold_html headers in
   let body_elements = fold_html body in
   output_string oc Opam_doc_config.doctype;
@@ -173,136 +209,33 @@ $body_elements$
   end
     
 
-let create_html_default_skeleton filename module_name body_list =
+let create_html_default_skeleton filename title body_list =
   let headers = 
     let open Opam_doc_config in 
-	[ <:html<<title>$str:module_name$</title>&>>
+	[ <:html<<title>$str:title$</title>&>>
 	; character_encoding
 	; style_tag
 	; script_tag 
 	] 
     in
     create_html_skeleton filename headers body_list
-		
 
-(* TODO : add the possible reference to identifier module *)
-(* html_signature =
-   module M = S | module M = struct .. end 
-   default : module M
-*)   
-let create_module_body_title module_name title_signature info =  
-  let html_signature = 
-    match title_signature with Some s -> s 
-      | None -> <:html<<pre>$keyword "module"$ $str:module_name$</pre>&>>
-  in
-  <:html<<h1>Module $str:module_name$</h1>
-$html_signature$$make_info info$
-<hr/>&>>
-
-
-  let create_module_body_title_with_ref module_name signature info target_name target_path  =  
-    let target_name = Filename.basename target_name in
-    <:html<<h1>Module $str:module_name$ = <a href="$str:target_path$">$str:target_name$</a></h1>
-	$signature$$make_info info$
-<hr/>&>>
-
-
-(** Output an .html file to a concrete ocaml module definition.
-    It will also contains the html tag with the path referencing
-    the .html.contents file to load
-
-    filename = ".*.html"
-    title_signature : Html.t
-    module_name = "A.B.M"
-    info : Html.t
-*)    
-let create_html_concrete_page filename title_signature module_name info =
-  let contents_filename = filename ^ Opam_doc_config.page_contents_extension in
-  create_html_default_skeleton 
-    filename module_name 
-    [ create_module_body_title module_name title_signature info
-    ; create_content_to_load_tag contents_filename
-    ]
-
-let create_html_concrete_page_with_ref filename module_name signature info target_name target_path =
-  let contents_filename = filename ^ Opam_doc_config.page_contents_extension in
-  create_html_default_skeleton 
-    filename module_name
-    [ create_module_body_title_with_ref 
-	module_name signature info target_name target_path
-    ; create_content_to_load_tag contents_filename
-    ]
-
-(** Output an .contents file containing the concrete
-    module documentation and the possible recursive
-    tags to .contents *)
-let create_html_page_contents filename (items : Html.t list) =
-  let contents_filename = filename ^ Opam_doc_config.page_contents_extension in
-  let oc = open_out (!Opam_doc_config.output_directory ^ contents_filename) in
-  begin
-    List.iter (fun item -> output_string oc ((string_of_html item)^"\n")) items;
-    close_out oc
-  end
-
-let create_html_symlink_contents filename target =
-  let contents_filename = (!Opam_doc_config.output_directory ^ filename ^ Opam_doc_config.page_contents_extension) in
-  let contents_target_filename = target ^ Opam_doc_config.page_contents_extension in
-  Unix.(
-    try
-      symlink contents_target_filename contents_filename
-    with
-	Unix_error _ ->
-	  unlink contents_filename;
-	  symlink contents_target_filename contents_filename
-  )
-
-(* str_env : "M.M'.M''" *)
-(* path : .*/bla.html *)
-let create_include_pages str_env path (module_type : Types.module_type)  =
-  let trunc_path = Filename.chop_suffix path ".html" in
-  let open Types in
-      let rec loop env path = function
-	| Mty_signature msig -> 
-	  ListLabels.iter msig 
-	    ~f:(function
-	      | Sig_module (id, msig,_) 
-	      | Sig_modtype (id, Modtype_manifest (msig)) ->
-		let new_env = env^"."^id.Ident.name in
-		let new_path = path^"."^id.Ident.name in
-		
-		(* .contents creation *)
-		create_html_symlink_contents 
-		  (new_env^".html") (new_path^".html");
-		
-		(* .html creation *)
-		create_html_concrete_page_with_ref 
-		  (new_env^".html")
-		  new_env 
-		  Html.nil None (* sig - info *)
-		  new_path
-		  (new_path^".html");
-		
-		loop new_env new_path msig 
-	      | Sig_class _
-	      | Sig_class_type _ -> () (* TODO *)
-
-	      | Sig_modtype _ 
-	      | Sig_value _
-	      | Sig_type _ 
-	      | Sig_exception _ -> ()
-	    );
-	
-	| Mty_functor (_,_, mty) -> loop env path mty 
-	| Mty_ident _ -> ()
-      in
-      loop str_env trunc_path module_type
+let create_html_default_page global filename title =
+  create_html_default_skeleton filename title 
+    (* package index - links + comm *)
+    (List.map 
+    (fun package -> 
+      let uri = Uri.of_string ("?package=" ^ package) in
+      <:html<<a href=$uri:uri$>$str:String.capitalize package$</a><br/>&>>)
+    (List.sort String.compare (Index.get_global_packages global)))
       
 (** Hacks functions *)
 
 (* To be removed at some point *)
 (** Extract the reference from a '<a .* href="...".*</a>' tag *)
 let extract_path path = 
-  let s = string_of_html path in
+  (* there are some \n generated by the string_of_html *)
+  let s = String.trim (string_of_html path) in
   if s.[0] = '<' && s.[1] = 'a' then
     let open String in
 	let i = index s '"' + 1 in
@@ -338,7 +271,7 @@ let flatten_symlinks () =
 	unlink linkfile;
 	symlink target linkfile
       in
-      let curr_dir = opendir !Opam_doc_config.output_directory in
+      let curr_dir = opendir !Opam_doc_config.current_package in
       try
 	while true do
 	  try 
