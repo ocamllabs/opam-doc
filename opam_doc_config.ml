@@ -12,7 +12,6 @@ let filter_pervasives = ref false
 let clear_index = ref false
 let use_online_links = ref true
 
-
 let current_package = ref "test"
 
 let options  = 

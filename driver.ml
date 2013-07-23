@@ -117,7 +117,7 @@ let _ =
   Opam_doc_config.(
     Arg.parse options (fun file -> files := file :: !files) usage
   );
-  
+
   (* read the saved global table *)  
   let global = read_global_file !(Opam_doc_config.index_file_path) in
 (* 

@@ -31,13 +31,15 @@ type global = t_value CrcMap.t
 type local = t_value LocalMap.t
 
 let read_global_file path =
-  try 
-    let ic = open_in path in
-    let global = input_value ic in
-    close_in ic;
-    global 
-  with
-    | Sys_error _ -> CrcMap.empty
+  if !Opam_doc_config.clear_index then CrcMap.empty
+  else
+    try 
+      let ic = open_in path in
+      let global = input_value ic in
+      close_in ic;
+      global 
+    with
+      | Sys_error _ -> CrcMap.empty
 
 let update_global global filenames =
   let doFile acc fname =
