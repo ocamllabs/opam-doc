@@ -4,7 +4,12 @@ open Cow
 
 module StringMap = Map.Make(String)
 
-type smap = string StringMap.t
+let (>>) h f = f h
+
+let create_package_directory () =
+  let package_name = !Opam_doc_config.current_package in
+  if not Sys.(file_exists package_name && is_directory package_name) then
+    Unix.mkdir package_name 0o755  
 
 let get_cmt cmd cmt_list =
   let base = Filename.chop_extension cmd in
@@ -65,41 +70,109 @@ let json_to_string json =
     json_to_buffer json buf;
     Buffer.contents buf
 
-let process_file global cmd cmt = 
-  let dintf = 
-    let cmd = Cmd_format.read_cmd cmd in
-      match cmd.Cmd_format.cmd_doctree with
-        Doctree.Dfile_intf dintf -> dintf
-      | Doctree.Dfile_impl _ -> raise (Failure "Not implemented: .cmd files")
-  in
-  let intf, imports = 
-    let cmi, cmt = Cmt_format.read cmt in
-      match cmi, cmt with
-      | _, None -> raise (Failure "Not a cmt file")
-      | None, Some cmt -> raise (Failure "Not implemented: .cmt files")
-      | Some cmi, Some cmt -> 
-          match cmt.Cmt_format.cmt_annots with
-            Cmt_format.Interface intf -> intf, cmi.Cmi_format.cmi_crcs
-          | Cmt_format.Implementation _ -> raise (Failure "Not implemented: .cmt files")
-          | _ -> raise (Failure "Wrong kind of cmt file")
-  in
-    let local = create_local global imports in
-    let jintf = generate_file local dintf intf in
-    let json = Docjson.json_of_file jintf in
-    let json_name = (Filename.chop_extension cmd) ^ ".json" in
-    let oc = open_out json_name in
-      output_string oc (json_to_string json);
-      close_out oc
+let process_cmd cmd =
+  Cmd_format.(
+    let cmd = read_cmd cmd in cmd.cmd_doctree
+  )
 
-let _ = 
-  let files = 
-    let files = ref [] in
-      Arg.parse [] (fun file -> files := file :: !files) "Bad usage";
-      !files
+let generate_json cmd jfile =
+  let json = Docjson.json_of_file jfile in
+  let json_name = (Filename.chop_extension cmd) ^ ".json" in
+  let oc = open_out json_name in
+  output_string oc (json_to_string json);
+  close_out oc
+    
+let process_file global cmd cmt = 
+  print_endline ("Processing : "^cmt^" and "^cmd);
+  let module_name = String.capitalize 
+    (Filename.chop_extension (Filename.basename cmd)) in
+  let doc_file = process_cmd cmd in
+  let cmi, cmt = Cmt_format.read cmt in
+  match cmi, cmt with
+    | _, None -> raise (Failure "Not a cmt file")
+    | None, Some cmt -> raise (Failure "I need the cmti")
+    | Some cmi, Some cmt ->
+      let imports = cmi.Cmi_format.cmi_crcs in
+      let local = create_local global imports in
+      Index.reset_internal_references module_name;
+      try 
+	let jfile = 
+	  match cmt.Cmt_format.cmt_annots with
+            | Cmt_format.Interface intf ->   
+	      generate_file_from_interface local doc_file intf
+            | Cmt_format.Implementation impl ->  
+	      generate_file_from_structure local doc_file impl
+            | _ -> raise (Failure "Wrong kind of cmt file") 
+	in
+	(*generate_json cmd jfile;*)
+	Doc_html.generate_html module_name jfile
+      with
+	| Invalid_argument s ->
+	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name;
+	  None
+	    
+let _ =
+  let files = ref [] in
+  
+  Opam_doc_config.(
+    Arg.parse options (fun file -> files := file :: !files) usage
+  );
+
+  (* read the saved global table *)  
+  let global = read_global_file !(Opam_doc_config.index_file_path) in
+(* 
+   print_endline "[debug] global table before update :";
+   global_print global;
+
+*)
+
+  let cmt_files = List.filter
+    (fun file -> Filename.check_suffix file ".cmti"
+      || Filename.check_suffix file ".cmt") !files in
+  
+  let cmd_files = List.filter 
+    (fun file -> Filename.check_suffix file ".cmdi" 
+      || Filename.check_suffix file ".cmd") !files in
+    
+  let filter_impl_files ext files = 
+    List.filter 
+      (fun file -> 
+	if Filename.check_suffix file ext then
+	  try ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files); 
+	      false 
+	  with Not_found -> true
+	else true) 
+      files 
   in
-  let cmt_files = List.filter (fun file -> Filename.check_suffix file ".cmti") files in
-  let cmd_files = List.filter (fun file -> Filename.check_suffix file ".cmdi") files in
-  let global = create_global_from_files cmt_files in
-    List.iter 
-      (fun cmd -> let cmt = get_cmt cmd cmt_files in process_file global cmd cmt)
-      cmd_files
+
+  let cmt_files = filter_impl_files ".cmt" cmt_files in  
+  let cmd_files = filter_impl_files ".cmd" cmd_files in 
+
+  let global = update_global global cmt_files in
+  
+  create_package_directory ();
+      
+  let processed_files =
+    List.map (fun cmd -> let cmt = get_cmt cmd cmt_files in
+			 try process_file global cmd cmt with e -> raise e)
+      cmd_files 
+    >> List.filter (function Some o -> true | None -> false)
+    >> List.map (function Some o -> o | None -> assert false)
+    >> List.sort (fun (x,_) (y,_) -> String.compare x y)
+  in
+  
+    
+  Doc_html.output_style_file ();
+  Doc_html.output_script_file ();
+  
+  
+  
+  Doc_html.generate_module_index processed_files;
+  
+  (* TODO : keep track of the packages *)
+  Doc_html.create_default_page global !Opam_doc_config.default_index_name;
+  
+
+  (* write down the updated global table *)
+  write_global_file global !Opam_doc_config.index_file_path
+    

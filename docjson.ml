@@ -2,26 +2,10 @@ open Cow
 
 type info = Html.t
 
-let id x = x
+let string_of_html = Cow.Html.to_string
 
-let rec output_html_data out = function
-  | (`Data _ as d) :: t ->
-    Xml.output out d;
-    output_html_data out t
-  | (`El _ as e) :: t ->
-    Xml.output_tree id out e;
-    Xml.output out (`Dtd None);
-    output_html_data out t
-  | [] -> ()
-
-let string_of_html html = 
-  let b = Buffer.create 32 in
-  let out = Xml.make_output (`Buffer b) in
-    Xml.output out (`Dtd None);
-    output_html_data out html;
-    Buffer.contents b
-
-let json_of_info i = Json.String (string_of_html i)
+let json_of_info i = 
+  Json.String (string_of_html i)
 
 let list_opt = function
   | [] -> None
@@ -42,422 +26,441 @@ let json_of_path p = Json.String (string_of_html p)
 let path_of_json _ = raise (Failure "Not Supported")
 
 type variant_constructor =
- { name: string;
-   args: typ list;
-   info: info option }
+ { vc_name: string;
+   vc_args: typ list;
+   vc_info: info option }
 with json
 
-let constructor name args info = {name; args; info}
+let constructor vc_name vc_args vc_info = {vc_name; vc_args; vc_info}
 
 type record_label =
- { name: string;
-   mut: bool;
-   typ: typ;
-   info: info option }
+ { rl_name: string;
+   rl_mut: bool;
+   rl_typ: typ;
+   rl_info: info option }
 with json
 
-let label name mut typ info = {name; mut; typ; info}
+let label rl_name rl_mut rl_typ rl_info = {rl_name; rl_mut; rl_typ; rl_info}
 
 type type_kind = 
-  { kind: [ `Abstract | `Variant | `Record ];
-    constructors: variant_constructor list option;
-    labels: record_label list option }
+  { tk_kind: [ `Abstract | `Variant | `Record ];
+    tk_constructors: variant_constructor list option;
+    tk_labels: record_label list option }
 with json
 
 let kAbstract = 
-  { kind = `Abstract;
-    constructors = None;
-    labels = None }
+  { tk_kind = `Abstract;
+    tk_constructors = None;
+    tk_labels = None }
 
 let kVariant constrs = 
-  { kind = `Variant; 
-    constructors = Some constrs; 
-    labels = None }
+  { tk_kind = `Variant; 
+    tk_constructors = Some constrs; 
+    tk_labels = None }
 
 let kRecord labels = 
-  { kind = `Record;
-    constructors = None;
-    labels = Some labels }
+  { tk_kind = `Record;
+    tk_constructors = None;
+    tk_labels = Some labels }
 
 type class_type =
-  { kind: [ `Ident | `Sig ];
-    args: typ list option;
-    params: typ list option;
-    path: path option;
-    fields: class_type_field list option }
+  { ct_kind: [ `Ident | `Sig | `Constraint ];
+    ct_args: typ list option;
+    ct_params: typ list option;
+    ct_path: path option;
+    ct_fields: class_type_field list option;
+    ct_cstr : (class_type * class_type) option;
+  }
 
 and class_type_field =
-  { field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
-    class_type: class_type option;
-    name: string option;
-    mut: bool option;
-    virt: bool option;
-    priv: bool option;
-    typ: typ option;
-    eq: (typ * typ) option;
-    info: info option; }
+  { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
+    ctf_class_type: class_type option;
+    ctf_name: string option;
+    ctf_mut: bool option;
+    ctf_virt: bool option;
+    ctf_priv: bool option;
+    ctf_typ: typ option;
+    ctf_eq: (typ * typ) option;
+    ctf_info: info option; }
 with json
 
 let kClassIdent args params path = 
-  { kind = `Ident; 
-    args = list_opt args;
-    params = Some params;
-    path = Some path;
-    fields = None }
+  { ct_kind = `Ident; 
+    ct_args = list_opt args;
+    ct_params = Some params;
+    ct_path = Some path;
+    ct_fields = None;
+    ct_cstr = None; }
 
 let kClassSig args fields =
-  { kind = `Sig;
-    args = list_opt args;
-    params = None;
-    path = None;
-    fields = Some fields }
+  { ct_kind = `Sig;
+    ct_args = list_opt args;
+    ct_params = None;
+    ct_path = None;
+    ct_fields = Some fields;
+    ct_cstr = None;  }
+
+(* params or not params*)
+let kClassConstraint args constr = 
+  { ct_kind = `Constraint;
+    ct_args = list_opt args;
+    ct_params = None;
+    ct_path = None;
+    ct_fields = None;
+    ct_cstr = Some constr; 
+  }
 
 let fInherit class_type info = 
-  { field = `Inherit;
-    class_type = Some class_type;
-    name = None;
-    mut = None;
-    virt = None;
-    priv = None;
-    typ = None;
-    eq = None;
-    info = info }
+  { ctf_field = `Inherit;
+    ctf_class_type = Some class_type;
+    ctf_name = None;
+    ctf_mut = None;
+    ctf_virt = None;
+    ctf_priv = None;
+    ctf_typ = None;
+    ctf_eq = None;
+    ctf_info = info }
 
-let fVal name mut virt priv typ info = 
-  { field = `Val;
-    class_type = None;
-    name = Some name;
-    mut = Some mut;
-    virt = Some virt;
-    priv = Some priv;
-    typ = Some typ;
-    eq = None;
-    info = info }
+let fVal name mut virt (*priv*) typ info = 
+  { ctf_field = `Val;
+    ctf_class_type = None;
+    ctf_name = Some name;
+    ctf_mut = Some mut;
+    ctf_virt = Some virt;
+    ctf_priv = None(* Some priv*);
+    ctf_typ = Some typ;
+    ctf_eq = None;
+    ctf_info = info }
 
 let fMethod name virt priv typ info = 
-  { field = `Method;
-    class_type = None;
-    name = Some name;
-    mut = None;
-    virt = Some virt;
-    priv = Some priv;
-    typ = Some typ;
-    eq = None;
-    info = info }
+  { ctf_field = `Method;
+    ctf_class_type = None;
+    ctf_name = Some name;
+    ctf_mut = None;
+    ctf_virt = Some virt;
+    ctf_priv = Some priv;
+    ctf_typ = Some typ;
+    ctf_eq = None;
+    ctf_info = info }
 
 let fConstraint typ1 typ2 info = 
-  { field = `Constraint;
-    class_type = None;
-    name = None;
-    mut = None;
-    virt = None;
-    priv = None;
-    typ = None;
-    eq = Some (typ1, typ2);
-    info = info }
+  { ctf_field = `Constraint;
+    ctf_class_type = None;
+    ctf_name = None;
+    ctf_mut = None;
+    ctf_virt = None;
+    ctf_priv = None;
+    ctf_typ = None;
+    ctf_eq = Some (typ1, typ2);
+    ctf_info = info }
 
 let fClassComment info = 
-  { field = `Comment;
-    class_type = None;
-    name = None;
-    mut = None;
-    virt = None;
-    priv = None;
-    typ = None;
-    eq = None;
-    info = info }
+  { ctf_field = `Comment;
+    ctf_class_type = None;
+    ctf_name = None;
+    ctf_mut = None;
+    ctf_virt = None;
+    ctf_priv = None;
+    ctf_typ = None;
+    ctf_eq = None;
+    ctf_info = info }
 
 type with_constraint =
-  { kind: [ `Type | `Module ];
-    path: path;
-    subst: bool;
-    typeq: typ option;
-    modeq: path option }
+  { wc_kind: [ `Type | `Module ];
+    wc_path: path;
+    wc_subst: bool;
+    wc_typeq: typ option;
+    wc_modeq: path option }
 with json
 
 let kWithType path subst typeq = 
-  { kind = `Type;
-    path = path;
-    subst = subst;
-    typeq = Some typeq;
-    modeq = None }
+  { wc_kind = `Type;
+    wc_path = path;
+    wc_subst = subst;
+    wc_typeq = Some typeq;
+    wc_modeq = None }
 
 let kWithMod path subst modeq = 
-  { kind = `Type;
-    path = path;
-    subst = subst;
-    typeq = None;
-    modeq = Some modeq }
+  { wc_kind = `Type;
+    wc_path = path;
+    wc_subst = subst;
+    wc_typeq = None;
+    wc_modeq = Some modeq }
 
 type variance = [ `None | `Positive | `Negative ]
 with json
 
-let vNone = `None
-
-let vPositive = `Positive
-
-let vNegative = `Negative
-
 type module_type =
-  { mtkind: [ `Ident | `Sig | `Functor | `With | `TypeOf ];
-    mtpath: path option;
-    items: signature_item list option;
-    arg_name: string option;
-    arg_type: module_type option;
-    cnstrs: with_constraint list option;
-    base: module_type option;
-    expr: module_expr option }
+  { mt_kind: [ `Ident | `Sig | `Functor | `With | `TypeOf | `Apply ];
+    mt_path: path option;
+    mt_items: signature_item list option;
+    mt_arg_name: string option;
+    mt_arg_type: module_type option;
+    mt_cnstrs: with_constraint list option;
+    mt_base: module_type option;
+    mt_expr: module_expr option }
 
 and signature_item =
-  { item: [ `Value | `Primitive | `Type | `Exception | `Module 
+  { si_item: [ `Value | `Primitive | `Type | `Exception | `Module 
           | `ModType | `Include | `Class | `ClassType | `Comment ];
-    name: string option;
-    typ: typ option;
-    primitive: string list option;
-    params: typ list option;
-    cstrs: (typ * typ) list option;
-    type_kind: type_kind option;
-    priv: bool option;
-    manifest: typ option;
-    variance: variance list option;
-    args: typ list option;
-    module_type: module_type option;
-    virt: bool option;
-    class_type: class_type option;
-    info: info option }
+    si_name: string option;
+    si_typ: typ option;
+    si_primitive: string list option;
+    si_params: typ list option;
+    si_cstrs: (typ * typ) list option;
+    si_type_kind: type_kind option;
+    si_priv: bool option;
+    si_manifest: typ option;
+    si_variance: variance list option;
+    si_args: typ list option;
+    si_module_type: module_type option;
+    si_virt: bool option;
+    si_class_type: class_type option;
+    si_info: info option }
 
 and module_expr =
-  { mkind: [ `Ident ];
-    mpath: path option }
+  { me_kind: [ `Ident ];
+    me_path: path option }
 with json
 
 let kModTypeIdent path = 
-  { mtkind = `Ident;
-    mtpath = Some path;
-    items = None;
-    arg_name = None;
-    arg_type = None;
-    cnstrs = None;
-    base = None;
-    expr = None }
+  { mt_kind = `Ident;
+    mt_path = Some path;
+    mt_items = None;
+    mt_arg_name = None;
+    mt_arg_type = None;
+    mt_cnstrs = None;
+    mt_base = None;
+    mt_expr = None }
 
 let kModTypeSig items = 
-  { mtkind = `Sig;
-    mtpath = None;
-    items = Some items;
-    arg_name = None;
-    arg_type = None;
-    cnstrs = None;
-    base = None;
-    expr = None }
+  { mt_kind = `Sig;
+    mt_path = None;
+    mt_items = Some items;
+    mt_arg_name = None;
+    mt_arg_type = None;
+    mt_cnstrs = None;
+    mt_base = None;
+    mt_expr = None }
 
 let kModTypeFunctor arg_name arg_type base = 
-  { mtkind = `Functor;
-    mtpath = None;
-    items = None;
-    arg_name = Some arg_name;
-    arg_type = Some arg_type;
-    cnstrs = None;
-    base = Some base;
-    expr = None }
+  { mt_kind = `Functor;
+    mt_path = None;
+    mt_items = None;
+    mt_arg_name = Some arg_name;
+    mt_arg_type = Some arg_type;
+    mt_cnstrs = None;
+    mt_base = Some base;
+    mt_expr = None }
 
 let kModTypeWith cnstrs base = 
-  { mtkind = `With;
-    mtpath = None;
-    items = None;
-    arg_name = None;
-    arg_type = None;
-    cnstrs = Some cnstrs;
-    base = Some base;
-    expr = None }
+  { mt_kind = `With;
+    mt_path = None;
+    mt_items = None;
+    mt_arg_name = None;
+    mt_arg_type = None;
+    mt_cnstrs = Some cnstrs;
+    mt_base = Some base;
+    mt_expr = None }
 
 let kModTypeTypeOf expr = 
-  { mtkind = `TypeOf;
-    mtpath = None;
-    items = None;
-    arg_name = None;
-    arg_type = None;
-    cnstrs = None;
-    base = None;
-    expr = Some expr }
+  { mt_kind = `TypeOf;
+    mt_path = None;
+    mt_items = None;
+    mt_arg_name = None;
+    mt_arg_type = None;
+    mt_cnstrs = None;
+    mt_base = None;
+    mt_expr = Some expr }
+
+let kModTypeApply base arg_type = 
+  { mt_kind = `Apply;
+    mt_path = None;
+    mt_items = None;
+    mt_arg_name = None;
+    mt_arg_type = Some arg_type;
+    mt_cnstrs = None;
+    mt_base = Some base;
+    mt_expr = None; }
 
 let iValue name typ info = 
-  { item = `Value;
-    name = Some name;
-    typ = Some typ;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = None;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Value;
+    si_name = Some name;
+    si_typ = Some typ;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = None;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iPrimitive name typ primitive info = 
-  { item = `Primitive;
-    name = Some name;
-    typ = Some typ;
-    primitive = Some primitive;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = None;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Primitive;
+    si_name = Some name;
+    si_typ = Some typ;
+    si_primitive = Some primitive;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = None;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iType name params cstrs type_kind priv manifest variance info = 
-  { item = `Type;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = Some params;
-    cstrs = list_opt cstrs;
-    type_kind = Some type_kind;
-    priv = Some priv;
-    manifest = manifest;
-    variance = Some variance;
-    args = None;
-    module_type = None;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Type;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = Some params;
+    si_cstrs = list_opt cstrs;
+    si_type_kind = Some type_kind;
+    si_priv = Some priv;
+    si_manifest = manifest;
+    si_variance = Some variance;
+    si_args = None;
+    si_module_type = None;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iException name args info = 
-  { item = `Exception;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = Some args;
-    module_type = None;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Exception;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = Some args;
+    si_module_type = None;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iModule name module_type info = 
-  { item = `Module;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = Some module_type;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Module;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = Some module_type;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iModType name module_type info = 
-  { item = `ModType;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = module_type;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `ModType;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = module_type;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iInclude module_type info = 
-  { item = `Include;
-    name = None;
-    typ = None;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = Some module_type;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Include;
+    si_name = None;
+    si_typ = None;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = Some module_type;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let iClass name params variance virt class_type info = 
-  { item = `Class;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = Some params;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = Some variance;
-    args = None;
-    module_type = None;
-    virt = Some virt;
-    class_type = Some class_type;
-    info = info }
+  { si_item = `Class;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = Some params;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = Some variance;
+    si_args = None;
+    si_module_type = None;
+    si_virt = Some virt;
+    si_class_type = Some class_type;
+    si_info = info }
 
 let iClassType name params variance virt class_type info = 
-  { item = `ClassType;
-    name = Some name;
-    typ = None;
-    primitive = None;
-    params = Some params;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = Some variance;
-    args = None;
-    module_type = None;
-    virt = Some virt;
-    class_type = Some class_type;
-    info = info }
+  { si_item = `ClassType;
+    si_name = Some name;
+    si_typ = None;
+    si_primitive = None;
+    si_params = Some params;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = Some variance;
+    si_args = None;
+    si_module_type = None;
+    si_virt = Some virt;
+    si_class_type = Some class_type;
+    si_info = info }
 
 let iComment info = 
-  { item = `Comment;
-    name = None;
-    typ = None;
-    primitive = None;
-    params = None;
-    cstrs = None;
-    type_kind = None;
-    priv = None;
-    manifest = None;
-    variance = None;
-    args = None;
-    module_type = None;
-    virt = None;
-    class_type = None;
-    info = info }
+  { si_item = `Comment;
+    si_name = None;
+    si_typ = None;
+    si_primitive = None;
+    si_params = None;
+    si_cstrs = None;
+    si_type_kind = None;
+    si_priv = None;
+    si_manifest = None;
+    si_variance = None;
+    si_args = None;
+    si_module_type = None;
+    si_virt = None;
+    si_class_type = None;
+    si_info = info }
 
 let kModIdent path = 
-  { mkind = `Ident;
-    mpath = Some path }
+  { me_kind = `Ident;
+    me_path = Some path }
 
 type file = 
-  { items: signature_item list;
-    info: info option }
+  { f_items: signature_item list;
+    f_info: info option }
 with json
 
-let file items info = {items; info}
+let file f_items f_info = {f_items; f_info}
+
