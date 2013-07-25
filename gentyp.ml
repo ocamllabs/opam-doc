@@ -19,8 +19,8 @@ open Ctype
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
-  | Oide_internal_ident of string * Ident.t
-  | Oide_external_ident of string
+  | Oide_internal_ident of string * Ident.t * bool (* is_class ? *)
+  | Oide_external_ident of string * bool (* is_class ? *)
 
 type out_type =
   | Otyp_alias of out_type * string
@@ -47,7 +47,7 @@ let rec print_ident ppf id =
   
   let rec loop (elems:string list) = function
     (* lib externe, index a interrogé *)
-    | Oide_external_ident name ->
+    | Oide_external_ident (name, is_class) ->
       (* A.B.c *)
       (* elems : contient ["B";"c"] *) 
       
@@ -73,11 +73,11 @@ let rec print_ident ppf id =
 	match html_path with
 	  | Some path ->
 	    fprintf ppf "@{<path:%s>%s@}" path concrete_name
-	  | None -> 
+	  | None ->
 	    fprintf ppf "@{<unresolved>%s@}" concrete_name
       end
 	
-    | Oide_internal_ident (name,id) ->
+    | Oide_internal_ident (name, id, is_class) ->
       begin
 	  try
 	    (* Looking up in the internal reference base *)
@@ -258,34 +258,22 @@ and print_typargs ppf =
 (* Print a path *)
 
 (* Removed special handling of pervasives *)
-let rec tree_of_path p = 
-  (*DEBUG
-    print_path p;*)
+let rec tree_of_path ?(is_class=false) p = 
   match p with (*function*)
   | Path.Pident id ->
     let pers = Ident.persistent id in
     let name = Ident.name id in
     if pers then
-      Oide_external_ident (name)
+      Oide_external_ident (name, is_class)
     else
-      Oide_internal_ident (name, id)
+      Oide_internal_ident (name, id, is_class)
   | Path.Pdot(p, s, pos) ->
-    Oide_dot (tree_of_path p, s)
+    Oide_dot (tree_of_path ~is_class:is_class p, s)
   | Path.Papply(p1, p2) ->
-    Oide_apply (tree_of_path p1, tree_of_path p2)
-
-and print_path = function
-  | Path.Pident id ->
-    Ident.print std_formatter id;
-    print_newline ()
-  | Path.Pdot(p, s, pos) ->
-    print_endline ("dot "^s); print_path p;
-    Printf.printf "Pdot name : %s\n" s
-  | Path.Papply(p1, p2) ->
-    ()
+    Oide_apply (tree_of_path ~is_class:is_class p1, tree_of_path ~is_class:is_class p2)
       
-let path ppf p =
-  print_ident ppf (tree_of_path p)
+let path ppf ?(is_class=false) p =
+  print_ident ppf (tree_of_path ~is_class:is_class p)
 
 (* Print a type expression *)
 
@@ -689,9 +677,9 @@ let process_tags tag =
 	  (fun body -> <:html<<a href="$uri:Uri.of_string arg$">$body$</a>&>>)
 	| _ -> raise Not_found
 	       
-let path local p = 
+let path local ?(is_class=false) p = 
   index := Some local;
-  with_html process_tags path p
+  with_html process_tags (path ~is_class:is_class) p
     
 let type_scheme local ty = 
   index := Some local;

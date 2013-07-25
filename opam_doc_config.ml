@@ -20,7 +20,7 @@ let options  =
 
     ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one");
     
-    ("--filter-pervasives", Set filter_pervasives, "Add the 'Pervasives' label to Pervasives' references");
+    ("--filter-pervasives", Set filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references");
     
     ("--clear-index", Set clear_index, "Clear the global index before processing");
     
@@ -222,7 +222,6 @@ function create_menu(){
 
 //load package only
 function load_package_index(package_name){
-    console.log(\"Loading index : \"+package_name+\"/index.html...\");
     $(\"body\").load(package_name+\"/index.html\",
 		   function(response, status, xhr){
 		       $(\"body\")
@@ -236,6 +235,13 @@ function expand_content(){
     var expand = this.innerHTML == '+'?true:false;
     this.innerHTML = expand?'-':'+';
     this.parentNode.lastElementChild.style.display = expand?'block':'none';
+}
+
+function expand_all(){
+    $(\"button\").each(function(){
+        if ($(this)[0].innerHTML == '+')
+           $(this).click();
+    })
 }
 
 // node : dom node = <div *>..</div>contents_to_be_hidden</div></div>- is_diplayed = boolean
@@ -270,7 +276,6 @@ function expand_includes(){
 		var $data = perform_ajax_request(args.package+'/'+ module_arr[0]+'.html', false);
 		var result = lookup_module($data, module_arr.slice(1));
 		result.content.find(\"> div.info\").remove();
-		console.log(result.content);
 		
 		//.wrap(\"<div></div>\").parent() doesn't work here - Oo
 		var new_node = $(document.createElement(\"div\"));
@@ -284,6 +289,12 @@ function expand_includes(){
          });
 	
 	expand_includes(); // the processed includes could unwrap others includes
+
+        //should continue?
+        return true;
+    } else {
+        //should continue?
+        return false;
     }
 }
 
@@ -292,7 +303,6 @@ function shrink_modules (){
 
     $(\"div.ocaml_module.sig\").each(function (){
        try {
-	console.log(\"sig : \"+$(this).attr(\"name\"));
 	$(this).removeClass(\"ocaml_module sig\");
 	wrap_element($(this)[0], true);
 	} catch (e){
@@ -302,7 +312,6 @@ function shrink_modules (){
 
     $(\"div.ocaml_module.ident\").each(function (){
 	try {
-	console.log(\"ident : \"+$(this).attr(\"name\"));
 	$(this).removeClass(\"ocaml_module ident\");
 	var path = $(this).attr(\"path\");
 	
@@ -322,7 +331,6 @@ function shrink_modules (){
 
 	    wrap_element($(this)[0], true);
 	    
-	    console.log(\"rec_callED\");
 	    rec_call = true; // ask for a recursion
 	  }
 	} catch (e){
@@ -330,14 +338,20 @@ function shrink_modules (){
 	}
     });
 				     
-    if (rec_call){ console.log(\"CALL\"); shrink_modules();}
-    console.log(\"FINI\");
+    if (rec_call){ shrink_modules();}
 }
 
 // Load the included modules, wraps the module content with a button and hides it
 function expand_sub_nodes(){
     expand_includes();
     shrink_modules();
+    
+    // modules aliases may contain includes as well
+    while (expand_includes()) {
+        shrink_modules();
+    }
+   
+   // $(\"body\").append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
 }
 
 /*
@@ -413,7 +427,7 @@ function lookup_module_rec($data, module_arr, title, signature){
 		    if (include_sig_content.length > 0){
 			return lookup_module_rec(include_sig_content, module_arr, title, signature);
 		    } else {
-			console.error(\"this include : \"+ includes[i] +\" is fucked up -- continue..\");
+			console.log(\"this include : \"+ includes[i] +\" is weird - it points items it doesn't have -- continue..\");
 			continue;
 		    }
 		} 
@@ -458,7 +472,6 @@ function lookup_module_rec($data, module_arr, title, signature){
 	    }
 	    
 	    if (typeof next_path === 'undefined'){
-		console.log(\"ident + path undefined\");
 		//if this is an ident and there is no path, it is very wrong
 		console.log(\"Incomplete path -- Missing dependencies documentation\");
 		var info_content = $query.prepend('<div class=\"failed_lookup\">Could not lookup the content, process the package\\'s dependencies</div>');
@@ -466,14 +479,11 @@ function lookup_module_rec($data, module_arr, title, signature){
 	    } 
 	    // if there is a path then we do an ajax request on this
 	    else {
-		console.log(\"ident + path defined\");
-		console.log(\"path = \" +next_path);
 		var args = $.parseParams(next_path.substring(1));
 		var alias_module_arr = args.module.split('.');
 		
 		$data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
 		title.setAlias(args.package, alias_module_arr[0]);
-		console.log(alias_module_arr.slice(1).concat(module_arr.slice(1)));
 
 		return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr.slice(1)), title, signature); 
 	    }
@@ -514,7 +524,7 @@ function fetch_module_content(_package, _module, _class){
     // if : toplevel module
     if (module_arr.length == 1){
 	//Wrapping to be able to use .html() later.
-	signature = $data.find('> div.info');
+	signature = $data.find('> div.info:first');
 	signature.remove();
 	signature = signature.wrap('<div></div>').parent();
 	content = $data.find('> *').wrapAll('<div></div>').parent();
@@ -522,7 +532,7 @@ function fetch_module_content(_package, _module, _class){
     } else {
 	var result = lookup_module($data, module_arr.slice(1));
 	signature = result.signature.wrap('<div></div>').parent();
-	console.log(result.title);
+
 	content = result.content;
 	if (typeof result.title !== 'undefined' && result.title.isAlias){
 	    title += \" = \" + result.title.getLinkedTitle(_package);

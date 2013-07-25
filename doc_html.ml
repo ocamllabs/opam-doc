@@ -153,7 +153,10 @@ let rec html_of_class_type_ident = function
       (List.map (fun _ -> `None) params) in
     <:html<$args$$params$$path$>>
   | _ -> assert false
-    
+
+and html_of_class_field = function
+  | _ -> <:html<A field>>
+
 and html_of_class_type_sig = function
   | { ct_kind = `Sig; 
       ct_args = args (* option *);
@@ -162,8 +165,7 @@ and html_of_class_type_sig = function
       code "type"
 	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
     in 
-    let ref_link = <:html<..>> (*add link *) in
-    <:html<$args$$code "code" (html_of_string "object")$ $ref_link$ $code "code" (html_of_string "end")$>>
+    <:html<$args$$code "code" (html_of_string "object")$ .. $code "code" (html_of_string "end")$>>
   | _ -> assert false
     
 and html_of_class_type_constraint = function
@@ -187,7 +189,6 @@ and html_of_class_type class_type =
     | `Sig -> html_of_class_type_sig
     | `Constraint -> html_of_class_type_constraint) class_type
 
-(* url = CurrentModule.ClassName-c.html *)
 let html_of_class env = function 
   | { si_item = typ
     ; si_name = Some name
@@ -200,15 +201,45 @@ let html_of_class env = function
     let params_html = html_of_type_class_param_list params variances in
     let query_string = 
       "?package=" ^ !Opam_doc_config.current_package
-      ^ "&module="^get_full_path_name env^"&class="^name in
-    let ref = <:html<<a href="$uri:Uri.of_string query_string$">$str:name$</a>&>> in
+      ^"&module="^get_full_path_name env
+      ^"&class="^name in
+    let reference = <:html<<a href="$uri:Uri.of_string query_string$">$str:name$</a>&>> in
     let header = 
       <:html<$keyword (if typ = `Class then  "class" else "class type")$$
 	if virt then keyword " virtual" 
-	else Html.nil$ $params_html$$ref$>> in
+	else Html.nil$ $params_html$$reference$>> in
     let sign = if typ = `Class then "=" else ":" in
-    let pre = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
-    <:html<$pre$$make_info info$>>    
+    let signature = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
+    let html_content = <:html<$signature$$make_info info$>> in
+    
+    (* generating meta-data tags *)
+    begin
+      let rec wrap_class = function
+	| {ct_kind=`Ident; 
+	   ct_path=Some path;
+	   (* ct_params=Some params (* do something there *)*)
+	   _} -> 
+	  let reference =
+	    try Some (extract_path path) with Not_found -> None
+	  in
+	  wrap_ident_class html_content name reference	   
+	| {ct_kind = `Sig; 
+	   ct_fields= Some fields;
+	   _ } -> 
+	  let sub_elements = List.map html_of_class_field fields in
+	  wrap_sig_class 
+	    html_content
+	    (fold_html sub_elements)
+	    name
+	| {ct_kind=`Constraint;
+	   ct_cstr=Some (ctyp, _);
+	   _ } -> wrap_class ctyp
+	  
+	| _ -> assert false
+      in
+      wrap_class class_type
+    end
+
   | _ -> assert false 
 
 (** {4 Exceptions} *)

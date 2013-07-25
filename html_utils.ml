@@ -16,7 +16,7 @@ module TagsGenerators = struct
 let make_info = 
   function 
     | Some i when i != Html.nil -> 
-	<:html<<div class="info">$i$</div>&>>
+      <:html<<div class="info">$i$</div>&>>
     | _ -> Html.nil
 
  (* quick hack to slice comments for index description
@@ -152,6 +152,15 @@ let wrap_sig_module signature elements module_name =
 		</div>
 </div>&>>
 
+let wrap_ident_class html_content name reference =
+  (* TODO *)
+  html_content
+
+
+let wrap_sig_class signature elements class_name =
+  (* TODO *)
+  signature
+
 let wrap_include include_item path sig_items signature =
   let mod_type = Index.lookup_include_module_type include_item in
   let included_items = 
@@ -254,7 +263,6 @@ let rec grab_base_module =
     | {mt_kind=`Apply; mt_base=Some base; _} -> grab_base_module base
     | {mt_kind=`TypeOf; mt_expr = Some {me_path=Some p}; _} -> kModTypeIdent p
     | _ -> assert false
-
 
 let flatten_symlinks () =
   let open Unix in 
