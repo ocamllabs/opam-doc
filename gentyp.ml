@@ -56,7 +56,7 @@ let rec print_ident ppf id =
 	  let local = match !index with 
 	    | Some local -> local 
 	    | None -> raise Not_found in
-	  Some (Index.local_lookup local (name::elems))
+	  Some (Index.local_lookup local ~is_class:is_class (name::elems))
 	with 
 	    Not_found -> 
 	      (*(* debug *)
@@ -96,14 +96,14 @@ let rec print_ident ppf id =
 		  ^"."
 		  ^name
 		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
-		  ^"&type="^last_item 
+		  ^(if is_class then "&class=" else "&type=")^last_item 
 	      in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	    else
 	      let html_path = 
 		"?package=" ^ !Opam_doc_config.current_package 
 		^"&module=" ^ (String.concat "." (elems@module_list))
-		^"&type="^name in
+		^(if is_class then "&class=" else "&type=")^name in
 	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
 	  with 
 	      Not_found -> 
@@ -163,9 +163,9 @@ and print_out_type_2 ppf =
     | ty -> print_simple_out_type ppf ty
 and print_simple_out_type ppf =
   function
-  Otyp_class (ng, id, tyl) ->
-    fprintf ppf "@[%a%s#%a@]" print_typargs tyl (if ng then "_" else "")
-      print_ident id
+    | Otyp_class (ng, id, tyl) ->
+      fprintf ppf "@[%a%s#%a@]" print_typargs tyl (if ng then "_" else "")
+	print_ident id
     | Otyp_constr (id, tyl) ->
       pp_open_box ppf 0;
       print_typargs ppf tyl;
@@ -560,7 +560,7 @@ and tree_of_typobject sch fi nm =
     | Some (p, ty :: tyl) ->
       let non_gen = is_non_gen sch (repr ty) in
       let args = tree_of_typlist sch tyl in
-      Otyp_class (non_gen, tree_of_path p, args)
+      Otyp_class (non_gen, tree_of_path ~is_class:true p, args)
     | _ ->
       assert false
   end

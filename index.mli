@@ -17,7 +17,7 @@ val create_local: global -> (string * Digest.t) list -> local
    Hence, you will need to lookup the module after the first dot
    (this should be improve)
 *)
-val local_lookup: local -> string list -> string
+val local_lookup: local -> ?is_class:bool -> string list -> string
 
 val get_global_packages: global -> string list
 

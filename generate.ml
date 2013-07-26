@@ -49,9 +49,9 @@ and add_include_references sig_list =
       | Sig_class (id, _, _)
       | Sig_class_type (id, _, _) -> add_internal_reference id
     ) 
-    sig_list
-
-
+    sig_list      	  
+      
+ 
 (* TODO add support for references *)
 let rec generate_text_element local elem =
   match elem with
@@ -241,7 +241,7 @@ let generate_info_opt2 local info after_info =
     | None, None -> None
     | Some i, None -> Some i
     | None, Some i -> Some i
-    | Some i, Some i2 -> Some <:html<$i$$i2$>>
+    | Some i, Some i2 -> Some <:html<$i$$i2$>> (* todo fix the inclusion of comments *)
 
 (* TODO do proper type printing *)
 let generate_typ local typ = 
@@ -349,13 +349,22 @@ let rec generate_class_type local dclty clty =
 	let params = List.map 
 	  (generate_typ local)
 	  cor_list in
-	let path = Gentyp.path local path in
+	let path = Gentyp.path local ~is_class:true path in
 	kClassIdent (List.rev args_acc) params path
       | Dcty_signature dclass_sig, Tcty_signature class_sig ->
+	(* Temporarly remove the class comments until 
+	   the dissociation from cmt / cmd is made *)
+	let dclass_sig = 
+	  List.filter 
+	    (function dfield -> 
+	      match dfield.dctf_desc with Dctf_comment -> false | _ -> true)
+	    dclass_sig in
+
 	let jfields = List.map2 (generate_class_field local) 
 	  dclass_sig
 	  (* The fields are reversed... Why? *)
 	  (List.rev class_sig.csig_fields) in
+	
 	kClassSig (List.rev args_acc) jfields
       | Dcty_fun dclass_type, Tcty_fun (label, core_type, sub_class_type) ->
 	let arg = generate_typ local core_type in
@@ -640,8 +649,8 @@ and generate_structure_item_list local dimpl_items impl_items =
         let jitem = generate_structure_item local ditem item in
         loop drest rest (jitem :: acc)
       (* A class *)
-      | ({dstr_desc = Dstr_class _} as ditem) :: drest, 
-        ({str_desc = Tstr_class (cnext :: crest)} as item) :: rest -> 
+      | ({dstr_desc = Dstr_class (_, cl_expr)} as ditem) :: drest, 
+        ({str_desc = Tstr_class (cnext :: crest)} as item) :: rest ->
         let item = {item with str_desc = Tstr_class [cnext]} 
         and rest = 
           match crest with
@@ -889,10 +898,12 @@ and generate_class_struct local dclexpr ci_expr =
   let rec loop local dclexpr ci_expr args_acc =
     match dclexpr, ci_expr.cl_desc with
       | Dcl_structure dcstruct, Tcl_structure {cstr_pat=patt; cstr_fields=fields} -> 
-	(* removing the 'initialize' fields *)
+	(* removing the 'initialize' and 'class_comments' (don't know what to do) 
+	   fields *)
 	let dcstruct = List.filter 
 	  (function dfield -> 
-	    match dfield.dcf_desc with Dcf_init -> false | _ -> true) dcstruct in
+	    match dfield.dcf_desc with Dcf_init | Dcf_comment -> false | _ -> true)
+	  dcstruct in
 	let fields = List.filter 
 	  (function tfield -> 
 	    match tfield.cf_desc with Tcf_init _ -> false | _ -> true) fields in
@@ -931,7 +942,6 @@ and generate_class_struct local dclexpr ci_expr =
       
       | Dcl_constraint (dcexpr, dctyp), 
 	Tcl_constraint (class_expr, Some ctyp, _, _, _) ->
-	(* ie : Dcl_constraint contains a Dcl_constr *)
 	let cty1 = loop local dcexpr class_expr [] in
 	let cty2 = generate_class_type local dctyp ctyp in
 	kClassConstraint (List.rev args_acc) (cty1, cty2)
@@ -945,7 +955,7 @@ and generate_class_field local dclfexpr clfexpr =
     | Tcfk_virtual co_typ -> 
       generate_typ local co_typ, true
     | Tcfk_concrete expr -> 
-      Gentyp.type_scheme local expr.exp_type,false
+      Gentyp.type_scheme local expr.exp_type, false
   in
   match dclfexpr.dcf_desc, clfexpr.cf_desc with
     | Dcf_inher dcexpr, Tcf_inher (_, class_expr, _, _, _) ->
@@ -971,7 +981,12 @@ and generate_class_field local dclfexpr clfexpr =
       let jtyp2 = generate_typ local co_typ2 in
       let jinfo = generate_info_opt local dclfexpr.dcf_info in
       fConstraint jtyp1 jtyp2 jinfo
-    | Dcf_init, Tcf_init _ | Dcf_comment, _ | Dcf_stop, _ -> assert false
+    
+    | Dcf_comment, x -> 
+      assert false
+      
+    | Dcf_init, Tcf_init _       
+    | Dcf_stop, _ -> fVal "Error" false false Html.nil None (* assert false *)
     | _,_ -> 
       print_endline "generate_class_field: Mismatch";
       fVal "Error" false false Html.nil None

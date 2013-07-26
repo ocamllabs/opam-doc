@@ -135,18 +135,18 @@ let is_module name =
   name.[0] >= 'A' && name.[0] <= 'Z'
 
 (* assuming that if a type name is present, it is at the end of the list *)
-let rec assemble_path (pack, path) = function 
+let rec assemble_path is_class (pack, path) = function 
   | [] -> "?package="^pack^"&module="^path
   | h::[] ->
     if is_module h then
       "?package="^pack^"&module="^path^"."^h
     else 
-      "?package="^pack^"&module="^path^"&type="^h
+      "?package="^pack^"&module="^path^(if is_class then "&class=" else "&type=")^h
   | h::t ->
     if not (is_module h) then raise (Failure "Incorrect signature");
-    assemble_path (pack, path^"."^h) t
+    assemble_path is_class (pack, path^"."^h) t
 
-let local_lookup local path_elems =
+let local_lookup local ?(is_class=false) path_elems =
   let rec loop pack = function
     | m1::m2::r ->
       begin
@@ -164,7 +164,7 @@ let local_lookup local path_elems =
     | [] -> raise Not_found    
   in
   let ((package,path), rest) = loop None path_elems in
-  assemble_path (package,path) rest
+  assemble_path is_class (package,path) rest
 
 let get_global_packages global =
   let open Hashtbl in

@@ -154,13 +154,66 @@ let rec html_of_class_type_ident = function
     <:html<$args$$params$$path$>>
   | _ -> assert false
 
+(* and class_type_field =
+  { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
+    ctf_class_type: class_type option;
+    ctf_name: string option;
+    ctf_mut: bool option;
+    ctf_virt: bool option;
+    ctf_priv: bool option;
+    ctf_typ: typ option;
+    ctf_eq: (typ * typ) option;
+    ctf_info: info option; }
+with json
+*)
 and html_of_class_field = function
-  | _ -> <:html<A field>>
+  | { ctf_field = `Inherit
+    ; ctf_class_type = Some cty
+    ; ctf_info = info
+    ;  _ } -> (* add an inherit wrapping to expand easily *)
+    make_pre <:html<$keyword "inherit"$ $html_of_class_type cty$$make_info info$>>
+  | { ctf_field = `Val
+    ; ctf_name = Some name
+    ; ctf_mut = Some mut
+    ; ctf_virt = Some virt
+    ; ctf_typ = Some typ
+    ; ctf_info = info
+    ;  _ } -> 
+    let label = keyword "val" in
+    let label = if virt then <:html<$label$ $keyword "virtual"$>> else label in
+    let label = if mut then <:html<$label$ $keyword "mutable"$>> else label in
+    let label = generate_id_mark "ATT" name <:html<$label$ $str:name$>> in
+    let signature = make_pre <:html<$label$ : $code "code" typ$>> in
+    <:html<$signature$$make_info info$>>
+  |  { ctf_field = `Method
+     ; ctf_name = Some name
+     ; ctf_virt = Some virt
+     ; ctf_priv = Some priv
+     ; ctf_typ = Some typ
+     ; ctf_info = info
+     ; _} ->  
+    let label = keyword "method" in
+    let label = if priv then <:html<$label$ $keyword "private"$>> else label in
+    let label = if virt then <:html<$label$ $keyword "virtual"$>> else label in
+    let label = generate_id_mark "METHOD" name <:html<$label$ $str:name$>> in
+    let signature = make_pre <:html<$label$ : $code "code" typ$>> in
+    <:html<$signature$$make_info info$>>
+  | { ctf_field = `Constraint
+    ; ctf_eq = Some (typ1, typ2)
+    ; ctf_info = info
+    ; _  } -> (* TODO handle class constraints *) Html.nil
+
+  | { ctf_field = `Comment
+    ; ctf_info = info
+    ; _ } -> make_info info
+    
+  | _ -> Html.nil (* assert false *)
 
 and html_of_class_type_sig = function
-  | { ct_kind = `Sig; 
-      ct_args = args (* option *);
-      ct_fields = Some fields; } ->
+  | { ct_kind = `Sig
+    ; ct_args = args (* option *)
+    ; ct_fields = Some fields
+    ; _ } ->
     let args = match args with None -> Html.nil | Some args ->
       code "type"
 	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
@@ -169,9 +222,10 @@ and html_of_class_type_sig = function
   | _ -> assert false
     
 and html_of_class_type_constraint = function
-  | { ct_kind = `Constraint; 
-    ct_args = args (* option *);
-    ct_cstr = Some (ctype, cttype) } ->
+  | { ct_kind = `Constraint
+    ; ct_args = args (* option *)
+    ; ct_cstr = Some (ctype, cttype)
+    ; _ } ->
     let args = match args with None -> Html.nil | Some args ->
       code "type"
 	(List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil args)
@@ -219,10 +273,10 @@ let html_of_class env = function
 	   ct_path=Some path;
 	   (* ct_params=Some params (* do something there *)*)
 	   _} -> 
-	  let reference =
+	  let path =
 	    try Some (extract_path path) with Not_found -> None
 	  in
-	  wrap_ident_class html_content name reference	   
+	  wrap_ident_class html_content name path	   
 	| {ct_kind = `Sig; 
 	   ct_fields= Some fields;
 	   _ } -> 
