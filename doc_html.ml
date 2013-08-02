@@ -31,8 +31,9 @@ let html_of_value = function
   | {si_item = `Primitive;
      si_name = Some name;
      si_typ = Some typ;
-     si_info = info; _ } ->  
-    let name_val = make_span <:html<$keyword "val"$ $str:name$>> in
+     si_info = info; _ } ->
+    let name_val = generate_mark 
+      Opam_doc_config.mark_value name <:html<$keyword "val"$ $str:name$>> in
     let node_val = <:html<$name_val$ : $code "type" typ$>>
     in
     <:html< 
@@ -62,7 +63,7 @@ let html_of_type_variant father_name = function
 	let cell typ = <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$typ$</code></td>&>>
 	in 
 	let constr_name = 
-	  generate_id_mark Opam_doc_config.mark_type_elt (father_name^"."^name)
+	  generate_mark Opam_doc_config.mark_type_elt (father_name^"."^name)
 	  (<:html<<span class="constructor">$str:name$</span>&>>)
 	in 
 	let constr = 
@@ -87,7 +88,7 @@ let html_of_type_record father_name = function
   | {tk_labels = Some lbls; _} ->
     make_type_table 
       (function {rl_name=name; rl_mut=mut; rl_typ=typ; rl_info=info} ->
-	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_id_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
+	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
         &>>
       )
       lbls
@@ -113,7 +114,7 @@ let html_of_type = function
     let name_html = 
       <:html<$keyword "type"$ $html_of_type_param_list params variances$$str:name$>>
     in    
-    let name_html = generate_id_mark Opam_doc_config.mark_type name name_html in
+    let name_html = generate_mark Opam_doc_config.mark_type name name_html in
     let manifest = 
       match manifest, type_kind.tk_kind with 
 	| Some typ,`Record -> <:html<= {$code "type" typ$}>>
@@ -166,12 +167,21 @@ let rec html_of_class_type_ident = function
     ctf_info: info option; }
 with json
 *)
-and html_of_class_field = function
+
+and html_of_inherit = function
   | { ctf_field = `Inherit
     ; ctf_class_type = Some cty
     ; ctf_info = info
-    ;  _ } -> (* add an inherit wrapping to expand easily *)
-    make_pre <:html<$keyword "inherit"$ $html_of_class_type cty$$make_info info$>>
+    ;  _ } -> 
+    let signature = make_pre 
+      <:html<$keyword "inherit"$ $html_of_class_type cty$$make_info info$>> 
+    in
+    (* generating meta-data tags *)
+    wrap_class "inherit_field" signature cty
+  | _ -> assert false
+
+and html_of_class_field = function
+  | { ctf_field = `Inherit; _ } as field -> html_of_inherit field
   | { ctf_field = `Val
     ; ctf_name = Some name
     ; ctf_mut = Some mut
@@ -182,7 +192,8 @@ and html_of_class_field = function
     let label = keyword "val" in
     let label = if virt then <:html<$label$ $keyword "virtual"$>> else label in
     let label = if mut then <:html<$label$ $keyword "mutable"$>> else label in
-    let label = generate_id_mark "ATT" name <:html<$label$ $str:name$>> in
+    let label = generate_mark Opam_doc_config.mark_attribute name 
+      <:html<$label$ $str:name$>> in
     let signature = make_pre <:html<$label$ : $code "code" typ$>> in
     <:html<$signature$$make_info info$>>
   |  { ctf_field = `Method
@@ -195,7 +206,8 @@ and html_of_class_field = function
     let label = keyword "method" in
     let label = if priv then <:html<$label$ $keyword "private"$>> else label in
     let label = if virt then <:html<$label$ $keyword "virtual"$>> else label in
-    let label = generate_id_mark "METHOD" name <:html<$label$ $str:name$>> in
+    let label = generate_mark Opam_doc_config.mark_method 
+      name <:html<$label$ $str:name$>> in
     let signature = make_pre <:html<$label$ : $code "code" typ$>> in
     <:html<$signature$$make_info info$>>
   | { ctf_field = `Constraint
@@ -243,32 +255,7 @@ and html_of_class_type class_type =
     | `Sig -> html_of_class_type_sig
     | `Constraint -> html_of_class_type_constraint) class_type
 
-let html_of_class env = function 
-  | { si_item = typ
-    ; si_name = Some name
-    ; si_params = Some params
-    ; si_variance = Some variances
-    ; si_virt = Some virt
-    ; si_class_type = Some class_type
-    ; si_info = info; _ } -> 
-    let id = generate_id_mark Opam_doc_config.mark_type name in
-    let params_html = html_of_type_class_param_list params variances in
-    let query_string = 
-      "?package=" ^ !Opam_doc_config.current_package
-      ^"&module="^get_full_path_name env
-      ^"&class="^name in
-    let reference = <:html<<a href="$uri:Uri.of_string query_string$">$str:name$</a>&>> in
-    let header = 
-      <:html<$keyword (if typ = `Class then  "class" else "class type")$$
-	if virt then keyword " virtual" 
-	else Html.nil$ $params_html$$reference$>> in
-    let sign = if typ = `Class then "=" else ":" in
-    let signature = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
-    let html_content = <:html<$signature$$make_info info$>> in
-    
-    (* generating meta-data tags *)
-    begin
-      let rec wrap_class = function
+and wrap_class name html_content = function
 	| {ct_kind=`Ident; 
 	   ct_path=Some path;
 	   (* ct_params=Some params (* do something there *)*)
@@ -287,12 +274,34 @@ let html_of_class env = function
 	    name
 	| {ct_kind=`Constraint;
 	   ct_cstr=Some (ctyp, _);
-	   _ } -> wrap_class ctyp
-	  
+	   _ } -> wrap_class name html_content ctyp
 	| _ -> assert false
-      in
-      wrap_class class_type
-    end
+
+let html_of_class env = function 
+  | { si_item = typ
+    ; si_name = Some name
+    ; si_params = Some params
+    ; si_variance = Some variances
+    ; si_virt = Some virt
+    ; si_class_type = Some class_type
+    ; si_info = info; _ } -> 
+    let id = generate_mark Opam_doc_config.mark_type name in
+    let params_html = html_of_type_class_param_list params variances in
+    let query_string = 
+      "?package=" ^ !Opam_doc_config.current_package
+      ^"&module="^get_full_path_name env
+      ^"&class="^name in
+    let reference = <:html<<a href="$uri:Uri.of_string query_string$">$str:name$</a>&>> in
+    let header = 
+      <:html<$keyword (if typ = `Class then  "class" else "class type")$$
+	if virt then keyword " virtual" 
+	else Html.nil$ $params_html$$reference$>> in
+    let sign = if typ = `Class then "=" else ":" in
+    let signature = make_pre <:html<$id header$ $str:sign$ $html_of_class_type class_type$>> in
+    let html_content = <:html<$signature$$make_info info$>> in
+    
+    (* generating meta-data tags *)
+    wrap_class name html_content class_type
 
   | _ -> assert false 
 
@@ -301,7 +310,7 @@ let html_of_class env = function
 let html_of_exception = function 
   | { si_item = `Exception; si_name = Some name; 
       si_args = Some args; si_info = info} -> 
-    let id = generate_id_mark Opam_doc_config.mark_exception name <:html<$keyword "exception"$ $str:name$>> 
+    let id = generate_mark Opam_doc_config.mark_exception name <:html<$keyword "exception"$ $str:name$>> 
     in let args = match args with 
       | [] -> Html.nil 
       | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
@@ -344,17 +353,23 @@ and html_of_module_with = function
       mt_base = Some base; _ } ->
     let l = List.map 
       (function 
-	| {wc_typeq = Some typ; wc_path = path} ->  <:html<type $path$ = $typ$>> 
-        | {wc_path = path; wc_modeq = Some modeq} -> <:html<module $path$ = $modeq$>>
+	| {wc_typeq = Some typ; wc_path = path; 
+	   wc_subst = subst; _} -> 
+	  let sgn = if subst then ":=" else "=" in
+	  <:html<type $path$ $str:sgn$ $typ$>>
+        | {wc_path = path; wc_modeq = Some modeq;
+	   wc_subst = subst; _} -> 
+	  let sgn = if subst then ":=" else "=" in
+	  <:html<module $path$ $str:sgn$ $modeq$>>
 	| _ -> assert false)
       cnstrs in
     <:html<$html_of_module_body base$ with $insert_between " and " l$>>
   | _ -> assert false
-    
 
 and html_of_module_typeof  = function 
-  | { mt_kind = `TypeOf; mt_expr = Some ({me_path=Some p; _}); _} ->
-    <:html<module type of $p$>>
+  | { mt_kind = `TypeOf; mt_base = Some base; _} ->
+    let base_html = html_of_module_body base in
+    <:html<module type of $base_html$>>
   | _ -> assert false
 
 and html_of_module_apply = function
@@ -389,11 +404,15 @@ and html_of_module env =
     let reference = <:html<<a href="$uri:Uri.of_string query_string$">$str:name$</a>&>> in
     let signature = make_pre
       (if m_kind = `Module then
-	  <:html<$keyword "module"$ $reference$ : $body$>>
+	  <:html<$keyword "module"$ $reference$ : $code "type" body$>>
        else
 	  <:html<$keyword "module type"$ $reference$ = $code "type" body$>>
       ) in
-    let html_content = <:html<$signature$$make_info info$>> in
+    let constraints = match extract_constraints mty with
+      | [] -> Html.nil
+      | l -> <:html<<div style="display:none" class="constraints">$fold_html l$</div>&>>  
+    in
+    let html_content = <:html<$constraints$$signature$$make_info info$>> in
     
     (* generating meta-data tags *)
     begin
@@ -419,7 +438,7 @@ and html_of_include env = function
      si_module_type= Some mty;
      si_info = info; _ } as key -> 
     
-    let module_sig = html_of_module_body mty in
+    let module_sig = code "type" (html_of_module_body mty) in
     let signature = make_pre <:html<$keyword "include"$ $module_sig$$make_info info$>> in
     let path,elems =
       match (Html_utils.grab_base_module mty) with

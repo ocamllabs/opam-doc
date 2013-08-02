@@ -198,7 +198,7 @@ type module_type =
     mt_arg_type: module_type option;
     mt_cnstrs: with_constraint list option;
     mt_base: module_type option;
-    mt_expr: module_expr option }
+ }
 
 and signature_item =
   { si_item: [ `Value | `Primitive | `Type | `Exception | `Module 
@@ -216,12 +216,7 @@ and signature_item =
     si_module_type: module_type option;
     si_virt: bool option;
     si_class_type: class_type option;
-    si_info: info option }
-
-and module_expr =
-  { me_kind: [ `Ident ];
-    me_path: path option }
-with json
+    si_info: info option } with json
 
 let kModTypeIdent path = 
   { mt_kind = `Ident;
@@ -231,7 +226,7 @@ let kModTypeIdent path =
     mt_arg_type = None;
     mt_cnstrs = None;
     mt_base = None;
-    mt_expr = None }
+  }
 
 let kModTypeSig items = 
   { mt_kind = `Sig;
@@ -241,7 +236,7 @@ let kModTypeSig items =
     mt_arg_type = None;
     mt_cnstrs = None;
     mt_base = None;
-    mt_expr = None }
+  }
 
 let kModTypeFunctor arg_name arg_type base = 
   { mt_kind = `Functor;
@@ -251,7 +246,7 @@ let kModTypeFunctor arg_name arg_type base =
     mt_arg_type = Some arg_type;
     mt_cnstrs = None;
     mt_base = Some base;
-    mt_expr = None }
+  }
 
 let kModTypeWith cnstrs base = 
   { mt_kind = `With;
@@ -261,17 +256,17 @@ let kModTypeWith cnstrs base =
     mt_arg_type = None;
     mt_cnstrs = Some cnstrs;
     mt_base = Some base;
-    mt_expr = None }
+  }
 
-let kModTypeTypeOf expr = 
+let kModTypeTypeOf base = 
   { mt_kind = `TypeOf;
     mt_path = None;
     mt_items = None;
     mt_arg_name = None;
     mt_arg_type = None;
     mt_cnstrs = None;
-    mt_base = None;
-    mt_expr = Some expr }
+    mt_base = Some base;
+  }
 
 let kModTypeApply base arg_type = 
   { mt_kind = `Apply;
@@ -281,7 +276,7 @@ let kModTypeApply base arg_type =
     mt_arg_type = Some arg_type;
     mt_cnstrs = None;
     mt_base = Some base;
-    mt_expr = None; }
+  }
 
 let iValue name typ info = 
   { si_item = `Value;
@@ -452,10 +447,6 @@ let iComment info =
     si_virt = None;
     si_class_type = None;
     si_info = info }
-
-let kModIdent path = 
-  { me_kind = `Ident;
-    me_path = Some path }
 
 type file = 
   { f_items: signature_item list;

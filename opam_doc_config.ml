@@ -149,6 +149,9 @@ let mark_attribute = "ATT"
 (** The prefix for methods marks. *)
 let mark_method = "METHOD"
 
+(** The prefix for title marks. *)
+let mark_title = "TITLE"
+
 let jquery_online_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"
 
 let style_filename = "style.css"
@@ -216,9 +219,7 @@ function create_menu(){
 	    +(parent_module!=''?'&module='+parent_module:\"\");
 	
 	return '<a class=\"up\" title=\"'+parent_module+'\" href=\"'+url+'\">Up</a>';
-
     }
-
 }
 
 //load package only
@@ -267,7 +268,8 @@ function expand_includes(){
 	$mod_includes.each(function(){
           try {
 	    $(this).removeClass('ocaml_include');
-	    
+            $(this).addClass('processed_include');
+
 	    if ($(this).is(\".ident\")){
 		var path = $(this).attr(\"path\");
 
@@ -343,11 +345,13 @@ function shrink_modules (){
 }
 
 function shrink_classes (){
-    
+    var b = false;
+
     $(\"div.ocaml_class.sig\").each(function (){
        try {
 	   $(this).removeClass(\"ocaml_class sig\");
 	   wrap_element($(this)[0], true);
+           b = true;
        } catch (e){
 	   console.log('Error on shrinking with '+$(this).attr('name'));
        }
@@ -371,15 +375,17 @@ function shrink_classes (){
 
 	    //.wrap(\"<div></div>\").parent() doesn't work here - Oo
 	    var new_node = $(document.createElement(\"div\"));
-	    $(this).append($(new_node).append($(result).html()));
+	    $(this).append($(new_node).append(result.content.html()));
 	    
 	    wrap_element($(this)[0], true);
+            b = true;
 	}
 	} catch (e){
 	    console.log('Error on expanding : '+$(this).attr('name'));
 	}
     });
-    
+
+    return b;
 }
 
 // Load the included modules, wraps the module content with a button and hides it
@@ -389,10 +395,26 @@ function expand_sub_nodes(){
     do {
 	b = expand_includes();
 	shrink_modules();
-	shrink_classes();
+	b = shrink_classes() || b; // inherits could contains inherits as well
     } while (b); // modules aliases may contain includes as well
        
     // $(\"body\").append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
+}
+
+function replace_with_constraints($module_content, $constraints){
+    if ($constraints == null) return;
+
+    $constraints.each(function(){
+	var name=$(this).attr('name');
+	
+	if ($(this).is('.type')){
+	    var $node = $module_content.find('> pre > span.TYPE'+name).parent();
+	    $node.append('<code class=\\'type\\'>'+$(this).html()+'</code>');
+	} else {
+	    var $node = $module_content.find('> div[name=\\''+name+'\\'] > pre');
+	    $node.append(' <code class=\\'type\\'>'+$(this).html()+'</code>');
+	}
+    });    
 }
 
 /*
@@ -400,16 +422,19 @@ function expand_sub_nodes(){
   page_title => B.M.X = Ext.T
   signature => <div> module a = x  <div class='info'> </div> </div>
 */
-function write_content(module_content, page_title, signature){
+function write_content($module_content, page_title, signature, $constraints){
     //Clear the page
     $('body').empty();
+
+    //Replace the constraints
+    replace_with_constraints($module_content, $constraints)
 
     $('body')
 	.append(create_menu())
 	.append('<h1>'+page_title+'</h1>')
 	.append(signature.html())
 	.append('<hr width=\\'100%\\'>')
-	.append(module_content.html());
+	.append($module_content.html());
     
     expand_sub_nodes();
 }
@@ -433,11 +458,11 @@ function perform_ajax_request(url, async){
 }
 
 // Fetch first found signature
-function lookup_module_rec($data, module_arr, title, signature){
-    console.log(\"[DEBUG] Call - lookup_module_rec(data:\"+$data+\", module_arr:\"+module_arr+\", title:\"+title+\", signature:\"+signature)+\")\";
+function lookup_module_rec($data, module_arr, title, signature, constraints){
+    console.log(\"[DEBUG] Call - lookup_module_rec(data:\"+$data+\", module_arr:\"+module_arr+\", title:\"+title+\", signature:\"+signature+\")\");
     
     if (module_arr.length == 0)
-	return {content:$data, title:title, signature:signature};
+	return {content:$data, title:title, signature:signature, constraints:constraints};
 
     // else {
     var content, target_title;
@@ -466,7 +491,7 @@ function lookup_module_rec($data, module_arr, title, signature){
 		if (typeof next_path === 'undefined'){
 		    var include_sig_content = $(includes[i]).find(\"> div.ocaml_module_content\");
 		    if (include_sig_content.length > 0){
-			return lookup_module_rec(include_sig_content, module_arr, title, signature);
+			return lookup_module_rec(include_sig_content, module_arr, title, signature, constraints);
 		    } else {
 			console.log(\"this include : \"+ includes[i] +\" is weird - it points items it doesn't have -- continue..\");
 			continue;
@@ -479,7 +504,7 @@ function lookup_module_rec($data, module_arr, title, signature){
 		    var alias_module_arr = args.module.split('.');
 		
 		    $data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
-		    return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr), title, signature); 
+		    return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr), title, signature, constraints); 
 		}
 		
 	    } //end of : we found the good entry somewhere
@@ -491,32 +516,38 @@ function lookup_module_rec($data, module_arr, title, signature){
     }
     // There is a module we found with that name
     else {
+	// Retrieve the possible constraints
+	var $constraints = $query.find(\"> div.constraints > * \");
+	if ($constraints.length > 0)
+	    constraints = $constraints;
+	
+	
 	//check sig or ident
 	//if sig, recursion with module_content ~ like the include one
 	//else ident, recursion on the ajax request... ~like the include one
-	
+
 	if ($query.is(\"div.sig\")){
 	    var module_sig_content =  $query.find(\"> div.ocaml_module_content\");
 	    title.addSig(module_arr[0]);
 	    
 	    if (signature == null && module_arr.length == 1){
-		signature = $query.find('> :not(div.ocaml_module_content)');
+		signature = $query.find('> pre:not(div.ocaml_module_content)');
 	    }
 	    
-	    return lookup_module_rec(module_sig_content, module_arr.slice(1), title, signature);
+	    return lookup_module_rec(module_sig_content, module_arr.slice(1), title, signature, constraints);
 	} 
 	else {
 	    var next_path = $query.attr('path');
 	    
 	    if (signature == null){
-		signature = $query.find('> *');
+		signature = $query.find('> pre:not(div.ocaml_module_content)');
 	    }
 	    
 	    if (typeof next_path === 'undefined'){
 		//if this is an ident and there is no path, it is very wrong
 		console.log(\"Incomplete path -- Missing dependencies\");
 		var info_content = $query.prepend('<div class=\"failed_lookup\">Could not lookup the content, process the package\\'s dependencies</div>');
-		return lookup_module_rec(info_content, [], undefined, signature);
+		return lookup_module_rec(info_content, [], undefined, signature, constraints);
 	    } 
 	    // if there is a path then we do an ajax request on this
 	    else {
@@ -526,7 +557,7 @@ function lookup_module_rec($data, module_arr, title, signature){
 		$data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
 		title.setAlias(args.package, alias_module_arr[0]);
 
-		return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr.slice(1)), title, signature); 
+		return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr.slice(1)), title, signature, constraints); 
 	    }
 	}
     }
@@ -552,7 +583,7 @@ function lookup_module($data, module_arr){
 			   return '<a href=\"'+url+'\">'+this._module+'</a>';
 		       } // Add package into the alias ?
 		      };
-    return lookup_module_rec($data, module_arr, empty_title, null);
+    return lookup_module_rec($data, module_arr, empty_title, null, null);
 }
 
 function lookup_class_rec($data, _class, title, signature){
@@ -678,7 +709,7 @@ function fetch_module_content(_package, _module, _class){
 
     var $data = perform_ajax_request(_package+\"/\"+module_arr[0]+\".html\", false);
 
-    var $content, signature, title;
+    var $content, signature, title, $constraints;
 
     if (class_def){
 	title = 'Class '+ _class;
@@ -703,6 +734,7 @@ function fetch_module_content(_package, _module, _class){
 	if (typeof result.title !== 'undefined' && result.title.isAlias){
 	    title += \" = \" + result.title.getLinkedTitle(_package);
 	}
+	$constraints = result.constraints;
     }
 
     if (class_def){
@@ -715,7 +747,7 @@ function fetch_module_content(_package, _module, _class){
 	$content = result.content;
     }
 
-    write_content($content, title, signature);
+    write_content($content, title, signature, $constraints);
 }
 
 function main(_package, _module, _type, _class){
@@ -729,10 +761,18 @@ function main(_package, _module, _type, _class){
     } else if (pack_def && mod_def) {
 	fetch_module_content(_package, _module, _class);
     }
-    
+
     if (typ_def){
-	    location.hash = \"TYPE\"+_type;
-    }
+	var $type_target = $('pre > span.TYPE'+_type+':visible');
+	if ($type_target.length ==  0){
+	    $type_target = $('pre > code > span.TYPE'+_type+':visible');
+	}
+	if ($type_target.length > 0){
+	    scrollTo(0, $type_target.position().top);
+	    $type_target.css('background', 'yellow');
+	}
+    } 
+    
 }
 
 

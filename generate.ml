@@ -8,8 +8,6 @@ open Cow
 
 open Types
 
-let title_id_tag = "TITLE"
-
 let internal_path = ref []
 
 let generate_submodule name f arg =
@@ -67,8 +65,8 @@ let rec generate_text_element local elem =
     | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
     | Ref(rk, s, t) -> (* ref check*)
       <:html<TODO reference : $str:s$>>
-    | Special_ref _ -> raise (Failure "Not implemented")
-    | Target _ -> raise (Failure "Not implemented")
+    | Special_ref _ -> <:html<TODO special ref>> (* raise (Failure "Not implemented") *)
+    | Target _ -> <:html<TODO target>> (* raise (Failure "Not implemented") *)
 
 and generate_text local text =
   List.fold_left 
@@ -112,7 +110,7 @@ and generate_title n lbl text =
     | _ -> Html.nil in
   let id = match lbl with 
     | Some s ->  s
-    | _ -> sn^"_"^title_id_tag
+    | _ -> sn^"_"^Opam_doc_config.mark_title
   in <:html<<br/>$ftag id text$<br/>&>>
   
 let generate_authors local authors = 
@@ -419,9 +417,9 @@ let rec generate_module_type local dmty mty =
   | Dmty_with dbase, Tmty_with(base, cnstrs) ->
       let jbase = generate_module_type local dbase base in
       let jcnstrs = List.map (generate_with_constraint local) cnstrs in
-        kModTypeWith jcnstrs jbase
-  | Dmty_typeof dexpr, Tmty_typeof expr ->
-    let jexpr = generate_module_expr local dexpr expr in
+      kModTypeWith jcnstrs jbase
+  | Dmty_typeof dexpr, Tmty_typeof mexpr ->
+    let jexpr = generate_module_str_type local dexpr mexpr in
     kModTypeTypeOf jexpr
   | _, _ -> raise (Failure "generate_module_type: Mismatch")
 
@@ -501,7 +499,7 @@ and generate_signature_item local ditem item =
             iPrimitive name jtyp primitive jinfo
       end
     | Dsig_type(name, dkind), Tsig_type [id, _, tdecl] ->
-      (* add to internal type table *)
+
       add_internal_reference id;
 
       let jparams = List.map generate_typ_param tdecl.typ_params in
@@ -604,11 +602,6 @@ and generate_signature_item local ditem item =
       let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
       iClassType name jparams jvariance virt jclty jinfo
     | _, _ -> raise (Failure "generate_signature_item: Mismatch")
-
-and generate_module_expr local dmty mexpr = 
-  match dmty, mexpr.mod_desc with
-    | Dmod_ident, Tmod_ident (p, _) -> {me_kind=`Ident; me_path=Some (Gentyp.path local p)}
-    | _ -> raise (Failure "generate_module_expr: Mismatch")
 
 (*************** STRUCTURES ********************)
 
@@ -849,47 +842,38 @@ and print_item_desc_t = function
 and generate_module_str_type local dmexpr mexpr =
   match dmexpr, mexpr.mod_desc with
     | Dmod_ident , Tmod_ident (p, _) -> kModTypeIdent (Gentyp.path local p)
+
     | Dmod_structure str, Tmod_structure tstr -> 
       let jstr = generate_structure_item_list local str tstr.str_items in
       kModTypeSig jstr
+
     | Dmod_functor (darg, dbase), Tmod_functor (ident, {txt=name} , arg , base) ->
       let jarg = generate_module_type local darg arg in
       let jbase = generate_module_str_type local dbase base in
       kModTypeFunctor name jarg jbase
+
     | Dmod_apply (dmexpr1, dmexpr2), Tmod_apply (mexpr1, mexpr2, _) ->
       let jbase =  generate_module_str_type local dmexpr1 mexpr1 in
       let jarg = generate_module_str_type local dmexpr2 mexpr2 in
       kModTypeApply jbase jarg
-    | Dmod_constraint (dmexpr,dmty), Tmod_constraint (mexpr, tmty, mtconstr, coerc) ->
-      (*Don't know what to really do with module constraint*)
-      (*
-	module Make (Z:sig type t end) : sig end with type persistent_singleton = Z.t = 
-	struct
-	type persistent_singleton = Z.t
-	end
-      *)
-      
+
+    | Dmod_constraint (dmexpr,dmty), Tmod_constraint (mexpr, _, Tmodtype_explicit mty, _) ->
+      generate_module_type local dmty mty
+	
+    | Dmod_constraint (dmexpr,dmty), Tmod_constraint (mexpr, _, Tmodtype_implicit, _) ->
       generate_module_str_type local dmexpr mexpr
-    | Dmod_unpack, Tmod_unpack (expr ,tmty) ->
-      (*Don't know what to do with module unpack*)
-      (* 
-	 module Make_datumable5
-	 (Versions : Versions)
-	 (T : T)
-	 (V1 : T_bin)
-	 (V2 : T_bin)
-	 (V3 : T_bin)
-	 (V4 : T_bin)
-	 (V5 : T_bin)
-	 (V1_cvt : V(V1)(T).S)
-	 (V2_cvt : V(V2)(T).S)
-	 (V3_cvt : V(V3)(T).S)
-	 (V4_cvt : V(V4)(T).S)
-	 (V5_cvt : V(V5)(T).S)
-	 : Datumable with type datum = T.t = *)
-      kModTypeSig []
+
+    | Dmod_unpack, Tmod_unpack (expr, tmty) ->
+      (* Not sure what to do with an unpack module (first class module) *)
+      (match tmty with
+	| Mty_ident p -> 
+	  kModTypeIdent (Gentyp.path local p) 
+	| _ ->
+	  Printf.eprintf "unpack mismatch\n%!";
+	  kModTypeSig []
+      )
     | _, _ -> 
-      print_endline "generate_module_str_type: Mismatch";
+      Printf.eprintf "generate_module_str_type: Mismatch\n%!";
       kModTypeSig []
       (* raise (Failure "generate_module_str_type: Mismatch") *)
 
@@ -952,10 +936,21 @@ and generate_class_struct local dclexpr ci_expr =
     
 and generate_class_field local dclfexpr clfexpr =
   let extract_type_and_virtual_from_kind = function
-    | Tcfk_virtual co_typ -> 
-      generate_typ local co_typ, true
+    (* Type method = < obj type; .. > -> real type 
+       small hack to remove the first part
+    *)
+    | Tcfk_virtual co_typ ->
+      let exp_type = co_typ.ctyp_type in
+      (match exp_type.desc with
+	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
+	| _ -> Gentyp.type_scheme local exp_type, false
+      )      
     | Tcfk_concrete expr -> 
-      Gentyp.type_scheme local expr.exp_type, false
+      (match expr.exp_type.desc with
+	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
+	| _ -> Gentyp.type_scheme local expr.exp_type, false
+      )
+
   in
   match dclfexpr.dcf_desc, clfexpr.cf_desc with
     | Dcf_inher dcexpr, Tcf_inher (_, class_expr, _, _, _) ->

@@ -109,7 +109,7 @@ type module_type =
     mt_arg_type: module_type option;
     mt_cnstrs: with_constraint list option;
     mt_base: module_type option;
-    mt_expr: module_expr option }
+  }
 and signature_item =
   { si_item: [ `Value | `Primitive | `Type | `Exception | `Module 
           | `ModType | `Include | `Class | `ClassType | `Comment ];
@@ -127,15 +127,10 @@ and signature_item =
     si_virt: bool option;
     si_class_type: class_type option;
     si_info: info option }
-and module_expr =
-  { me_kind: [ `Ident ];
-    me_path: path option }
 
 val json_of_module_type: module_type -> Json.t
 
 val json_of_signature_item: signature_item -> Json.t
-
-val json_of_module_expr: module_expr -> Json.t
 
 val kModTypeIdent: path -> module_type
 
@@ -147,7 +142,7 @@ val kModTypeApply : module_type -> module_type -> module_type
 
 val kModTypeWith: with_constraint list -> module_type -> module_type
 
-val kModTypeTypeOf: module_expr -> module_type
+val kModTypeTypeOf: module_type -> module_type
 
 val iValue: string -> typ -> info option -> signature_item
 
@@ -175,8 +170,6 @@ val iComment: info option -> signature_item
 type file = 
   { f_items: signature_item list;
     f_info: info option }
-
-val kModIdent: path -> module_expr
 
 val json_of_file: file -> Json.t
 
