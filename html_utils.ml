@@ -85,19 +85,68 @@ let make_type_table f l =
        Html.nil 
        l)
 
+(* Cannot lookup by #id, another type with the same id  could be found in submodules *)
+let generate_mark mark name html =
+  <:html<<span class="$str:mark^name$">$html$</span>&>>
+(* <:html<<span id="$str:mark^name$">$html$</span>&>>*)
+
 let rec insert_between sep = function
   | [] -> Html.nil
   | [h] -> h
   | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
 
+(* Beginning of generate-utils *)
 
 let make_field_comment comm =
   <:html<<td class="typefieldcomment" align="left">$comm$</td>&>>
 
-(* Cannot lookup by id, another type with the same id  could be found in submodules *)
-let generate_mark mark name html =
-  <:html<<span class="$str:mark^name$">$html$</span>&>>
-(* <:html<<span id="$str:mark^name$">$html$</span>&>>*)
+let make_variant_cell parent_name name args_type info = 
+  let html_name = make_span ~css_class:"constructor" (html_of_string name) in
+  let html_name = generate_mark 
+    Opam_doc_config.mark_type_elt 
+    (parent_name^"."^name) html_name in
+  
+  let html_body = match args_type with
+    | [] -> Html.nil
+    | _ -> let l = insert_between " * " args_type in
+	   <:html<$html_name$ $keyword "of"$ $code "type" l$>>
+  in
+  
+  let info_td = match info with 
+	       | Some i -> make_field_comment i
+	       | _ -> Html.nil in
+
+  <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$html_body$</code></td>$info_td$&>>
+
+let make_record_label_cell parent_name name is_mutable label_type info = 
+  let spacing_td = <:html<<td align="left" valign="top"><code>  </code></td>&>> in
+  
+  let html_name = if is_mutable then 
+      <:html<$keyword "mutable"$ >> (* space is important here *)
+    else Html.nil in
+  let marked_name = generate_mark 
+    Opam_doc_config.mark_type_elt 
+    (parent_name^"."^name) (html_of_string name) in
+  let html_name = <:html<$html_name$$marked_name$>> in
+
+  let body_td = 
+    <:html<<td align="left" valign="top"><code>$html_name$ : $code "type" label_type$</code></td>&>> in
+  
+  let info_td = match info with 
+	       | Some i -> make_field_comment i
+	       | _ -> Html.nil in
+  
+  <:html<$spacing_td$$body_td$$info_td$>>
+
+
+let make_with_constraint kind path is_destructive modeq = 
+  let label = match kind with `Type -> "todule" | `Module -> "module" in
+  let path = path (* TODO - replace Gentyp.t *) in
+  let sgn = if is_destructive then ":=" else "=" in
+  let modeq = modeq (* TODO - replace Gentyp.t *) in
+  <:html<$str:label$ $path$ $str:sgn$ $modeq$>>
+
+(* End of generate-utils *)
 
 let make_reference name path = 
   <:html<<a href="$str:path$">$str:name$</a>&>>

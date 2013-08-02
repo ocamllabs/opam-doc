@@ -88,7 +88,7 @@ let html_of_type_record father_name = function
   | {tk_labels = Some lbls; _} ->
     make_type_table 
       (function {rl_name=name; rl_mut=mut; rl_typ=typ; rl_info=info} ->
-	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ :$code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
+	<:html<<td align="left" valign="top"><code>  </code></td><td align="left" valign="top"><code>$if mut then keyword "mutable" else Html.nil$ $generate_mark Opam_doc_config.mark_type_elt (father_name^"."^name) (html_of_string name)$ : $code "type" typ$;</code></td>$match info with Some i -> make_field_comment i | _ -> Html.nil$
         &>>
       )
       lbls
@@ -154,19 +154,6 @@ let rec html_of_class_type_ident = function
       (List.map (fun _ -> `None) params) in
     <:html<$args$$params$$path$>>
   | _ -> assert false
-
-(* and class_type_field =
-  { ctf_field: [ `Inherit | `Val | `Method | `Constraint | `Comment ];
-    ctf_class_type: class_type option;
-    ctf_name: string option;
-    ctf_mut: bool option;
-    ctf_virt: bool option;
-    ctf_priv: bool option;
-    ctf_typ: typ option;
-    ctf_eq: (typ * typ) option;
-    ctf_info: info option; }
-with json
-*)
 
 and html_of_inherit = function
   | { ctf_field = `Inherit
