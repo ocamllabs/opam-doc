@@ -16,6 +16,8 @@ open Types
 open Btype
 open Ctype
 
+open Cow
+  
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
@@ -40,17 +42,25 @@ and out_variant =
   | Ovar_fields of (string * bool * out_type list) list
   | Ovar_name of out_ident * out_type list
 
+
+(* Path resolution *)
+type path = Unresolved of string | Resolved of Uri.t * string | Apply of path * path
+
+let rec html_of_path = function
+  | Unresolved name -> <:html<$str:name$>>
+  | Resolved (uri, name) -> <:html<<a href="$uri:uri$">$str:name$</a>&>>
+  | Apply (p1, p2) -> <:html<$html_of_path p1$($html_of_path p2$)>>
+
 let index = ref None
 
+   
 (* Added semantic tags to identifiers and special handling of pervasives *)
-let rec print_ident ppf id = 
+let rec lookup_ident id = 
   
   let rec loop (elems:string list) = function
     (* lib externe, index a interrogé *)
     | Oide_external_ident (name, is_class) ->
-      (* A.B.c *)
-      (* elems : contient ["B";"c"] *) 
-      
+
       let html_path =
 	try
 	  let local = match !index with 
@@ -59,9 +69,8 @@ let rec print_ident ppf id =
 	  Some (Index.local_lookup local ~is_class:is_class (name::elems))
 	with 
 	    Not_found -> 
-	      (*(* debug *)
-	      Printf.eprintf "Reference to %s : unresolved\n%!" 
-		(String.concat "." (name::elems));*)
+	      (* Printf.eprintf "Unsolved reference : %s" 
+		 (String.concat "." (name::elems)); *)
 	      None
       in
       let concrete_name = String.concat "."
@@ -72,9 +81,9 @@ let rec print_ident ppf id =
       begin
 	match html_path with
 	  | Some path ->
-	    fprintf ppf "@{<path:%s>%s@}" path concrete_name
+	    Resolved (Uri.of_string path, concrete_name)
 	  | None ->
-	    fprintf ppf "@{<unresolved>%s@}" concrete_name
+	    Unresolved concrete_name
       end
 	
     | Oide_internal_ident (name, id, is_class) ->
@@ -98,28 +107,39 @@ let rec print_ident ppf id =
 		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
 		  ^(if is_class then "&class=" else "&type=")^last_item 
 	      in
-	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
+	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
 	    else
 	      let html_path = 
 		"?package=" ^ !Opam_doc_config.current_package 
 		^"&module=" ^ (String.concat "." (elems@module_list))
 		^(if is_class then "&class=" else "&type=")^name in
-	      fprintf ppf "@{<path:%s>%s@}" html_path (String.concat "." (name::elems))
+	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
 	  with 
 	      Not_found -> 
 		(*(* debug *)
-		Printf.eprintf "Reference to internal %s : unresolved - stamp : %d\n%!" 
+		  Printf.eprintf "Reference to internal %s : unresolved - stamp : %d\n%!" 
 		  name id.Ident.stamp;*)
-		fprintf ppf "@{<unresolved>%s@}" (String.concat "." (name::elems))
+		Unresolved (String.concat "." (name::elems))
 	end	
     | Oide_dot (sub_id, name) ->
       loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->
-      fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+      Apply (lookup_ident id1, lookup_ident id2)
   in
 
   loop [] id
 
+let rec print_ident ppf id =
+  match lookup_ident id with
+    | Unresolved name -> fprintf ppf "@{<unresolved>%s@}" name
+    | Resolved (uri, name) -> fprintf ppf "@{<path:%s>%s@}" (Uri.to_string uri) name
+    | Apply _ -> 
+      (match id with 
+	| Oide_apply (id1, id2) -> 
+	  fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+	| _ -> assert false)
+      
+(* Types *)
 (* Types *)
 
 let rec print_list pr sep ppf =
@@ -272,9 +292,9 @@ let rec tree_of_path ?(is_class=false) p =
   | Path.Papply(p1, p2) ->
     Oide_apply (tree_of_path ~is_class:is_class p1, tree_of_path ~is_class:is_class p2)
       
-let path ppf ?(is_class=false) p =
-  print_ident ppf (tree_of_path ~is_class:is_class p)
-
+let path ppf is_class p =
+   lookup_ident (tree_of_path ~is_class:is_class p)
+     
 (* Print a type expression *)
 
 let names = ref ([] : (type_expr * string) list)
@@ -590,7 +610,6 @@ let type_scheme ppf ty = reset_and_mark_loops ty; typexp true 0 ppf ty
 
 (* Create special buffers and formatters to allow HTML to be mixed
    into the pretty printer's output. *)
-open Cow
 
 type html_buffer = 
     { mutable stack: Cow.Html.t list;
@@ -663,6 +682,7 @@ let with_html tagf pf a =
   pp_print_flush ppf ();
   pop_level hb
 
+
 (* Convert semantic tags into HTML *)
 let process_tags tag =
   match tag with
@@ -676,11 +696,8 @@ let process_tags tag =
         | "path" ->
 	  (fun body -> <:html<<a href="$uri:Uri.of_string arg$">$body$</a>&>>)
 	| _ -> raise Not_found
-	       
-let path local ?(is_class=false) p = 
-  index := Some local;
-  with_html process_tags (path ~is_class:is_class) p
-    
+	           
 let type_scheme local ty = 
   index := Some local;
   with_html process_tags type_scheme ty
+

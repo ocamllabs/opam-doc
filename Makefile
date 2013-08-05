@@ -23,6 +23,8 @@ clean:
 opam-doc: opam_doc_config.cmo index.cmo gentyp.cmo doctree.cmo docjson.cmo html_utils.cmo doc_html.cmo cmd_format.cmo generate.cmo driver.cmo
 	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
 
+test: gentyp_html.cmo generate_html.cmo
+
 cmd_format.cmo : doctree.cmi
 cmd_format.cmx : doctree.cmx
 doc_html.cmo : opam_doc_config.cmo html_utils.cmo docjson.cmi
@@ -37,11 +39,23 @@ driver.cmo : opam_doc_config.cmo index.cmi generate.cmo docjson.cmi \
     doc_html.cmo cmd_format.cmo
 driver.cmx : opam_doc_config.cmx index.cmx generate.cmx docjson.cmx \
     doc_html.cmx cmd_format.cmx
-generate.cmo : info.cmi index.cmi gentyp.cmi doctree.cmi docjson.cmi
-generate.cmx : info.cmx index.cmx gentyp.cmx doctree.cmx docjson.cmx
+generate_docjson.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp.cmi \
+    doctree.cmi docjson.cmi
+generate_docjson.cmx : opam_doc_config.cmx info.cmx index.cmx gentyp_html.cmx \
+    doctree.cmx docjson.cmx
+generate_html.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp_html.cmi \
+doctree.cmi docjson.cmi html_utils.cmo
+generate_html.cmx :
+generate.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp.cmi doctree.cmi \
+    docjson.cmi
+generate.cmx : opam_doc_config.cmx info.cmx index.cmx gentyp.cmx doctree.cmx \
+    docjson.cmx
 gentyp.cmo : opam_doc_config.cmo index.cmi gentyp.cmi
 gentyp.cmx : opam_doc_config.cmx index.cmx gentyp.cmi
 gentyp.cmi : index.cmi
+gentyp_html.cmo : opam_doc_config.cmo index.cmi gentyp_html.cmi
+gentyp_html.cmx : opam_doc_config.cmx index.cmx gentyp_html.cmi
+gentyp_html.cmi : index.cmi
 html_utils.cmo : opam_doc_config.cmo index.cmi docjson.cmi
 html_utils.cmx : opam_doc_config.cmx index.cmx docjson.cmx
 index.cmo : opam_doc_config.cmo index.cmi

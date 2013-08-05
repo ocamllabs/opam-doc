@@ -12,7 +12,6 @@ let html_of_string = Html.of_string
 
 (** {3 Tags generators} *)
 
-module TagsGenerators = struct
 let make_info = 
   function 
     | Some i when i != Html.nil -> 
@@ -146,6 +145,18 @@ let make_with_constraint kind path is_destructive modeq =
   let modeq = modeq (* TODO - replace Gentyp.t *) in
   <:html<$str:label$ $path$ $str:sgn$ $modeq$>>
 
+let create_class_signature_content elements = 	
+  <:html<<div class="ocaml_class_content">$fold_html elements$</div>&>>
+
+let create_class_container class_name signature html_content = function
+  | Some (Gentyp_html.Unresolved _) -> 
+      <:html<<div class="ocaml_class ident" name="$str:class_name$">$signature$$html_content$</div>&>>
+  | Some (Gentyp_html.Resolved (uri, _)) ->
+	  <:html<<div class="ocaml_class ident" name="$str:class_name$">path=$uri:uri$> $signature$$html_content$</div>&>>
+ | None -> 
+   <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
+ | Some (Gentyp_html.Apply _) -> assert false
+
 (* End of generate-utils *)
 
 let make_reference name path = 
@@ -250,10 +261,6 @@ let wrap_include include_item path sig_items signature =
 		      $signature$$module_content$
 </div>&>>
 
-end
-
-
-open TagsGenerators		
 
 (** {3 Html pages generators} *)
 
