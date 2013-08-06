@@ -137,14 +137,6 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   <:html<$spacing_td$$body_td$$info_td$>>
 
-
-let make_with_constraint kind path is_destructive modeq = 
-  let label = match kind with `Type -> "todule" | `Module -> "module" in
-  let path = path (* TODO - replace Gentyp.t *) in
-  let sgn = if is_destructive then ":=" else "=" in
-  let modeq = modeq (* TODO - replace Gentyp.t *) in
-  <:html<$str:label$ $path$ $str:sgn$ $modeq$>>
-
 let create_class_signature_content elements = 	
   <:html<<div class="ocaml_class_content">$fold_html elements$</div>&>>
 
@@ -156,6 +148,10 @@ let create_class_container class_name signature html_content = function
  | None -> 
    <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
  | Some (Gentyp_html.Apply _) -> assert false
+
+(* module content *)
+let create_module_signature_content elements = 	
+  <:html<<div class="ocaml_module_content">$fold_html elements$</div>&>>
 
 (* End of generate-utils *)
 

@@ -42,7 +42,8 @@ let generate_submodule name f arg =
   internal_path:=List.tl !internal_path;  
   res
 
-
+*)
+(*
 let add_internal_reference id =
    Index.add_internal_reference id (List.rev !internal_path)
 
@@ -76,7 +77,7 @@ and add_include_references sig_list =
       | Sig_class_type (id, _, _) -> add_internal_reference id
     ) 
     sig_list      	  
-*)      
+  *)      
  
 (* TODO add support for references *)
 let rec generate_text_element local elem =
@@ -269,7 +270,6 @@ let generate_info_opt2 local info after_info =
     | None, Some i -> Some i
     | Some i1, Some i2 -> Some <:html<$i1$$i2$>> (* todo fix the inclusion of comments *)
 
-(* TODO do proper type printing *)
 let generate_typ local typ = 
   Gentyp_html.type_scheme local typ.ctyp_type
 
@@ -546,7 +546,7 @@ and generate_class_type_fields local dclsigl tclsigl =
       | None ->  List.map (process_class_field local) tclsigl
 
 (** Returns a signature and a path option in order to wrap the content *)
-let rec generate_class_struct local dclexpr ci_expr = 
+let rec generate_class_expr local dclexpr ci_expr = 
   (* Gros bugs en vue avec args_acc *)
   let rec loop local dclexpr ci_expr args_acc =
     match dclexpr, ci_expr.cl_desc with
@@ -629,8 +629,688 @@ let rec generate_class_struct local dclexpr ci_expr =
 
 	<:html<$args$( $cte$ : $ctyp$ )>>, path
 	  
-      | _,_ -> raise (Failure "generate_class_struct: Mismatch")
+      | _,_ -> raise (Failure "generate_class_expr: Mismatch")
   in
   loop local dclexpr ci_expr []
 
-and generate_class_fields local dclstruct tclstruct = assert false
+and generate_class_fields local (dclexpr : Doctree.class_field list option) tclexpr = 
+      let extract_type_and_virtual_from_kind = function
+    (* Type method = < obj type; .. > -> real type 
+       small hack to remove the first part
+    *)
+    | Tcfk_virtual co_typ ->
+      let exp_type = co_typ.ctyp_type in
+      (match exp_type.desc with
+	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
+	| _ -> Gentyp.type_scheme local exp_type, false
+      )      
+    | Tcfk_concrete expr -> 
+      (match expr.exp_type.desc with
+	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
+	| _ -> Gentyp.type_scheme local expr.exp_type, false
+      )
+      in
+      
+    let process_class_field local tfield = 
+      let open Html_utils in
+	  match tfield.cf_desc with
+	    | Tcf_inher (_, cexpr, _, _, _) -> 
+	      let ctyp, path = generate_class_expr local None cexpr in
+	      let signature = make_pre 
+		<:html<$keyword "inherit"$ $ctyp$>> in
+	      create_class_container "_inherit_field" signature ctyp path
+	    | Tcf_val (name, _, mut_f, _, cl_f_kind, _) ->
+	      
+	      let typ,virt = extract_type_and_virtual_from_kind cl_f_kind in
+	      let mut = match mut_f with | Mutable -> true | Immutable -> false in
+	      
+	      let label = keyword "val" in
+	      let label = 
+		if virt then <:html<$label$ $keyword "virtual"$>> else label in
+	      let label = 
+		if mut then <:html<$label$ $keyword "mutable"$>> else label in
+	      let label = generate_mark Opam_doc_config.mark_attribute name 
+		<:html<$label$ $str:name$>> in
+	      make_pre <:html<$label$ : $code "code" typ$>>		   
+	    
+	    | Tcf_meth (name, _, priv_f, cl_f_kind, ovr_b) ->
+	      let typ, virt = extract_type_and_virtual_from_kind cl_f_kind in
+	      let priv = match priv_f with Private -> true | Public -> false in
+	      	      
+	      let label = keyword "method" in
+	      let label = 
+		if virt then <:html<$label$ $keyword "virtual"$>> else label in
+	      let label = 
+		if priv then <:html<$label$ $keyword "private"$>> else label in
+	      let label = generate_mark Opam_doc_config.mark_method 
+		name <:html<$label$ $str:name$>> in
+	      make_pre <:html<$label$ : $code "code" typ$>>
+	    | Tcf_constr (co_typ1, co_typ2) ->
+	      let jtyp1 = generate_typ local co_typ1 in
+	      let jtyp2 = generate_typ local co_typ2 in
+	      let label = <:html<$jtyp1$ = $jtyp2$>> in
+	      let label = <:html<$code "type" label$>> in
+	      make_pre <:html<$keyword "constraint"$ $label$>>	  
+	    | Tcf_init _ -> Html.nil
+      in
+      
+      let generate_class_type_fields_with_doctree local dclexpr tclexpr =
+	let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
+    	  match dclsigl, tclsigl with
+	    | [], r -> 
+	      Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+	      List.rev acc @ List.map (process_class_field local) r
+	    | { dcf_desc=Dcf_comment
+	      ; dcf_info=i1 }::r, r2 -> 
+	      if is_stopped then
+		loop acc local r r2 is_stopped
+	      else 
+		let info = Html_utils.make_info (generate_info_opt local i1) in
+		loop (info::acc) local r r2 is_stopped
+	    | { dcf_desc=Dcf_stop; _}::r, r2 -> loop acc local r r2 (not is_stopped)
+	    | d::r, t::r2 ->
+	      begin
+		match d.dcf_desc, t.cf_desc with
+		  | Dcf_inher dctyp, Tcf_inher (_, cexpr, _, _, _) -> 
+		    let item = 
+		      let open Html_utils in
+			  let ctyp, path = generate_class_expr local None cexpr in
+			  let signature = make_pre 
+			    <:html<$keyword "inherit"$ $ctyp$>> in
+			  create_class_container "_inherit_field" signature ctyp path
+		      in
+		      if is_stopped then
+			loop (item::acc) local r r2 is_stopped
+		      else 
+			let info = Html_utils.make_info
+			  (generate_info_opt local d.dcf_info) in
+			loop (info::item::acc) local r r2 is_stopped
+		  | Dcf_val _, Tcf_val _ 
+		  | Dcf_meth _, Tcf_meth _ 
+		  | Dcf_constr, Tcf_constr _ -> 
+		    let item = process_class_field local t in
+		    if is_stopped then
+		      loop (item::acc) local r r2 is_stopped
+		    else 
+		      let info =  Html_utils.make_info
+			(generate_info_opt local d.dcf_info) in
+		      loop (info::item::acc) local r r2 is_stopped
+		  | _,_ -> 
+		    Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+		    List.rev acc @ List.map (process_class_field local) (t::r2)
+	      end
+	    | _, [] -> List.rev acc
+	      
+	in
+	loop [] local dclexpr tclexpr false
+      in
+      
+      match dclexpr with
+	| Some dclexpr -> generate_class_type_fields_with_doctree local dclexpr tclexpr
+	| None ->  List.map (process_class_field local) tclexpr
+
+
+let rec generate_module_type local dmty mty = 
+  let open Html_utils in
+  match dmty, mty.mty_desc with
+    | (Some Dmty_ident | None), Tmty_ident(path, _) -> 
+      let real_path = get_path local path in
+      let path = path_to_html real_path in
+      <:html<$code "code" path$&>>, Some real_path
+
+    | Some (Dmty_signature dsg), Tmty_signature sg ->
+      let sg_items = generate_signature_item_list local (Some dsg) sg.sig_items in
+      let signature = 
+	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
+      in
+      let module_content = create_module_signature_content sg_items in
+      <:html<$signature$$module_content$>>, None
+    | None, Tmty_signature sg ->
+      let sg_items = generate_signature_item_list local None sg.sig_items in
+      let signature = 
+	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
+      in
+      let module_content = create_module_signature_content sg_items in
+      <:html<$signature$$module_content$>>, None
+	
+    | Some (Dmty_functor(darg, dbase)), Tmty_functor(id, _, arg, base) ->
+      let arg, _ = generate_module_type local (Some darg) arg in
+      let base, path_opt = generate_module_type local (Some dbase) base in
+      
+      let label = <:html<$code "code" (html_of_string "functor (")$>> in
+      let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
+      let label = <:html<$label$<code class="code"> : </code>&>> in
+      let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
+      
+      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
+      body, path_opt
+    | None, Tmty_functor(id, _, arg, base) ->
+      let arg, _ = generate_module_type local None arg in
+      let base, path_opt = generate_module_type local None base in
+      
+      let label = <:html<$code "code" (html_of_string "functor (")$>> in
+      let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
+      let label = <:html<$label$<code class="code"> : </code>&>> in
+      let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
+      
+      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
+      body, path_opt (* TODO *)
+	
+    | Some (Dmty_with dbase), Tmty_with(base, cnstrs) ->
+      let base, path_opt = generate_module_type local (Some dbase) base in
+      let cnstrs = List.map (generate_with_constraint local) cnstrs in
+
+      <:html<$base$ with $insert_between " and " cnstrs$>>, path_opt      
+    (* kModTypeWith jcnstrs jbase *)
+    | None, Tmty_with(base, cnstrs) ->
+      let base, path_opt = generate_module_type local None base in
+      let cnstrs = List.map (generate_with_constraint local) cnstrs in
+      
+      <:html<$base$ with $insert_between " and " cnstrs$>>, path_opt
+
+    | Some (Dmty_typeof dexpr), Tmty_typeof mexpr ->
+      let expr, path_opt = generate_module_expr local (Some dexpr) mexpr in
+      
+      <:html<module type of $expr$>>, path_opt
+    | None, Tmty_typeof mexpr ->
+      let expr, path_opt = generate_module_expr local None mexpr in
+
+      <:html<module type of $expr$>>, path_opt
+      
+    | _, _ -> raise (Failure "generate_module_type: Mismatch")
+      
+and generate_module_expr local dmexpr tmexpr = 
+  let open Html_utils in
+  match dmexpr, tmexpr.mod_desc with
+    | (Some Dmod_ident | None), Tmod_ident(path, _) -> 
+      let real_path = get_path local path in
+      let path = path_to_html real_path in
+      <:html<$code "code" path$&>>, Some real_path
+
+    | Some (Dmod_structure dstr), Tmod_structure str ->
+      let str_items = generate_structure_item_list local (Some dstr) str.str_items in
+      let signature = 
+	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
+      in
+      let module_content = create_module_signature_content str_items in
+      <:html<$signature$$module_content$>>, None
+    | None, Tmod_structure str ->
+      let str_items = generate_structure_item_list local None str.str_items in
+      let signature = 
+	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
+      in
+      let module_content = create_module_signature_content str_items in
+      <:html<$signature$$module_content$>>, None
+	
+    | Some (Dmod_functor(darg, dbase)), Tmod_functor(id, _, arg, base) ->
+      let arg, _ = generate_module_type local (Some darg) arg in
+      let base, path_opt = generate_module_expr local (Some dbase) base in
+      
+      let label = <:html<$code "code" (html_of_string "functor (")$>> in
+      let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
+      let label = <:html<$label$<code class="code"> : </code>&>> in
+      let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
+      
+      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
+      body, path_opt
+    | None, Tmod_functor(id, _, arg, base) ->
+      let arg, _ = generate_module_type local None arg in
+      let base, path_opt = generate_module_expr local None base in
+      
+      let label = <:html<$code "code" (html_of_string "functor (")$>> in
+      let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
+      let label = <:html<$label$<code class="code"> : </code>&>> in
+      let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
+      
+      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
+      body, path_opt
+	
+    | Some (Dmod_apply (dmexpr1, dmexpr2)), Tmod_apply (tmexpr1, tmexpr2, _) ->
+      let base, path_opt = generate_module_expr local (Some dmexpr1) tmexpr1 in
+      let arg, path_opt2 = generate_module_expr local (Some dmexpr2) tmexpr2 in
+      <:html<$base$($arg$)>>, path_opt
+    | None, Tmod_apply (tmexpr1, tmexpr2, _) -> 
+      let base, path_opt = generate_module_expr local None tmexpr1 in
+      let arg, path_opt2 = generate_module_expr local None tmexpr2 in
+      <:html<$base$($arg$)>>, path_opt
+
+    | dmod_constraint_opt, Tmod_constraint(_, _, Tmodtype_explicit tmty, _) ->
+      begin 
+	match dmod_constraint_opt with
+	  | Some (Dmod_constraint (_, dmty)) -> generate_module_type local (Some dmty) tmty 
+	  | None -> generate_module_type local None tmty 
+	  | _ -> assert false
+      end
+    | dmod_constraint_opt, Tmod_constraint(tmexpr, _, Tmodtype_implicit, _) ->
+      begin 
+	match dmod_constraint_opt with
+	  | Some (Dmod_constraint (dmexpr, _)) -> 
+	    generate_module_expr local (Some dmexpr) tmexpr
+	  | None -> generate_module_expr local None tmexpr 
+	  | _ -> assert false
+      end
+    | (Some Dmod_unpack | None), Tmod_unpack(tmexpr, tmty) -> 
+      (* Not sure what to do with an unpack module (first class module) *)
+      begin
+	match tmty with 
+	  | Mty_ident path -> 
+	    let real_path = get_path local path in
+	    let path = path_to_html real_path in
+	    <:html<$code "code" path$&>>, Some real_path
+	  | _ -> 	  
+	    Printf.eprintf "generate_module_expr: unpack mismatch\n%!";
+	    Html.nil, None
+      end
+    | _, _ -> raise (Failure "generate_module_type: Mismatch")
+   
+(* Discards open, expands module_rec and process signature items  *)
+and generate_signature_item_list local dsig_items tsig_items =
+    let rec loop_with_doctree ditems items acc is_stopped =
+      match ditems, items with
+        | [], _ -> List.rev acc
+	| {dsig_desc = Dsig_comment; dsig_info=info; _} :: drest, _ ->
+          if is_stopped then
+	    loop_with_doctree drest items acc is_stopped
+	  else
+	    let comment = Html_utils.make_info (generate_info_opt local info) in
+            loop_with_doctree drest items (comment :: acc) is_stopped
+	| {dsig_desc = Dsig_stop; _} :: drest, _ ->
+	  loop_with_doctree drest items acc (not is_stopped)
+	| {dsig_desc = Dsig_open; _} :: drest, {sig_desc = Tsig_open _; _} :: rest ->
+	  (* We discard the 'open' elements *)
+          loop_with_doctree drest rest acc is_stopped
+	| ({dsig_desc = Dsig_type _; _} as ditem) :: drest, 
+          ({sig_desc = Tsig_type (tnext :: trest); _} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_type [tnext]}
+          and rest = 
+            match trest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_type trest} :: rest
+          in
+          let jitem = generate_signature_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dsig_desc = Dsig_recmodule _; _} as ditem) :: drest, 
+          ({sig_desc = Tsig_recmodule (mnext :: mrest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_recmodule [mnext]} 
+          and rest = 
+            match mrest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_recmodule mrest} :: rest
+          in
+          let jitem = generate_signature_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dsig_desc = Dsig_class _; _} as ditem) :: drest, 
+          ({sig_desc = Tsig_class (cnext :: crest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class [cnext]} 
+          and rest =
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class crest} :: rest
+          in
+          let jitem = generate_signature_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dsig_desc = Dsig_class_type _; _} as ditem) :: drest, 
+          ({sig_desc = Tsig_class_type (cnext :: crest)} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class_type [cnext]}
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class_type crest} :: rest
+          in
+          let jitem = generate_signature_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ditem :: drest, item :: rest ->
+          let jitem = generate_signature_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| _, _ -> raise (Failure "generate_signature_item_list: Mismatch")
+    in
+  
+    let rec loop_without_doctree items acc =
+      match items with
+        | [] -> List.rev acc
+	| {sig_desc = Tsig_open _} :: rest ->
+	  (* We discard the 'open' elements *)
+          loop_without_doctree rest acc
+	| ({sig_desc = Tsig_type (tnext :: trest); _} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_type [tnext]}
+          and rest = 
+            match trest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_type trest} :: rest
+          in
+          let jitem = generate_signature_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	| ({sig_desc = Tsig_recmodule (mnext :: mrest); _} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_recmodule [mnext]} 
+          and rest = 
+            match mrest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_recmodule mrest} :: rest
+          in
+          let jitem = generate_signature_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	|({sig_desc = Tsig_class (cnext :: crest); _} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class [cnext]} 
+          and rest =
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class crest} :: rest
+          in
+          let jitem = generate_signature_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	| ({sig_desc = Tsig_class_type (cnext :: crest); _} as item) :: rest -> 
+          let item = {item with sig_desc = Tsig_class_type [cnext]}
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with sig_desc = Tsig_class_type crest} :: rest
+          in
+          let jitem = generate_signature_item local None item in
+          loop_without_doctree rest (jitem :: acc) 
+	| item :: rest ->
+          let jitem = generate_signature_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+    in
+    match dsig_items with 
+      | Some ditems -> loop_with_doctree ditems tsig_items [] false
+      | None -> loop_without_doctree tsig_items []
+
+(* Mirror function for structure items *)      
+and generate_structure_item_list local (dstr_items : Doctree.structure_item list option) 
+      tstr_items : Html.t list =
+
+    let rec loop_with_doctree ditems items acc is_stopped =
+      match ditems, items with
+        | [], _ -> List.rev acc
+	| {dstr_desc = Dstr_comment; dstr_info=info; _} :: drest, _ ->
+          if is_stopped then
+	    loop_with_doctree drest items acc is_stopped
+	  else
+	    let comment = Html_utils.make_info (generate_info_opt local info) in
+            loop_with_doctree drest items (comment :: acc) is_stopped
+	| {dstr_desc = Dstr_stop; _} :: drest, _ ->
+	  loop_with_doctree drest items acc (not is_stopped)
+	| {dstr_desc = Dstr_open; _} :: drest, {str_desc = Tstr_open _; _} :: rest ->
+	  (* We discard the 'open' elements *)
+          loop_with_doctree drest rest acc is_stopped
+	| ({dstr_desc = Dstr_type _; _} as ditem) :: drest, 
+          ({str_desc = Tstr_type (tnext :: trest); _} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_type [tnext]}
+          and rest = 
+            match trest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_type trest} :: rest
+          in
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dstr_desc = Dstr_recmodule _; _} as ditem) :: drest, 
+          ({str_desc = Tstr_recmodule (mnext :: mrest)} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_recmodule [mnext]} 
+          and rest = 
+            match mrest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_recmodule mrest} :: rest
+          in
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dstr_desc = Dstr_class _; _} as ditem) :: drest, 
+          ({str_desc = Tstr_class (cnext :: crest)} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_class [cnext]} 
+          and rest =
+            match crest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_class crest} :: rest
+          in
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ({dstr_desc = Dstr_class_type _; _} as ditem) :: drest, 
+          ({str_desc = Tstr_class_type (cnext :: crest)} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_class_type [cnext]}
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_class_type crest} :: rest
+          in
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| ditem :: drest, item :: rest ->
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	| _, _ -> raise (Failure "generate_structure_item_list: Mismatch")
+    in
+    
+    let rec loop_without_doctree items acc =
+      match items with
+        | [] -> List.rev acc
+	| {str_desc = Tstr_open _} :: rest ->
+	  (* We discard the 'open' elements *)
+          loop_without_doctree rest acc
+	| ({str_desc = Tstr_type (tnext :: trest); _} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_type [tnext]}
+          and rest = 
+            match trest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_type trest} :: rest
+          in
+          let jitem = generate_structure_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	| ({str_desc = Tstr_recmodule (mnext :: mrest); _} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_recmodule [mnext]} 
+          and rest = 
+            match mrest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_recmodule mrest} :: rest
+          in
+          let jitem = generate_structure_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	|({str_desc = Tstr_class (cnext :: crest); _} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_class [cnext]} 
+          and rest =
+            match crest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_class crest} :: rest
+          in
+          let jitem = generate_structure_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+	| ({str_desc = Tstr_class_type (cnext :: crest); _} as item) :: rest -> 
+          let item = {item with str_desc = Tstr_class_type [cnext]}
+          and rest = 
+            match crest with
+		[] -> rest
+              | _ -> {item with str_desc = Tstr_class_type crest} :: rest
+          in
+          let jitem = generate_structure_item local None item in
+          loop_without_doctree rest (jitem :: acc) 
+	| item :: rest ->
+          let jitem = generate_structure_item local None item in
+          loop_without_doctree rest (jitem :: acc)
+    in
+    match dstr_items with 
+      | Some ditems -> loop_with_doctree ditems tstr_items [] false
+      | None -> loop_without_doctree tstr_items []
+
+  and generate_signature_item local (ditem : Doctree.signature_item option) item : Html.t= 
+    let open Html_utils in
+    let ditem_desc, item_info = match ditem with 
+      | Some {dsig_desc=desc; dsig_info=i1; dsig_after_info=i2} ->
+	Some desc, 
+	make_info (generate_info_opt2 local i1 i2)
+      | None -> None, Html.nil
+    in
+    
+    match ditem_desc, item.sig_desc with
+      | (None | Some (Dsig_value _)), Tsig_value(id, _, val_desc) -> 
+        (* Special treatment for primitives ? *)
+	(* begin match val_desc.val_prim with
+          | [] -> 
+            let jtyp = generate_typ local val_desc.val_desc in
+            iValue name jtyp jinfo
+          | primitive ->
+            let jtyp = generate_typ local val_desc.val_desc in
+            
+	    iPrimitive name jtyp primitive jinfo end *)
+
+	let typ = generate_typ local val_desc.val_desc in
+	let signature = generate_mark Opam_doc_config.mark_value 
+	  id.Ident.name <:html<$keyword "val"$ $str:id.Ident.name$>> in
+	let signature = make_pre <:html<$signature$ : $code "type" typ$>> in
+	<:html<$signature$$item_info$>>
+	  
+      | dsig_type, Tsig_type [id, _, tdecl] ->
+	(* ------ TODO -----------
+	   add_internal_reference id; *)
+	let name = id.Ident.name in
+	let params_variances = html_of_type_param_list 
+	  (List.map generate_typ_param tdecl.typ_params) 
+	  (List.map generate_variance tdecl.typ_variance) in
+	
+	let body = generate_type_kind local name
+	  (match dsig_type with | Some (Dsig_type (_, dkind)) -> Some dkind | _ -> None)
+	  tdecl.typ_kind in
+	
+	(* TODO : make something out of the constraints *)
+	(* let cstrs =
+	   List.map (fun (ct1, ct2, _) -> (generate_typ local ct1, generate_typ local ct2))
+           tdecl.typ_cstrs in
+	*)
+
+	let priv = 
+          match tdecl.typ_private with
+              Private -> <:html<$keyword "private"$>>
+            | Public -> Html.nil
+	in
+	
+	let manifest = 
+          match tdecl.typ_manifest, tdecl.typ_kind with
+            | Some typ, Ttype_record _ -> <:html<= {$code "type" (generate_typ local typ)$}>>
+            | Some typ, _ -> <:html<= $code "type" (generate_typ local typ)$>>
+	    | None, Ttype_record _ ->  <:html<= {>>
+            | None, Ttype_abstract -> Html.nil
+            | None, _ -> <:html<= >>
+	in
+
+       let h_f = 
+	 match tdecl.typ_manifest, tdecl.typ_kind with
+           | None, Ttype_variant _ | None, Ttype_record _ -> (fun x -> make_pre (code "" x))
+           | _ -> make_pre
+       in
+       
+       let signature = generate_mark Opam_doc_config.mark_type name 
+	 <:html<$keyword "type"$ $params_variances$$str:name$>> in
+       let signature = h_f <:html<$signature$ $manifest$$priv$>> in
+       
+       <:html<$signature$$body$$item_info$>>
+	    
+    | (None | Some (Dsig_exception _)), Tsig_exception(id, _, edecl) ->
+      let args = List.map (generate_typ local) edecl.exn_params in
+      
+      let id = generate_mark Opam_doc_config.mark_exception id.Ident.name
+	<:html<$keyword "exception"$ $str:id.Ident.name$>> in 
+      let args = match args with 
+	| [] -> Html.nil 
+	| _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
+      let signature = make_pre <:html<$id$$args$>> in
+      <:html<$signature$$item_info$>>
+
+    | dsig_module, (Tsig_module(id, _, mty) | Tsig_recmodule [id, _, mty; _]) -> 
+      (* ------ TODO -----------
+	   add_internal_reference id; *)
+            
+      (* To handle : let jmty = generate_submodule name (fun () ->
+	generate_module_type local dmty mty) () in
+      *)
+
+      let name = id.Ident.name in
+
+      let body, path = generate_module_type local 
+	(match dsig_module with
+	  | Some (Dsig_module(_, dmty)) | Some (Dsig_recmodule (_, dmty)) -> Some dmty
+	  | _ -> None)
+	mty in
+      
+      let reference = (* todo *) <:html<$str:name$>> in
+      let signature = 
+	make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$>> in
+      
+    (* todo constraints *)
+    
+      let signature = <:html<$signature$$item_info$>> in
+      
+      (* wrapping module *)
+      begin
+	match path with 
+	  | Some (Gentyp_html.Resolved (uri, _)) ->   
+	    <:html<<div class="ocaml_module ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>			
+	  | Some (Gentyp_html.Unresolved _) ->
+	    <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>			
+	  | _ -> <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
+      end			       
+    
+    | _ , _ -> assert false
+
+  (*
+    
+    | Dsig_modtype(name, dmtyo), Tsig_modtype(id, _, mtydecl) ->
+      add_internal_reference id;
+      
+      let jmtyo = 
+        match dmtyo, mtydecl with
+            Some dmty, Tmodtype_manifest mty -> 
+              Some (generate_submodule name (fun () ->
+		generate_module_type local dmty mty) ())
+          | None, Tmodtype_abstract -> None
+          | _, _ -> raise (Failure "generate_signature_item>mod_type: Mismatch")
+      in
+      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
+      iModType name jmtyo jinfo
+    | Dsig_open, Tsig_open _ -> 
+      (* TODO *)
+      iComment None
+	(*raise (Failure "Not supported")*)
+    | Dsig_include dmty, Tsig_include(mty, typ_sig) ->
+      add_include_references typ_sig;
+      
+      let jmty = generate_module_type local dmty mty in
+      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
+      let mty_type = mty.mty_type in
+      let obj = iInclude jmty jinfo in
+
+      Index.add_include_module_type obj mty_type;
+      obj
+    | Dsig_class(name, dclty), Tsig_class [cl_desc] ->
+      (* jparams = class ->['a, 'b]<- point *)
+      (match cl_desc with
+	| { ci_id_class=id1; ci_id_class_type=id2;
+	    ci_id_object=id3; ci_id_typesharp=id4; _ } ->
+	  List.iter add_internal_reference [id1; id2; id3; id4]);
+      
+      let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
+      let jvariance = List.map generate_variance cl_desc.ci_variance in
+      let virt = 
+        match cl_desc.ci_virt with
+            Virtual -> true
+          | Concrete -> false
+      in
+      let jclty = generate_class_type local dclty cl_desc.ci_expr in
+      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
+      iClass name jparams jvariance virt jclty jinfo
+    | Dsig_class_type(name, dclty), Tsig_class_type [clty_decl] ->
+      (match clty_decl with
+	| { ci_id_class=id1; ci_id_class_type=id2;
+	    ci_id_object=id3; ci_id_typesharp=id4; _ } ->
+	  List.iter add_internal_reference [id1; id2; id3; id4]);    
+
+      let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
+      let jvariance = List.map generate_variance clty_decl.ci_variance in
+      let virt = 
+        match clty_decl.ci_virt with
+            Virtual -> true
+          | Concrete -> false
+      in
+      let jclty = generate_class_type local dclty clty_decl.ci_expr in
+      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
+      iClassType name jparams jvariance virt jclty jinfo
+    | _, _ -> raise (Failure "generate_signature_item: Mismatch") *)
+
+  and generate_structure_item local (ditem : Doctree.structure_item option) item : Html.t = 
+    assert false
