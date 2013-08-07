@@ -19,13 +19,14 @@ let generate_submodule name f arg =
 let add_internal_reference id =
   Index.add_internal_reference id (List.rev !internal_path)
 
-let rec treat_module_type id = function
-  | Mty_ident p -> () (* should do something ? *)
-  | Mty_signature msig -> generate_submodule 
-    id.Ident.name add_include_references msig
-  | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
 
-and add_include_references sig_list = 
+let rec add_include_references sig_list = 
+  let rec treat_module_type id = function
+    | Mty_ident p -> () (* should do something ? *)
+    | Mty_signature msig -> generate_submodule 
+      id.Ident.name add_include_references msig
+    | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
+  in
   List.iter 
     (function  
       | Sig_value (id,_)

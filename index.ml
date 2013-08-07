@@ -194,7 +194,7 @@ let add_internal_reference = add internal_table
    
 let lookup_internal_reference id = !current_module::(find internal_table id)  
 
-(* Includes internal types *)
+(* Includes internal types - TO REMOVE *)
 
 let include_table = create 4
 

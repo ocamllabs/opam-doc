@@ -6,7 +6,7 @@ let fold_html =
       <:html<$acc$
 $elem$>>) Html.nil
 
-let string_of_html = Docjson.string_of_html
+let string_of_html = Html.to_string
 
 let html_of_string = Html.of_string
 
@@ -227,6 +227,21 @@ let wrap_sig_class signature elements class_name =
 		</div>
 </div>&>>
 
+		       
+let rec js_array_of_include_items = 
+  let open Types in function
+    | Mty_signature msig -> 
+      let included_items = List.fold_left
+	(fun acc -> function 
+	  | Sig_module (id, _, _) | Sig_modtype (id, _) 
+	  | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
+	    -> ("\"" ^ id.Ident.name ^ "\"") ::acc
+	  | _ ->acc)	   
+	[] msig 
+      in
+      "[" ^ String.concat "," included_items ^ "]"
+    | _ -> "[]"
+
 let wrap_include include_item path sig_items signature =
   let mod_type = Index.lookup_include_module_type include_item in
   let included_items = 
@@ -245,18 +260,14 @@ let wrap_include include_item path sig_items signature =
     let js_array = "[" ^ String.concat "," included_items ^ "]" in
     match path with
       |	Some p ->
-	<:html<<div class="ocaml_include ident" path=$uri:Uri.of_string p$ items="$str:js_array$">
-		      $signature$
-</div>&>>
+	<:html<<div class="ocaml_include ident" path=$uri:Uri.of_string p$ items="$str:js_array$">$signature$</div>&>>
       | None ->
 	let module_content = match sig_items with 
-	  |Some l -> <:html<<div class="ocaml_module_content">
-			    $l$</div>&>> 
-	  | None -> Html.nil in
-	<:html<<div class="ocaml_include sig" items="$str:js_array$">
-		      $signature$$module_content$
-</div>&>>
-
+	  |Some l -> <:html<<div class="ocaml_module_content">$l$</div>&>> 
+	  | None -> Html.nil
+	in
+	<:html<<div class="ocaml_include sig" items="$str:js_array$">$signature$$module_content$</div>&>>
+		      
 
 (** {3 Html pages generators} *)
 

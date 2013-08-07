@@ -7,7 +7,14 @@ open Asttypes
 open Cow
 
 open Types
-    
+
+type signature = Html.t
+type module_content = Html.t    
+
+type structure_result = 
+  | Ident of signature * Gentyp_html.path
+  | Sig of signature * module_content
+
 let get_path local ?(is_class=false) (p : Path.t) =
   Gentyp_html.path local is_class p
     
@@ -17,44 +24,34 @@ let generate_html_path local ?(is_class=false) (p : Path.t) : Html.t =
   let path = get_path local ~is_class:is_class p in
   Gentyp_html.html_of_path path
 
+(* => non reentrant *)
+let glob_env = ref [] 
 
-type doc_env = 
-    {current_module_name:string;
-     parent_modules:string list (** reversed list B.M.SubM -> ["M"; "B"] *) }
+let get_full_path_name () =
+  String.concat "." !glob_env
 
-(* doc_env's abstraction layer *)
-let new_env module_name = 
-  {current_module_name=module_name; parent_modules=[]}
-
-let add_to_env env module_name =
-  {current_module_name=module_name; 
-   parent_modules=env.current_module_name::env.parent_modules}
-
-let get_full_path_name env =
-  String.concat "." (List.rev (env.current_module_name::env.parent_modules))
-
-(* TO REMOVE:
-let internal_path = ref []
-
-let generate_submodule name f arg =
-  internal_path:=name::(!internal_path);
-  let res = f arg in
-  internal_path:=List.tl !internal_path;  
-  res
-
-*)
-(*
+let current_uri arg =
+  Uri.of_string (
+    "?package=" ^ !Opam_doc_config.current_package
+    ^"&module="^get_full_path_name ()
+    ^(match arg with 
+      | `Class n -> "&class="^n
+      | `Type n ->  "&type="^n
+      | `Nothing -> ""))
+    
 let add_internal_reference id =
-   Index.add_internal_reference id (List.rev !internal_path)
+   Index.add_internal_reference id !glob_env
 
-let rec treat_module_type id = function
-  | Mty_ident p -> () (* should do something ? *)
-  | Mty_signature msig -> generate_submodule 
-    id.Ident.name add_include_references msig
-  | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
-
-
-and add_include_references sig_list = 
+let rec add_include_references sig_list = 
+  let rec treat_module_type id = function
+    | Mty_ident p -> () (* should really do something ? *)
+    | Mty_signature msig -> 
+      let prev_env = !glob_env in 
+      glob_env := !glob_env @ [id.Ident.name];      
+      add_include_references msig;
+      glob_env := prev_env;
+    | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
+  in
   List.iter 
     (function  
       | Sig_value (id,_)
@@ -77,7 +74,6 @@ and add_include_references sig_list =
       | Sig_class_type (id, _, _) -> add_internal_reference id
     ) 
     sig_list      	  
-  *)      
  
 (* TODO add support for references *)
 let rec generate_text_element local elem =
@@ -333,7 +329,6 @@ let generate_type_kind local parent_name dtk tk =
       | Some (Dtype_variant infos) | Some (Dtype_record infos) -> infos
   in
   
-  
   match tk with
     | Ttype_abstract -> Html.nil
       
@@ -401,7 +396,7 @@ let rec generate_class_type local dclty clty =
 
 	let body = <:html<$args$$params$$html_path$>> in
 	
-	body, Some path
+	Ident (body, path)
 	  
       | dclass_sig, Tcty_signature class_sig ->
 	let fields : Html.t list = 
@@ -417,11 +412,12 @@ let rec generate_class_type local dclty clty =
 	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
 	in 
 	
-	let body = let open Html_utils in 
-	     <:html<$args$$code "code" (html_of_string "object")$ .. $code "code" (html_of_string "end")$>> in
-			
-	<:html<$body$$Html_utils.create_class_signature_content fields$>>, None
+	let body = 
+	  let open Html_utils in 
+	      <:html<$args$$code "code" (html_of_string "object")$ .. $code "code" (html_of_string "end")$>> in
 	  
+	  Sig (<:html<$body$>>, Html_utils.create_class_signature_content fields)
+		     
       | dclass_type, Tcty_fun (_, core_type, sub_class_type) ->
 	let arg = generate_typ local core_type in
 	let sub_dclass_type = 
@@ -438,15 +434,22 @@ let rec generate_class_type local dclty clty =
 
 (* TODO : Double check this function *)
 and generate_class_type_fields local dclsigl tclsigl =
-    
+    let open Html_utils in
     let process_class_field local tfield = 
-      let open Html_utils in
       match tfield.ctf_desc with
 	| Tctf_inher ctyp -> 
-	  let ctyp, path = generate_class_type local None ctyp in
-	  let signature = make_pre 
-	    <:html<$keyword "inherit"$ $ctyp$>> in
-	  create_class_container "_inherit_field" signature ctyp path
+	  let class_result = generate_class_type local None ctyp in
+	    
+	  begin
+	    match class_result with
+	      | Ident (s, p) ->
+		let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+		create_class_container "_inherit_field" signature Html.nil (Some p)
+	      | Sig (s,c) -> 
+		let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+		create_class_container "_inherit_field" signature c None
+	  end
+
 	| Tctf_val (name, mut_f, virt_f, co_typ) ->  
 	  let typ = generate_typ local co_typ in
 	  let mut = match mut_f with | Mutable -> true | Immutable -> false in
@@ -492,7 +495,8 @@ and generate_class_type_fields local dclsigl tclsigl =
       let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
     	match dclsigl, tclsigl with
 	  | [], r -> 
-	    Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+	    Printf.eprintf 
+	      "generate_class_type_fields mismatch -- processing without doc\n%!";
 	    List.rev acc @ List.map (process_class_field local) r
 	  | { dctf_desc=Dctf_comment
 	    ; dctf_info=i1
@@ -508,11 +512,17 @@ and generate_class_type_fields local dclsigl tclsigl =
 	      match d.dctf_desc, t.ctf_desc with
 		| Dctf_inher dctyp, Tctf_inher ctyp -> 
 		  let item = 
-		    let open Html_utils in
-		    let ctyp, path = generate_class_type local None ctyp in
-		    let signature = make_pre 
-		      <:html<$keyword "inherit"$ $ctyp$>> in
-		    create_class_container "_inherit_field" signature ctyp path
+		    let class_result = generate_class_type local None ctyp in
+		    begin
+		      match class_result with
+			| Ident (s, p) ->
+			  let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+			  create_class_container "_inherit_field" signature Html.nil (Some p)
+			| Sig (s,c) -> 
+			  let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+			  create_class_container "_inherit_field" signature c None
+		    end
+		      
 		  in
 		  if is_stopped then
 		    loop (item::acc) local r r2 is_stopped
@@ -532,7 +542,8 @@ and generate_class_type_fields local dclsigl tclsigl =
 		      (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
 		    loop (info::item::acc) local r r2 is_stopped
 		| _,_ -> 
-		  Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+		  Printf.eprintf 
+		    "generate_class_type_fields mismatch -- processing without doc\n%!";
 		  List.rev acc @ List.map (process_class_field local) (t::r2)
 	    end
 	  | _, [] -> List.rev acc
@@ -561,11 +572,11 @@ let rec generate_class_expr local dclexpr ci_expr =
 	  | l -> Html_utils.code "type"
 	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
 	in
-	let body = 
+	let signature = 
 	  let open Html_utils in 
 	      <:html<$args$$code "code" (html_of_string "object")$ .. $code "code" (html_of_string "end")$>> in
 		   
-	  <:html<$body$$Html_utils.create_class_signature_content fields$>>, None
+	  Sig (signature, <:html<$Html_utils.create_class_signature_content fields$>>)
 	  
       | dclass_expr, Tcl_fun (_, pattern, _, class_expr, _) -> 
 	let arg = Gentyp.type_scheme local pattern.pat_type in
@@ -609,26 +620,29 @@ let rec generate_class_expr local dclexpr ci_expr =
 	    params (List.map (fun _ -> `None) params) (* dummy variance list *)
 	in
 
-	let body = <:html<$args$$params$$html_path$>> in
-	body, Some path
+	Ident (<:html<$args$$params$$html_path$>>, path)
 
       | dclass_constraint, Tcl_constraint (class_expr, Some ctyp, _, _, _) ->
 
-	let cte, path = loop local 
+	let cte = loop local 
 	  (match dclass_constraint with Some (Dcl_constraint (e,_)) -> Some e | _ -> None)
 	  class_expr [] in
-	let ctyp, _ = generate_class_type local
+	let ctyp = generate_class_type local 
 	  (match dclass_constraint with Some (Dcl_constraint (_,t)) -> Some t | _ -> None)
 	  ctyp in
-
+	
+	let ctyp_sig = match ctyp with | Ident (s, _) | Sig (s, _) -> s in
+	
 	let args = match args_acc with
 	  | [] -> Html.nil 
 	  | l -> Html_utils.code "type"
 	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
 	in 
-
-	<:html<$args$( $cte$ : $ctyp$ )>>, path
-	  
+	begin
+	  match cte with
+	    | Ident (s, p) -> Ident (<:html<$args$( $s$ : $ctyp_sig$ )>>, p)
+	    | Sig (s, c) -> Sig (<:html<$args$( $s$ : $ctyp_sig$ )>>, c)
+	end	  
       | _,_ -> raise (Failure "generate_class_expr: Mismatch")
   in
   loop local dclexpr ci_expr []
@@ -655,10 +669,17 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
       let open Html_utils in
 	  match tfield.cf_desc with
 	    | Tcf_inher (_, cexpr, _, _, _) -> 
-	      let ctyp, path = generate_class_expr local None cexpr in
-	      let signature = make_pre 
-		<:html<$keyword "inherit"$ $ctyp$>> in
-	      create_class_container "_inherit_field" signature ctyp path
+	      let class_result = generate_class_expr local None cexpr in
+	      begin
+		match class_result with
+		  | Ident (s, p) -> 
+		    let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+		    create_class_container "_inherit_field" signature Html.nil (Some p)
+		  | Sig (s,c) -> 
+		    let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+		    create_class_container "_inherit_field" signature c None
+	      end
+
 	    | Tcf_val (name, _, mut_f, _, cl_f_kind, _) ->
 	      
 	      let typ,virt = extract_type_and_virtual_from_kind cl_f_kind in
@@ -698,7 +719,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 	let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
     	  match dclsigl, tclsigl with
 	    | [], r -> 
-	      Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+	      Printf.eprintf "generate_class_type_fields mismatch -- processing without doc\n%!";
 	      List.rev acc @ List.map (process_class_field local) r
 	    | { dcf_desc=Dcf_comment
 	      ; dcf_info=i1 }::r, r2 -> 
@@ -712,12 +733,18 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 	      begin
 		match d.dcf_desc, t.cf_desc with
 		  | Dcf_inher dctyp, Tcf_inher (_, cexpr, _, _, _) -> 
-		    let item = 
+		    let item =
 		      let open Html_utils in
-			  let ctyp, path = generate_class_expr local None cexpr in
-			  let signature = make_pre 
-			    <:html<$keyword "inherit"$ $ctyp$>> in
-			  create_class_container "_inherit_field" signature ctyp path
+			  let class_result = generate_class_expr local None cexpr in
+			  begin
+			    match class_result with
+			      | Ident (s, p) ->
+				let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+				create_class_container "_inherit_field" signature Html.nil (Some p)
+			      | Sig (s,c) -> 
+				let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
+				create_class_container "_inherit_field" signature c None
+			  end
 		      in
 		      if is_stopped then
 			loop (item::acc) local r r2 is_stopped
@@ -736,7 +763,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 			(generate_info_opt local d.dcf_info) in
 		      loop (info::item::acc) local r r2 is_stopped
 		  | _,_ -> 
-		    Printf.eprintf "generate_class_type_fields mismatch -- processing without doc";
+		    Printf.eprintf "generate_class_type_fields mismatch -- processing without doc\n%!";
 		    List.rev acc @ List.map (process_class_field local) (t::r2)
 	      end
 	    | _, [] -> List.rev acc
@@ -756,7 +783,7 @@ let rec generate_module_type local dmty mty =
     | (Some Dmty_ident | None), Tmty_ident(path, _) -> 
       let real_path = get_path local path in
       let path = path_to_html real_path in
-      <:html<$code "code" path$&>>, Some real_path
+      Ident  (<:html<$code "code" path$&>>, real_path)
 
     | Some (Dmty_signature dsg), Tmty_signature sg ->
       let sg_items = generate_signature_item_list local (Some dsg) sg.sig_items in
@@ -764,68 +791,99 @@ let rec generate_module_type local dmty mty =
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content sg_items in
-      <:html<$signature$$module_content$>>, None
+      Sig (<:html<$signature$>>, <:html<$module_content$>>)
     | None, Tmty_signature sg ->
       let sg_items = generate_signature_item_list local None sg.sig_items in
       let signature = 
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content sg_items in
-      <:html<$signature$$module_content$>>, None
+      Sig (<:html<$signature$>>, <:html<$module_content$>>)
 	
     | Some (Dmty_functor(darg, dbase)), Tmty_functor(id, _, arg, base) ->
-      let arg, _ = generate_module_type local (Some darg) arg in
-      let base, path_opt = generate_module_type local (Some dbase) base in
+      let arg = match generate_module_type local (Some darg) arg with
+	| Sig (s, _) | Ident (s, _) -> s in
+      let base = generate_module_type local (Some dbase) base in
       
       let label = <:html<$code "code" (html_of_string "functor (")$>> in
       let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
       let label = <:html<$label$<code class="code"> : </code>&>> in
       let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
       
-      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
-      body, path_opt
+      begin
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<<div class="sig_block">$label$$msig$</div>&>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<<div class="sig_block">$label$$msig$</div>&>>, content)
+      end
     | None, Tmty_functor(id, _, arg, base) ->
-      let arg, _ = generate_module_type local None arg in
-      let base, path_opt = generate_module_type local None base in
+      let arg = match generate_module_type local None arg with
+	| Sig (s, _) | Ident (s, _) -> s in
+      let base = generate_module_type local None base in
       
       let label = <:html<$code "code" (html_of_string "functor (")$>> in
       let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
       let label = <:html<$label$<code class="code"> : </code>&>> in
       let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
       
-      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
-      body, path_opt (* TODO *)
+      begin
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<<div class="sig_block">$label$$msig$</div>&>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<<div class="sig_block">$label$$msig$</div>&>>, content)
+      end
 	
     | Some (Dmty_with dbase), Tmty_with(base, cnstrs) ->
-      let base, path_opt = generate_module_type local (Some dbase) base in
+      let base = generate_module_type local (Some dbase) base in
       let cnstrs = List.map (generate_with_constraint local) cnstrs in
 
-      <:html<$base$ with $insert_between " and " cnstrs$>>, path_opt      
-    (* kModTypeWith jcnstrs jbase *)
+      let signature = <:html<with $insert_between " and " cnstrs$>> in
+	begin
+	  match base with 
+	    | Ident (msig, p) -> Ident (<:html<$signature$$msig$>>, p)
+	    | Sig (msig, content) -> Sig (<:html<$signature$$msig$>>, content)
+	end
+	
     | None, Tmty_with(base, cnstrs) ->
-      let base, path_opt = generate_module_type local None base in
+      let base = generate_module_type local None base in
       let cnstrs = List.map (generate_with_constraint local) cnstrs in
       
-      <:html<$base$ with $insert_between " and " cnstrs$>>, path_opt
-
+      let signature = <:html<with $insert_between " and " cnstrs$>> in
+      begin
+	match base with 
+	  | Ident (msig, p) -> Ident (<:html<$signature$$msig$>>, p)
+	  | Sig (msig, content) -> Sig (<:html<$signature$$msig$>>, content)
+      end
+	
     | Some (Dmty_typeof dexpr), Tmty_typeof mexpr ->
-      let expr, path_opt = generate_module_expr local (Some dexpr) mexpr in
+      let base = generate_module_expr local (Some dexpr) mexpr in
       
-      <:html<module type of $expr$>>, path_opt
+      begin
+	match base with 
+	  | Ident (msig, p) -> Ident (<:html<module type of $msig$>>, p)
+	  | Sig (msig, content) -> Sig (<:html<module type of $msig$>>, content)
+      end
+      
     | None, Tmty_typeof mexpr ->
-      let expr, path_opt = generate_module_expr local None mexpr in
+      let base = generate_module_expr local None mexpr in
 
-      <:html<module type of $expr$>>, path_opt
+      begin
+	match base with 
+	  | Ident (msig, p) -> Ident (<:html<module type of $msig$>>, p)
+	  | Sig (msig, content) -> Sig (<:html<module type of $msig$>>, content)
+      end
       
     | _, _ -> raise (Failure "generate_module_type: Mismatch")
       
-and generate_module_expr local dmexpr tmexpr = 
+and generate_module_expr local dmexpr tmexpr =
   let open Html_utils in
   match dmexpr, tmexpr.mod_desc with
     | (Some Dmod_ident | None), Tmod_ident(path, _) -> 
       let real_path = get_path local path in
       let path = path_to_html real_path in
-      <:html<$code "code" path$&>>, Some real_path
+      Ident (<:html<$code "code" path$&>>, real_path)
 
     | Some (Dmod_structure dstr), Tmod_structure str ->
       let str_items = generate_structure_item_list local (Some dstr) str.str_items in
@@ -833,62 +891,90 @@ and generate_module_expr local dmexpr tmexpr =
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content str_items in
-      <:html<$signature$$module_content$>>, None
+      Sig  (signature, module_content)
+
     | None, Tmod_structure str ->
       let str_items = generate_structure_item_list local None str.str_items in
       let signature = 
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content str_items in
-      <:html<$signature$$module_content$>>, None
+      Sig  (signature, module_content)
 	
     | Some (Dmod_functor(darg, dbase)), Tmod_functor(id, _, arg, base) ->
-      let arg, _ = generate_module_type local (Some darg) arg in
-      let base, path_opt = generate_module_expr local (Some dbase) base in
+      let arg = match generate_module_type local (Some darg) arg with 
+	| Sig (s, _) | Ident (s, _) -> s in
+      let base = generate_module_expr local (Some dbase) base in
       
       let label = <:html<$code "code" (html_of_string "functor (")$>> in
       let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
       let label = <:html<$label$<code class="code"> : </code>&>> in
       let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
       
-      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
-      body, path_opt
+      begin
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<<div class="sig_block">$label$$msig$</div>&>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<<div class="sig_block">$label$$msig$</div>&>>, content)
+      end
+
     | None, Tmod_functor(id, _, arg, base) ->
-      let arg, _ = generate_module_type local None arg in
-      let base, path_opt = generate_module_expr local None base in
+      let arg = match generate_module_type local None arg with 
+	| Sig (s, _) | Ident (s, _) -> s in
+      let base = generate_module_expr local None base in
       
       let label = <:html<$code "code" (html_of_string "functor (")$>> in
       let label = <:html<$label$$code "code" (html_of_string id.Ident.name)$>> in
       let label = <:html<$label$<code class="code"> : </code>&>> in
       let label = <:html<$label$$arg$$code "code" (html_of_string ") -> ")$>> in
       
-      let body = <:html<<div class="sig_block">$label$$base$</div>&>> in
-      body, path_opt
+      begin
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<<div class="sig_block">$label$$msig$</div>&>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<<div class="sig_block">$label$$msig$</div>&>>, content)
+      end
 	
     | Some (Dmod_apply (dmexpr1, dmexpr2)), Tmod_apply (tmexpr1, tmexpr2, _) ->
-      let base, path_opt = generate_module_expr local (Some dmexpr1) tmexpr1 in
-      let arg, path_opt2 = generate_module_expr local (Some dmexpr2) tmexpr2 in
-      <:html<$base$($arg$)>>, path_opt
+      let base = generate_module_expr local (Some dmexpr1) tmexpr1 in
+      let arg = match generate_module_expr local (Some dmexpr2) tmexpr2 with 
+	| Sig (s, _) | Ident (s, _) -> s in
+      begin
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<$msig$($arg$)>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<$msig$($arg$)>>, content)
+      end
     | None, Tmod_apply (tmexpr1, tmexpr2, _) -> 
-      let base, path_opt = generate_module_expr local None tmexpr1 in
-      let arg, path_opt2 = generate_module_expr local None tmexpr2 in
-      <:html<$base$($arg$)>>, path_opt
-
+      let base = generate_module_expr local None tmexpr1 in
+      let arg = match generate_module_expr local None tmexpr2 with 
+	| Sig (s, _) | Ident (s, _) -> s in
+      begin      
+	match base with 
+	  | Ident (msig, p) -> 
+	    Ident (<:html<$msig$($arg$)>>, p)
+	  | Sig (msig, content) -> 
+	    Sig (<:html<$msig$($arg$)>>, content)
+      end
     | dmod_constraint_opt, Tmod_constraint(_, _, Tmodtype_explicit tmty, _) ->
-      begin 
-	match dmod_constraint_opt with
-	  | Some (Dmod_constraint (_, dmty)) -> generate_module_type local (Some dmty) tmty 
-	  | None -> generate_module_type local None tmty 
-	  | _ -> assert false
-      end
+
+	generate_module_type local
+	  (match dmod_constraint_opt with
+	    | Some (Dmod_constraint (_, dmty)) -> Some dmty
+	    | None | _ -> None)
+	  tmty
+
     | dmod_constraint_opt, Tmod_constraint(tmexpr, _, Tmodtype_implicit, _) ->
-      begin 
-	match dmod_constraint_opt with
-	  | Some (Dmod_constraint (dmexpr, _)) -> 
-	    generate_module_expr local (Some dmexpr) tmexpr
-	  | None -> generate_module_expr local None tmexpr 
-	  | _ -> assert false
-      end
+      
+      generate_module_expr local
+	(match dmod_constraint_opt with
+	  | Some (Dmod_constraint (dmexpr, _)) -> Some dmexpr
+	  |  _ -> None)
+	tmexpr
+
     | (Some Dmod_unpack | None), Tmod_unpack(tmexpr, tmty) -> 
       (* Not sure what to do with an unpack module (first class module) *)
       begin
@@ -896,10 +982,10 @@ and generate_module_expr local dmexpr tmexpr =
 	  | Mty_ident path -> 
 	    let real_path = get_path local path in
 	    let path = path_to_html real_path in
-	    <:html<$code "code" path$&>>, Some real_path
+	    Ident (<:html<$code "code" path$&>>, real_path)
 	  | _ -> 	  
 	    Printf.eprintf "generate_module_expr: unpack mismatch\n%!";
-	    Html.nil, None
+	    assert false
       end
     | _, _ -> raise (Failure "generate_module_type: Mismatch")
    
@@ -1129,6 +1215,169 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       | Some ditems -> loop_with_doctree ditems tstr_items [] false
       | None -> loop_without_doctree tstr_items []
 
+
+  and generate_type_item local name type_decl body info = 
+    let open Html_utils in
+  let params_variances = html_of_type_param_list 
+    (List.map generate_typ_param type_decl.typ_params) 
+    (List.map generate_variance type_decl.typ_variance) in
+  
+  (* TODO : make something out of the constraints *)
+  (* let cstrs =
+     List.map (fun (ct1, ct2, _) -> (generate_typ local ct1, generate_typ local ct2))
+     type_decl.typ_cstrs in
+  *)
+  let priv = 
+    match type_decl.typ_private with
+        Private -> <:html<$keyword "private"$>>
+      | Public -> Html.nil
+  in
+  let manifest = 
+    match type_decl.typ_manifest, type_decl.typ_kind with
+      | Some typ, Ttype_record _ -> <:html<= {$code "type" (generate_typ local typ)$}>>
+      | Some typ, _ -> <:html<= $code "type" (generate_typ local typ)$>>
+      | None, Ttype_record _ ->  <:html<= {>>
+      | None, Ttype_abstract -> Html.nil
+      | None, _ -> <:html<= >>
+  in
+					  
+  let h_f = 
+    match type_decl.typ_manifest, type_decl.typ_kind with
+      | None, Ttype_variant _ | None, Ttype_record _ -> (fun x -> make_pre (code "" x))
+      | _ -> make_pre
+  in
+  
+  let signature = generate_mark Opam_doc_config.mark_type name 
+    <:html<$keyword "type"$ $params_variances$$str:name$>> in
+  let signature = h_f <:html<$signature$ $manifest$$priv$>> in
+  
+  <:html<$signature$$body$$info$>>
+
+  and generate_value_item name typ info =
+    let open Html_utils in
+      let signature = generate_mark Opam_doc_config.mark_value 
+	name <:html<$keyword "val"$ $str:name$>> in
+      let signature = make_pre <:html<$signature$ : $code "type" typ$>> in
+      <:html<$signature$$info$>>
+
+  and generate_exception_item name args info =
+      let open Html_utils in
+	  let id = generate_mark Opam_doc_config.mark_exception name
+	    <:html<$keyword "exception"$ $str:name$>> in 
+	  let args = match args with 
+	    | [] -> Html.nil 
+	    | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
+	  let signature = make_pre <:html<$id$$args$>> in
+	  <:html<$signature$$info$>>
+
+  and generate_module_item name module_result item_info =
+      let open Html_utils in
+	  let reference = <:html<<a href="$uri:current_uri `Nothing$">$str:name$</a>&>> in
+
+	  (* TODO constraints *)
+	  
+	  match module_result with 
+	    | Ident (body, Gentyp_html.Resolved (uri, _)) -> 
+	      let signature = make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>			
+	    | Ident (body, Gentyp_html.Unresolved _) | Ident (body, _) -> 
+	      let signature = make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>
+	    | Sig (body, content) ->
+	      let signature = make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
+
+  and generate_module_type_item name module_result item_info =
+      let open Html_utils in
+	  let reference = 
+	    <:html<<a href="$uri:current_uri (`Type name)$">$str:name$</a>&>> in
+
+	  match module_result with 
+	    | Ident (body, Gentyp_html.Resolved (uri, _)) -> 
+	      let signature = make_pre <:html<$keyword "module type"$ $reference$ = $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>			
+	    | Ident (body, Gentyp_html.Unresolved _) | Ident (body, _) -> 
+	      let signature = make_pre <:html<$keyword "module type"$ $reference$ = $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>
+	    | Sig (body, content) ->
+	      let signature = make_pre <:html<$keyword "module type"$ $reference$ = $code "type" body$$item_info$>> in 
+	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
+	
+  and generate_include_item module_result typ_sig item_info =
+      let open Html_utils in
+	  let included_items = js_array_of_include_items typ_sig in
+	  
+	  match module_result with 
+	    | Ident (body, Gentyp_html.Resolved (uri, _)) -> 
+	      let signature = 
+		make_pre <:html<$keyword "include"$ $code "type" body$$item_info$>> in
+	      <:html<<div class="ocaml_include ident" path=$uri:uri$ items="$str:included_items$">$signature$</div>&>>
+			    
+	    | Ident (body, Gentyp_html.Unresolved _) | Ident (body, _) -> 
+	      let signature = 
+		make_pre <:html<$keyword "include"$ $code "type" body$$item_info$>> in
+	      <:html<<div class="ocaml_include ident" items="$str:included_items$">$signature$</div>&>>	      
+	    | Sig (body, content) ->
+	      let signature = 
+		make_pre <:html<$keyword "include"$ $code "type" body$$item_info$>> in
+	      <:html<<div class="ocaml_include sig" items="$str:included_items$">$signature$$content$</div>&>>
+			    
+ and generate_class_item name params variance virt class_result item_info =
+    let open Html_utils in
+	let id = generate_mark Opam_doc_config.mark_type name in
+	let params_html = html_of_type_class_param_list params variance in
+	
+	let reference = 
+	    <:html<<a href="$uri:current_uri (`Class name)$">$str:name$</a>&>> in
+
+	let signature = <:html<$keyword "class"$>> in
+	let signature = 
+	  <:html<$signature$$if virt then keyword " virtual" else Html.nil$>> in
+	let signature = <:html<$signature$$params_html$$reference$>> in
+	
+	match class_result with 
+	  | Ident (s, p) -> 
+	    let signature = make_pre <:html<$id signature$ : $s$>> in
+	    let signature = <:html<$signature$$item_info$>> in    
+	    begin 
+	      match p with 
+		| Gentyp_html.Resolved (uri, _) -> <:html<<div class="ocaml_class ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>
+                | Gentyp_html.Unresolved _ | _ -> <:html<<div class="ocaml_class ident" name="$str:name$">$signature$</div>&>>	   
+             end 
+          | Sig (s, c) ->
+	    let signature = make_pre <:html<$id signature$ : $s$>> in
+	    let signature = <:html<$signature$$item_info$>> in    
+	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$c$</div>&>>
+			 
+
+ and generate_class_type_item name params variance virt class_result item_info =
+    let open Html_utils in
+	let id = generate_mark Opam_doc_config.mark_type name in
+	let params_html = html_of_type_class_param_list params variance in
+		
+	let reference = 
+	    <:html<<a href="$uri:current_uri (`Class name)$">$str:name$</a>&>> in
+
+	let signature = <:html<$keyword "class type"$>> in
+	let signature = 
+	  <:html<$signature$$if virt then keyword " virtual" else Html.nil$>> in
+	let signature = <:html<$signature$$params_html$$reference$>> in
+	
+	match class_result with 
+	  | Ident (s, p) -> 
+	    let signature = make_pre <:html<$id signature$ : $s$>> in
+	    let signature = <:html<$signature$$item_info$>> in    
+	    begin 
+	      match p with 
+		| Gentyp_html.Resolved (uri, _) -> <:html<<div class="ocaml_class ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>
+                | Gentyp_html.Unresolved _ | _ -> <:html<<div class="ocaml_class ident" name="$str:name$">$signature$</div>&>>	   
+             end 
+          | Sig (s, c) ->
+	    let signature = make_pre <:html<$id signature$ : $s$>> in
+	    let signature = <:html<$signature$$item_info$>> in    
+	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$c$</div>&>>
+			 
+			 
   and generate_signature_item local (ditem : Doctree.signature_item option) item : Html.t= 
     let open Html_utils in
     let ditem_desc, item_info = match ditem with 
@@ -1148,169 +1397,276 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           | primitive ->
             let jtyp = generate_typ local val_desc.val_desc in
             
-	    iPrimitive name jtyp primitive jinfo end *)
-
+	   iPrimitive name jtyp primitive jinfo end *)
 	let typ = generate_typ local val_desc.val_desc in
-	let signature = generate_mark Opam_doc_config.mark_value 
-	  id.Ident.name <:html<$keyword "val"$ $str:id.Ident.name$>> in
-	let signature = make_pre <:html<$signature$ : $code "type" typ$>> in
-	<:html<$signature$$item_info$>>
+
+	generate_value_item id.Ident.name typ item_info
 	  
       | dsig_type, Tsig_type [id, _, tdecl] ->
-	(* ------ TODO -----------
-	   add_internal_reference id; *)
-	let name = id.Ident.name in
-	let params_variances = html_of_type_param_list 
-	  (List.map generate_typ_param tdecl.typ_params) 
-	  (List.map generate_variance tdecl.typ_variance) in
+	add_internal_reference id;
 	
-	let body = generate_type_kind local name
+	let body = generate_type_kind local id.Ident.name
 	  (match dsig_type with | Some (Dsig_type (_, dkind)) -> Some dkind | _ -> None)
 	  tdecl.typ_kind in
-	
-	(* TODO : make something out of the constraints *)
-	(* let cstrs =
-	   List.map (fun (ct1, ct2, _) -> (generate_typ local ct1, generate_typ local ct2))
-           tdecl.typ_cstrs in
-	*)
 
-	let priv = 
-          match tdecl.typ_private with
-              Private -> <:html<$keyword "private"$>>
-            | Public -> Html.nil
-	in
-	
-	let manifest = 
-          match tdecl.typ_manifest, tdecl.typ_kind with
-            | Some typ, Ttype_record _ -> <:html<= {$code "type" (generate_typ local typ)$}>>
-            | Some typ, _ -> <:html<= $code "type" (generate_typ local typ)$>>
-	    | None, Ttype_record _ ->  <:html<= {>>
-            | None, Ttype_abstract -> Html.nil
-            | None, _ -> <:html<= >>
-	in
-
-       let h_f = 
-	 match tdecl.typ_manifest, tdecl.typ_kind with
-           | None, Ttype_variant _ | None, Ttype_record _ -> (fun x -> make_pre (code "" x))
-           | _ -> make_pre
-       in
-       
-       let signature = generate_mark Opam_doc_config.mark_type name 
-	 <:html<$keyword "type"$ $params_variances$$str:name$>> in
-       let signature = h_f <:html<$signature$ $manifest$$priv$>> in
-       
-       <:html<$signature$$body$$item_info$>>
+	generate_type_item local id.Ident.name tdecl body item_info
 	    
     | (None | Some (Dsig_exception _)), Tsig_exception(id, _, edecl) ->
+
       let args = List.map (generate_typ local) edecl.exn_params in
+      generate_exception_item id.Ident.name args item_info
+
+    | dsig_module, (Tsig_module(id, _, mty) | Tsig_recmodule ((id, _, mty)::_)) -> 
+      add_internal_reference id;
       
-      let id = generate_mark Opam_doc_config.mark_exception id.Ident.name
-	<:html<$keyword "exception"$ $str:id.Ident.name$>> in 
-      let args = match args with 
-	| [] -> Html.nil 
-	| _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
-      let signature = make_pre <:html<$id$$args$>> in
-      <:html<$signature$$item_info$>>
+      let prev_env = !glob_env in 
+      glob_env := !glob_env @ [id.Ident.name];
 
-    | dsig_module, (Tsig_module(id, _, mty) | Tsig_recmodule [id, _, mty; _]) -> 
-      (* ------ TODO -----------
-	   add_internal_reference id; *)
-            
-      (* To handle : let jmty = generate_submodule name (fun () ->
-	generate_module_type local dmty mty) () in
-      *)
-
-      let name = id.Ident.name in
-
-      let body, path = generate_module_type local 
+      let module_result = generate_module_type local 
 	(match dsig_module with
 	  | Some (Dsig_module(_, dmty)) | Some (Dsig_recmodule (_, dmty)) -> Some dmty
 	  | _ -> None)
 	mty in
       
-      let reference = (* todo *) <:html<$str:name$>> in
-      let signature = 
-	make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$>> in
+      glob_env := prev_env;
       
-    (* todo constraints *)
-    
-      let signature = <:html<$signature$$item_info$>> in
-      
-      (* wrapping module *)
-      begin
-	match path with 
-	  | Some (Gentyp_html.Resolved (uri, _)) ->   
-	    <:html<<div class="ocaml_module ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>			
-	  | Some (Gentyp_html.Unresolved _) ->
-	    <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>			
-	  | _ -> <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
-      end			       
-    
-    | _ , _ -> assert false
+      generate_module_item id.Ident.name module_result item_info
 
-  (*
-    
-    | Dsig_modtype(name, dmtyo), Tsig_modtype(id, _, mtydecl) ->
+    | dsig_modtype, Tsig_modtype(id, _, tmtydecl) -> 
       add_internal_reference id;
       
-      let jmtyo = 
-        match dmtyo, mtydecl with
-            Some dmty, Tmodtype_manifest mty -> 
-              Some (generate_submodule name (fun () ->
-		generate_module_type local dmty mty) ())
-          | None, Tmodtype_abstract -> None
-          | _, _ -> raise (Failure "generate_signature_item>mod_type: Mismatch")
+      let prev_env = !glob_env in 
+      glob_env := !glob_env @ [id.Ident.name];
+      
+      let module_result = 
+	match tmtydecl with 
+	  | Tmodtype_manifest mty -> 
+	    generate_module_type local 
+	      (match dsig_modtype with
+		| Some (Dsig_modtype (_,dmty)) -> dmty | None | _ -> None)
+	      mty
+	  | Tmodtype_abstract -> Sig (Html.nil, Html.nil) (* to check *)
       in
-      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
-      iModType name jmtyo jinfo
-    | Dsig_open, Tsig_open _ -> 
-      (* TODO *)
-      iComment None
-	(*raise (Failure "Not supported")*)
-    | Dsig_include dmty, Tsig_include(mty, typ_sig) ->
+      
+      glob_env := prev_env;
+
+      generate_module_type_item id.Ident.name module_result item_info
+
+    | dsig_include, Tsig_include(mty, typ_sig) ->
+      
       add_include_references typ_sig;
       
-      let jmty = generate_module_type local dmty mty in
-      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
-      let mty_type = mty.mty_type in
-      let obj = iInclude jmty jinfo in
+      let module_result = generate_module_type local 
+	(match dsig_include with | Some (Dsig_include dmty) -> Some dmty | None | _ -> None)
+	mty in
+      
+      generate_include_item module_result mty.mty_type item_info
 
-      Index.add_include_module_type obj mty_type;
-      obj
-    | Dsig_class(name, dclty), Tsig_class [cl_desc] ->
-      (* jparams = class ->['a, 'b]<- point *)
+    | dsig_class, Tsig_class [cl_desc] -> 
       (match cl_desc with
 	| { ci_id_class=id1; ci_id_class_type=id2;
 	    ci_id_object=id3; ci_id_typesharp=id4; _ } ->
 	  List.iter add_internal_reference [id1; id2; id3; id4]);
       
-      let jparams = List.map generate_class_param (fst cl_desc.ci_params) in
-      let jvariance = List.map generate_variance cl_desc.ci_variance in
+      let params = List.map generate_class_param (fst cl_desc.ci_params) in
+      let variance = List.map generate_variance cl_desc.ci_variance in
       let virt = 
         match cl_desc.ci_virt with
             Virtual -> true
           | Concrete -> false
       in
-      let jclty = generate_class_type local dclty cl_desc.ci_expr in
-      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
-      iClass name jparams jvariance virt jclty jinfo
-    | Dsig_class_type(name, dclty), Tsig_class_type [clty_decl] ->
+      let class_result = generate_class_type local
+	(match dsig_class with Some (Dsig_class (_, dclty)) -> Some dclty | None | _ -> None)
+	cl_desc.ci_expr in
+      
+      let name = cl_desc.ci_id_class.Ident.name in
+
+      generate_class_item name params variance virt class_result item_info
+
+    | dsig_class_type, Tsig_class_type [clty_decl] ->
       (match clty_decl with
 	| { ci_id_class=id1; ci_id_class_type=id2;
 	    ci_id_object=id3; ci_id_typesharp=id4; _ } ->
 	  List.iter add_internal_reference [id1; id2; id3; id4]);    
+      
+      let params = List.map generate_class_param (fst clty_decl.ci_params) in
+      let variance = List.map generate_variance clty_decl.ci_variance in
+      let virt = match clty_decl.ci_virt with | Virtual -> true | Concrete -> false in
+      let class_result = generate_class_type local 
+	(match dsig_class_type with
+	  | Some (Dsig_class_type (_, dclty)) -> Some dclty | None | _ -> None)
+	clty_decl.ci_expr in
+      
+      generate_class_type_item clty_decl.ci_id_class.Ident.name 
+	params variance virt class_result item_info
 
-      let jparams = List.map generate_class_param (fst clty_decl.ci_params) in
-      let jvariance = List.map generate_variance clty_decl.ci_variance in
-      let virt = 
-        match clty_decl.ci_virt with
-            Virtual -> true
-          | Concrete -> false
-      in
-      let jclty = generate_class_type local dclty clty_decl.ci_expr in
-      let jinfo = generate_info_opt2 local ditem.dsig_info ditem.dsig_after_info in
-      iClassType name jparams jvariance virt jclty jinfo
-    | _, _ -> raise (Failure "generate_signature_item: Mismatch") *)
+    | _ , _ -> assert false
 
   and generate_structure_item local (ditem : Doctree.structure_item option) item : Html.t = 
-    assert false
+      let open Html_utils in
+      let ditem_desc, item_info = match ditem with 
+      | Some {dstr_desc=desc; dstr_info=i1} ->
+	Some desc, 
+	make_info (generate_info_opt local i1)
+      | None -> None, Html.nil
+      in
+      
+      match ditem_desc, item.str_desc with
+
+	| (None | Some (Dstr_value _)) , Tstr_value (rec_flag, [(patt,_)])  ->
+	  let name = match patt.pat_desc with
+	    | Tpat_var (id, _) -> id.Ident.name
+	    | _ -> assert false
+	  in
+	  
+	  let typ = Gentyp_html.type_scheme local patt.pat_type in
+	  generate_value_item name typ item_info
+	| _, Tstr_value _ -> 
+	  (* Other values kind (tuple, etc) - TODO for next version *)
+	  Printf.eprintf "Unsupported value representation\n%!";
+	  Html.nil
+
+	| dstr_type, Tstr_type [id, _, tdecl] -> 
+	  
+	  add_internal_reference id;
+
+	  let body = generate_type_kind local id.Ident.name
+	    (match dstr_type with | Some (Dstr_type (_, dkind)) -> Some dkind | _ -> None)
+	    tdecl.typ_kind in
+	  
+	  generate_type_item local id.Ident.name tdecl body item_info
+
+	| (None | Some (Dstr_exception _)), Tstr_exception(id, _, edecl) ->
+	  let args = List.map (generate_typ local) edecl.exn_params in
+	  
+	  generate_exception_item id.Ident.name args item_info
+
+	| dstr_module, (Tstr_module(id, _, mtexpr) 
+			   | Tstr_recmodule ((id, _, _, mtexpr)::_)) -> 
+
+	  add_internal_reference id;
+	  
+	  let prev_env = !glob_env in 
+	  glob_env := !glob_env @ [id.Ident.name];      
+	  	  
+	  let module_result = generate_module_expr local 
+	    (match dstr_module with
+	      | Some (Dstr_module(_, dmexpr)) 
+	      | Some (Dstr_recmodule (_, _, dmexpr)) -> Some dmexpr
+	      | _ -> None)
+	    mtexpr in
+
+	  glob_env := prev_env;
+
+	  generate_module_item id.Ident.name module_result item_info
+	    
+	| dstr_modtype, Tstr_modtype(id, _, tmty) ->
+
+	  add_internal_reference id;
+	  
+	  let prev_env = !glob_env in 
+	  glob_env := !glob_env @ [id.Ident.name];      
+	  	  
+	  let module_result = 
+	    generate_module_type local 
+	      (match dstr_modtype with
+		| Some (Dstr_modtype (_,dmty)) -> Some dmty | None | _ -> None)
+	      tmty
+	  in
+
+	  glob_env := prev_env;
+	  
+	  generate_module_type_item id.Ident.name module_result item_info
+	
+	| dstr_include, Tstr_include(mexpr, typ_sig) ->
+	  
+	  add_include_references typ_sig;
+	  
+	  let module_result = generate_module_expr local 
+	    (match dstr_include with 
+	      | Some (Dstr_include dmexpr) -> Some dmexpr | None | _ -> None)
+	    mexpr in
+	  
+	  generate_include_item module_result mexpr.mod_type item_info
+
+	| dstr_class, Tstr_class [cl_desc, _, _] -> 	    
+
+	  (match cl_desc with
+	    | { ci_id_class=id1; ci_id_class_type=id2;
+		ci_id_object=id3; ci_id_typesharp=id4; _ } ->
+	      List.iter add_internal_reference [id1; id2; id3; id4]);
+
+	  let params = List.map generate_class_param (fst cl_desc.ci_params) in
+	  let variance = List.map generate_variance cl_desc.ci_variance in
+	  let virt = 
+            match cl_desc.ci_virt with
+		Virtual -> true
+              | Concrete -> false
+	  in
+	  let class_result = generate_class_expr local
+	    (match dstr_class with 
+	      | Some (Dstr_class (_, dclexpr)) -> Some dclexpr | None | _ -> None)
+	    cl_desc.ci_expr in
+	  
+	  let name = cl_desc.ci_id_class.Ident.name in
+
+	  generate_class_item name params variance virt class_result item_info
+
+	| dstr_class_type, Tstr_class_type [(id, _, clty_decl)] ->
+	  add_internal_reference id;
+	  
+	  let params = List.map generate_class_param (fst clty_decl.ci_params) in
+	  let variance = List.map generate_variance clty_decl.ci_variance in
+	  let virt = match clty_decl.ci_virt with | Virtual -> true | Concrete -> false in
+	  let class_result = generate_class_type local 
+	    (match dstr_class_type with
+	      | Some (Dstr_class_type (_, dclty)) -> Some dclty | None | _ -> None)
+	    clty_decl.ci_expr in
+	  
+	  generate_class_type_item id.Ident.name params variance virt class_result item_info
+
+	| (None | Some (Dstr_primitive _)) , Tstr_primitive (id, _, val_desc) -> 
+	  let typ = generate_typ local val_desc.val_desc in
+	  generate_value_item id.Ident.name typ item_info
+
+	| (None | Some (Dstr_exn_rebind _)), Tstr_exn_rebind (id, _, path, _) ->
+	  Printf.eprintf "Exception rebind : Not yet implemented\n%!";
+	  Html.nil
+	  
+	| _, _ -> assert false
+
+let output_toplevel_module module_name html_elements =
+  let filename = !Opam_doc_config.current_package ^ "/" ^  module_name ^ ".html" in
+  let oc = open_out filename in
+  List.iter (fun e -> output_string oc (Html_utils.string_of_html e)) html_elements;
+  close_out oc
+
+let generate_file_from_interface local module_name ?doctree intf =
+  glob_env := [module_name];
+  let ditems_opt, info = match doctree with 
+      | Some (Dfile_intf dintf) -> Some dintf.dintf_items, dintf.dintf_info
+      | None | _ -> None, None in
+  
+  let sig_items =  generate_signature_item_list local ditems_opt intf.sig_items in
+  
+  let items = match generate_info_opt local info with 
+    | Some i -> i :: sig_items
+    | None -> sig_items
+  in
+  output_toplevel_module module_name items
+
+let generate_file_from_structure  local module_name ?doctree impl =
+  glob_env := [module_name];
+  let ditems_opt, info = match doctree with 
+    | Some (Dfile_impl dimpl) -> Some dimpl.dimpl_items, dimpl.dimpl_info
+    | None | _ -> None, None in
+  
+  let str_items =  generate_structure_item_list local ditems_opt impl.str_items in
+  
+  let items = match generate_info_opt local info with 
+    | Some i -> i :: str_items
+    | None -> str_items
+  in
+  output_toplevel_module module_name items
+  
+
