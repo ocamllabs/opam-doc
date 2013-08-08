@@ -26,12 +26,16 @@ module LocalMap = Map.Make(
       else sc
   end)
 
-type global = t_value CrcMap.t
+type package_list = (string * Cow.Html.t option) list
+
+type global = { map: t_value CrcMap.t
+	      ; package_list: package_list }
 
 type local = t_value LocalMap.t
-
+    
 let read_global_file path =
-  if !Opam_doc_config.clear_index then CrcMap.empty
+  if !Opam_doc_config.clear_index then 
+    {map= CrcMap.empty; package_list= []}
   else
     try 
       let ic = open_in path in
@@ -39,7 +43,7 @@ let read_global_file path =
       close_in ic;
       global 
     with
-      | Sys_error _ -> CrcMap.empty
+      | Sys_error _ -> {map= CrcMap.empty; package_list= []}
 
 let update_global global filenames =
   let doFile acc fname =
@@ -74,11 +78,11 @@ let update_global global filenames =
 	    | _ -> acc (* shouldn't happen but you never know :l *)
 	end
       | _ ->
-	(* acc *)
-	print_endline fname;
-	raise (Failure "Index.update_global: Wrong cmt file handed")
+	Printf.eprintf "Index.update_global: Wrong cmt file handed\n%!";
+	acc
   in
-  List.fold_left doFile global filenames
+  let newmap = List.fold_left doFile global.map filenames in
+  { global with map = newmap }
 
     
 let write_global_file global path =
@@ -87,7 +91,7 @@ let write_global_file global path =
   close_out oc
     
 (* debug *)
-let global_print table =
+let global_print global =
   CrcMap.iter
     (fun (x,y) z -> 
       Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y)
@@ -95,7 +99,7 @@ let global_print table =
 	    Packed_module _ -> "Packed"
 	  | Direct_path (package, str) -> "Direct path - package : "
 	    ^package^" module : "^str))
-    table
+    global.map
 
 let global_find_key (global:global) key =
   CrcMap.iter
@@ -111,16 +115,16 @@ let global_find_key (global:global) key =
 		   ""
 		   sub_modules)
 	    | Direct_path (_, str) -> "Direct path : "^str))
-    global
+    global.map
 
 let local_print table = ()
 
-let global_lookup global md = CrcMap.find md global
+let global_lookup global md = CrcMap.find md global.map
 
 let create_local global mds = 
   let rec doMod pack acc ((name, _) as md)  =
     try
-      let value = CrcMap.find md global in
+      let value = CrcMap.find md global.map in
       match value with
 	| Packed_module (_,crcs) -> 
 	  let acc = List.fold_left (doMod (Some name)) acc crcs in
@@ -167,39 +171,33 @@ let local_lookup local ?(is_class=false) path_elems =
   assemble_path is_class (package,path) rest
 
 let get_global_packages global =
-  let open Hashtbl in
-      let t = create 32 in
-      CrcMap.iter 
-	(fun _ -> function
-	  | Direct_path (package, _) | Packed_module (package, _) ->
-	    if not (mem t package) then
-	      add t package 0
-	)
-	global;
-      fold (fun k _ acc -> k::acc) t []	    
-      
+  global.package_list
+
+let package_exists global package_name =
+
+  try 
+    ignore (List.find (fun (n,_) -> n = package_name) global.package_list);
+    true
+  with Not_found -> false
+
+let add_global_package global package_name info =
+  let info_opt = if info = "" then None else Some (Cow.Html.of_string info) in
+  let rec add_or_replace acc = function
+    | [] -> List.rev ((package_name, info_opt)::acc)
+    | (h,_)::t when h = package_name -> 
+      (package_name, info_opt)::acc@t
+    | h::t -> add_or_replace (h::acc) t
+  in
+  {global with package_list = (add_or_replace [] global.package_list)}
 
 (* Internal references part *)
 open Hashtbl 
 
 let internal_table = create 32
 
-let current_module = ref ""
-
-let reset_internal_references module_name = 
-  current_module := module_name;
+let reset_internal_reference_table () = 
   reset internal_table
     
 let add_internal_reference = add internal_table
    
-let lookup_internal_reference id = !current_module::(find internal_table id)  
-
-(* Includes internal types - TO REMOVE *)
-
-let include_table = create 4
-
-let reset_include_table () = reset include_table
-  
-let add_include_module_type = add include_table
-
-let lookup_include_module_type = find include_table 
+let lookup_internal_reference = find internal_table

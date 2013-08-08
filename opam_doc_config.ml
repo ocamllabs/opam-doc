@@ -4,25 +4,31 @@ open Arg
 
 (* Todo : find a proper place to put the file *)
 let index_file_path = ref ((Sys.getcwd ())^"/opam-doc.idx")
-let default_index_name = ref "index.html"
 
-let online_url = ref ""
+let default_index_name = ref "index.html"
 
 let filter_pervasives = ref false
 let clear_index = ref false
-let use_online_links = ref true
+
+let always_proceed = ref false
+
+let package_descr = ref ""
 
 let current_package = ref "test"
 
 let options  = 
-  [
-    ("--package", Set_string current_package, "Specify the package");
+  [ ("--package", Set_string current_package, "Specify the package")
+  ; ("-p", Set_string current_package, "Specify the package")
+  ; ("--package-description", Set_string package_descr, "Add a description to the package")
+  ; ("-descr", Set_string package_descr, "Add a description to the package")
+      
+  ; ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one")
+    
+  ; ("--filter-pervasives", Set filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references")
+    
+  ; ("--clear-index", Set clear_index, "Clear the global index before processing")
 
-    ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one");
-    
-    ("--filter-pervasives", Set filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references");
-    
-    ("--clear-index", Set clear_index, "Clear the global index before processing");
+  ; ("-y", Set always_proceed, "Answer yes to all questions prompted")
     
 (*    ("-online-url", Set_string online_url, "Give the path to an online documentation, references to this library using the -online-links option will use this url");
 *)

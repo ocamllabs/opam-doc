@@ -1,5 +1,5 @@
 open Index
-open Generate
+open Generate_html
 open Cow
 
 module StringMap = Map.Make(String)
@@ -17,76 +17,36 @@ let get_cmt cmd cmt_list =
     try
       List.find pSameBase cmt_list
     with Not_found -> raise (Failure ("Missing cmt file: " ^ cmd))
-
-let rec list_iter_between f o = function
-  | [] -> ()
-  | [h] -> f h
-  | h::t -> f h; o (); list_iter_between f o t
-
-let escape_string s =
-  let buf = Buffer.create 80 in
-    Buffer.add_string buf "\"";
-    for i = 0 to String.length s - 1
-    do
-      let x =
-        match s.[i] with
-        | '\n' -> "\\n"
-        | '\t' -> "\\t"
-        | '\r' -> "\\r"
-        | '\b' -> "\\b"
-        | '\\' -> "\\\\"
-        | '/' -> "\\/"
-        | '"' -> "\\\""
-        | '\x0c' -> "\\f"
-        | c -> String.make 1 c
-      in
-        Buffer.add_string buf x
-    done;
-    Buffer.add_string buf "\"";
-    Buffer.contents buf
-
-let rec to_fct t f =
-  match t with
-  | Json.Int i -> f (Printf.sprintf "%Ld" i)
-  | Json.Bool b -> f (string_of_bool b)
-  | Json.Float r -> f (Printf.sprintf "%g" r)
-  | Json.String s -> f (escape_string s)
-  | Json.Null -> f "null"
-  | Json.Array a ->
-    f "[";
-    list_iter_between (fun i -> to_fct i f) (fun () -> f ", \n") a;
-    f "\n]";
-  | Json.Object a ->
-    f "{";
-    list_iter_between (fun (k, v) -> to_fct (Json.String k) f; f ": "; to_fct v f)
-      (fun () -> f ", \n") a;
-    f "\n}"
-
-let json_to_buffer t buf =
-  to_fct t (fun s -> Buffer.add_string buf s)
-
-let json_to_string json = 
-  let buf = Buffer.create 2048 in
-    json_to_buffer json buf;
-    Buffer.contents buf
-
+    
 let process_cmd cmd =
   Cmd_format.(
-    let cmd = read_cmd cmd in cmd.cmd_doctree
+    try 
+      let cmd = read_cmd cmd in Some cmd.cmd_doctree 
+    with
+	_ -> None			     
   )
 
-let generate_json cmd jfile =
-  let json = Docjson.json_of_file jfile in
-  let json_name = (Filename.chop_extension cmd) ^ ".json" in
-  let oc = open_out json_name in
-  output_string oc (json_to_string json);
-  close_out oc
-    
+let check_package_name_conflict global =
+  let rec loop () = 
+    Printf.printf "Package '%s' already exists. Proceed anyway? [Y/n/r] \n%!"
+      !Opam_doc_config.current_package;
+    Scanf.scanf "%c" (function
+      | 'Y' | '\n' -> false
+      | 'n' -> Printf.printf "Conflict unresolved. Exiting now..."; exit 0
+      | 'r' -> 
+	Printf.printf "New package name : ";
+	Opam_doc_config.current_package := read_line ();
+	false
+      | _ -> loop ())
+  in
+  while Index.package_exists global !Opam_doc_config.current_package && 
+    not !Opam_doc_config.always_proceed && loop () do () done
+
 let process_file global cmd cmt = 
   print_endline ("Processing : "^cmt^" and "^cmd);
   let module_name = String.capitalize 
     (Filename.chop_extension (Filename.basename cmd)) in
-  let doc_file = process_cmd cmd in
+  let doctree = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
     | _, None -> raise (Failure "Not a cmt file")
@@ -94,18 +54,14 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
-      Index.reset_internal_references module_name;
+      Index.reset_internal_reference_table ();
       try 
-	let jfile = 
-	  match cmt.Cmt_format.cmt_annots with
-            | Cmt_format.Interface intf ->   
-	      generate_file_from_interface local doc_file intf
-            | Cmt_format.Implementation impl ->  
-	      generate_file_from_structure local doc_file impl
-            | _ -> raise (Failure "Wrong kind of cmt file") 
-	in
-	(*generate_json cmd jfile;*)
-	Doc_html.generate_html module_name jfile
+	match cmt.Cmt_format.cmt_annots with
+          | Cmt_format.Interface intf ->   
+	    Some (generate_file_from_interface local module_name doctree intf)
+          | Cmt_format.Implementation impl ->  
+	    Some (generate_file_from_structure local module_name doctree impl)
+          | _ -> raise (Failure "Wrong kind of cmt file") 
       with
 	| Invalid_argument s ->
 	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name;
@@ -119,12 +75,13 @@ let _ =
   );
 
   (* read the saved global table *)  
-  let global = read_global_file !(Opam_doc_config.index_file_path) in
-(* 
-   print_endline "[debug] global table before update :";
-   global_print global;
+  let global = read_global_file !Opam_doc_config.index_file_path in
+  
+  check_package_name_conflict global;
 
-*)
+  let global = add_global_package global 
+    !Opam_doc_config.current_package 
+    !Opam_doc_config.package_descr in
 
   let cmt_files = List.filter
     (fun file -> Filename.check_suffix file ".cmti"
@@ -133,46 +90,46 @@ let _ =
   let cmd_files = List.filter 
     (fun file -> Filename.check_suffix file ".cmdi" 
       || Filename.check_suffix file ".cmd") !files in
-    
+
+  (* Remove the [ext] file when a [ext]i is found *)
   let filter_impl_files ext files = 
-    List.filter 
-      (fun file -> 
-	if Filename.check_suffix file ext then
-	  try ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files); 
-	      false 
-	  with Not_found -> true
-	else true) 
-      files 
+    let should_be_kept file =
+      if Filename.check_suffix file ext then
+	try 
+	  ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files); 
+	  false 
+	with Not_found -> true
+      else true
+	in
+    List.filter should_be_kept files 
   in
 
   let cmt_files = filter_impl_files ".cmt" cmt_files in  
   let cmd_files = filter_impl_files ".cmd" cmd_files in 
 
+  (* Update the global table with the future processed cmts *)  
   let global = update_global global cmt_files in
   
   create_package_directory ();
       
   let processed_files =
-    List.map (fun cmd -> let cmt = get_cmt cmd cmt_files in
-			 try process_file global cmd cmt with e -> raise e)
+    List.map 
+      (fun cmd -> let cmt = get_cmt cmd cmt_files in
+		  try process_file global cmd cmt with e -> raise e)
       cmd_files 
     >> List.filter (function Some o -> true | None -> false)
     >> List.map (function Some o -> o | None -> assert false)
-    >> List.sort (fun (x,_) (y,_) -> String.compare x y)
+    >> List.sort (fun (x,_) (y,_) -> compare x y)
   in
   
-    
-  Doc_html.output_style_file ();
-  Doc_html.output_script_file ();
-  
-  
-  
-  Doc_html.generate_module_index processed_files;
-  
-  (* TODO : keep track of the packages *)
-  Doc_html.create_default_page global !Opam_doc_config.default_index_name;
-  
+  if processed_files != [] then
+    begin
+      let open Html_utils in
+	  output_style_file ();
+	  output_script_file ();
+	  generate_module_index processed_files;
+	  generate_packages_index global
+    end;
 
   (* write down the updated global table *)
   write_global_file global !Opam_doc_config.index_file_path
-    

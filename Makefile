@@ -20,52 +20,49 @@ clean:
 	-rm opam-doc
 	-rm -f *~ *.annot *.js *.css *.html
 
-opam-doc: opam_doc_config.cmo index.cmo gentyp.cmo doctree.cmo docjson.cmo html_utils.cmo doc_html.cmo cmd_format.cmo generate.cmo driver.cmo
+opam-doc: opam_doc_config.cmo index.cmo gentyp_html.cmo doctree.cmo html_utils.cmo cmd_format.cmo generate_html.cmo driver.cmo
 	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
 
-test: gentyp_html.cmo generate_html.cmo
+
+run:opam-doc
+	$(MAKE) all -C test
+#	cd test; ocamldoc -html -d defaultdoc/ test.mli
+#	cd test; ../opam-doc test.cmdi test.cmti
+	cd test; ocamldoc -html -d default_impl/ test_impl.ml test2_impl.ml
+	./opam-doc -y test/test_impl.cm[dt] test/test2_impl.cm[dt] 
+
+run2:opam-doc
+	$(MAKE) all2 -C test
+#	cd test; ocamldoc -html -d defaultdoc/ test.mli
+#	cd test; ../opam-doc test.cmdi test.cmti
+	cd test; ocamldoc -html -d default_impl/ test_classes.ml
+	./opam-doc -y test/test_classes.cm[dt]
 
 cmd_format.cmo : doctree.cmi
 cmd_format.cmx : doctree.cmx
-doc_html.cmo : opam_doc_config.cmo html_utils.cmo docjson.cmi
-doc_html.cmx : opam_doc_config.cmx html_utils.cmx docjson.cmx
-docjson.cmo : docjson.cmi
-docjson.cmx : docjson.cmi
-docjson.cmi :
 doctree.cmo : info.cmi doctree.cmi
 doctree.cmx : info.cmx doctree.cmi
 doctree.cmi : info.cmi
-driver.cmo : opam_doc_config.cmo index.cmi generate.cmo docjson.cmi \
-    doc_html.cmo cmd_format.cmo
-driver.cmx : opam_doc_config.cmx index.cmx generate.cmx docjson.cmx \
-    doc_html.cmx cmd_format.cmx
-generate_docjson.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp.cmi \
-    doctree.cmi docjson.cmi
-generate_docjson.cmx : opam_doc_config.cmx info.cmx index.cmx gentyp_html.cmx \
-    doctree.cmx docjson.cmx
-generate_html.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp_html.cmi \
-doctree.cmi docjson.cmi html_utils.cmo
-generate_html.cmx :
-generate.cmo : opam_doc_config.cmo info.cmi index.cmi gentyp.cmi doctree.cmi \
-    docjson.cmi
-generate.cmx : opam_doc_config.cmx info.cmx index.cmx gentyp.cmx doctree.cmx \
-    docjson.cmx
-gentyp.cmo : opam_doc_config.cmo index.cmi gentyp.cmi
-gentyp.cmx : opam_doc_config.cmx index.cmx gentyp.cmi
-gentyp.cmi : index.cmi
+driver.cmo : opam_doc_config.cmo index.cmi html_utils.cmo generate_html.cmi \
+    cmd_format.cmo
+driver.cmx : opam_doc_config.cmx index.cmx html_utils.cmx generate_html.cmx \
+    cmd_format.cmx
+generate_html.cmo : opam_doc_config.cmo info.cmi index.cmi html_utils.cmo \
+    gentyp_html.cmi doctree.cmi docjson.cmi generate_html.cmi
+generate_html.cmx : opam_doc_config.cmx info.cmx index.cmx html_utils.cmx \
+    gentyp_html.cmx doctree.cmx docjson.cmx generate_html.cmi
+generate_html.cmi : index.cmi doctree.cmi
 gentyp_html.cmo : opam_doc_config.cmo index.cmi gentyp_html.cmi
 gentyp_html.cmx : opam_doc_config.cmx index.cmx gentyp_html.cmi
 gentyp_html.cmi : index.cmi
-html_utils.cmo : opam_doc_config.cmo index.cmi docjson.cmi
-html_utils.cmx : opam_doc_config.cmx index.cmx docjson.cmx
+html_utils.cmo : opam_doc_config.cmo index.cmi gentyp_html.cmi
+html_utils.cmx : opam_doc_config.cmx index.cmx gentyp_html.cmx
 index.cmo : opam_doc_config.cmo index.cmi
 index.cmx : opam_doc_config.cmx index.cmi
-index.cmi : docjson.cmi
+index.cmi :
 info.cmo : info.cmi
 info.cmx : info.cmi
 info.cmi :
-old_doc_html.cmo : docjson.cmi
-old_doc_html.cmx : docjson.cmx
 opam_doc_config.cmo :
 opam_doc_config.cmx :
 printast.cmo :

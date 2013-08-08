@@ -101,12 +101,11 @@ let rec lookup_ident id =
 		  let res, last_item = 
 		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
 		  "?package="^ !Opam_doc_config.current_package
-		  ^"&module="^base_path
-		  ^"."
-		  ^name
+		  ^"&module="^base_path^"."^name
 		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
 		  ^(if is_class then "&class=" else "&type=")^last_item 
 	      in
+
 	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
 	    else
 	      let html_path = 
@@ -137,7 +136,7 @@ let rec print_ident ppf id =
       (match id with 
 	| Oide_apply (id1, id2) -> 
 	  fprintf ppf "%a(%a)" print_ident id1 print_ident id2
-	| _ -> assert false)
+	| _ -> fprintf ppf "ident print bug")
       
 (* Types *)
 (* Types *)

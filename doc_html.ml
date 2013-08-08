@@ -1,7 +1,6 @@
 open Docjson
 open Cow
 open Html_utils
-open TagsGenerators
 
 (** {2 Environnement handling}  *)
 
@@ -483,10 +482,10 @@ let output_script_file () =
   output_string oc Opam_doc_config.default_script;
   close_out oc
    
-let create_default_page global filename = 
+(* let create_default_page global filename = 
   Html_utils.create_html_default_page global
     filename "OpamDoc - Ocaml Documentation"      
-
+*)
 let generate_module_index = function
   | [] -> ()
   | l ->

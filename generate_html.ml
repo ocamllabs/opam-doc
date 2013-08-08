@@ -36,8 +36,7 @@ let current_uri arg =
     ^"&module="^get_full_path_name ()
     ^(match arg with 
       | `Class n -> "&class="^n
-      | `Type n ->  "&type="^n
-      | `Nothing -> ""))
+      | `Module -> ""))
     
 let add_internal_reference id =
    Index.add_internal_reference id !glob_env
@@ -331,7 +330,7 @@ let generate_type_kind local parent_name dtk tk =
   
   match tk with
     | Ttype_abstract -> Html.nil
-      
+
     | Ttype_variant cstrs ->
       let rec loop cstrs dcstrs acc =
 	match cstrs with
@@ -347,8 +346,9 @@ let generate_type_kind local parent_name dtk tk =
             in
             loop rest drest (item :: acc)
           | [] -> 
-            if dcstrs <> [] then raise (Failure "generate_type_kind : Unknown Constructor")
-            else List.rev acc
+            if dcstrs <> [] then 
+	      Printf.eprintf "Warning : generate_type_kind : Unknown constructor\n%!";
+            List.rev acc
       in
       let items = loop cstrs infos [] in
       Html_utils.make_type_table (fun x -> x) items
@@ -402,8 +402,7 @@ let rec generate_class_type local dclty clty =
 	let fields : Html.t list = 
 	  generate_class_type_fields local 
 	    (match dclass_sig with Some Dcty_signature cl -> Some cl | _ -> None)
-	    (* The fields are reversed... Why? 
-	       Still true? => TEST *)
+	    (* The fields are apparently reversed... *)
 	    (List.rev class_sig.csig_fields) in
 	
 	let args = match args_acc with
@@ -494,10 +493,10 @@ and generate_class_type_fields local dclsigl tclsigl =
     let generate_class_type_fields_with_doctree local dclsigl tclsigl =
       let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
     	match dclsigl, tclsigl with
-	  | [], r -> 
+	  | [], r::l -> 
 	    Printf.eprintf 
 	      "generate_class_type_fields mismatch -- processing without doc\n%!";
-	    List.rev acc @ List.map (process_class_field local) r
+	    List.rev acc @ List.map (process_class_field local) (r::l)
 	  | { dctf_desc=Dctf_comment
 	    ; dctf_info=i1
 	    ; dctf_after_info=i2}::r, r2 -> 
@@ -579,7 +578,7 @@ let rec generate_class_expr local dclexpr ci_expr =
 	  Sig (signature, <:html<$Html_utils.create_class_signature_content fields$>>)
 	  
       | dclass_expr, Tcl_fun (_, pattern, _, class_expr, _) -> 
-	let arg = Gentyp.type_scheme local pattern.pat_type in
+	let arg = Gentyp_html.type_scheme local pattern.pat_type in
 	
 	loop local 
 	  (match dclass_expr with Some (Dcl_fun e) -> Some e | _ -> None)
@@ -655,13 +654,13 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
     | Tcfk_virtual co_typ ->
       let exp_type = co_typ.ctyp_type in
       (match exp_type.desc with
-	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
-	| _ -> Gentyp.type_scheme local exp_type, false
+	| Tarrow (_, _, ty2, _) -> Gentyp_html.type_scheme local ty2, false
+	| _ -> Gentyp_html.type_scheme local exp_type, false
       )      
     | Tcfk_concrete expr -> 
       (match expr.exp_type.desc with
-	| Tarrow (_, _, ty2, _) -> Gentyp.type_scheme local ty2, false
-	| _ -> Gentyp.type_scheme local expr.exp_type, false
+	| Tarrow (_, _, ty2, _) -> Gentyp_html.type_scheme local ty2, false
+	| _ -> Gentyp_html.type_scheme local expr.exp_type, false
       )
       in
       
@@ -718,9 +717,9 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
       let generate_class_type_fields_with_doctree local dclexpr tclexpr =
 	let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
     	  match dclsigl, tclsigl with
-	    | [], r -> 
-	      Printf.eprintf "generate_class_type_fields mismatch -- processing without doc\n%!";
-	      List.rev acc @ List.map (process_class_field local) r
+	    | [], r::l -> 
+	      Printf.eprintf "generate_class_expr_fields mismatch -- processing without doc\n%!";
+	      List.rev acc @ List.map (process_class_field local) (r::l)
 	    | { dcf_desc=Dcf_comment
 	      ; dcf_info=i1 }::r, r2 -> 
 	      if is_stopped then
@@ -763,7 +762,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 			(generate_info_opt local d.dcf_info) in
 		      loop (info::item::acc) local r r2 is_stopped
 		  | _,_ -> 
-		    Printf.eprintf "generate_class_type_fields mismatch -- processing without doc\n%!";
+		    Printf.eprintf "generate_class_expr_fields mismatch -- processing without doc\n%!";
 		    List.rev acc @ List.map (process_class_field local) (t::r2)
 	      end
 	    | _, [] -> List.rev acc
@@ -791,14 +790,14 @@ let rec generate_module_type local dmty mty =
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content sg_items in
-      Sig (<:html<$signature$>>, <:html<$module_content$>>)
+      Sig (signature, module_content)
     | None, Tmty_signature sg ->
       let sg_items = generate_signature_item_list local None sg.sig_items in
       let signature = 
 	<:html<$code "code" (html_of_string "sig")$ .. $code "code" (html_of_string "end")$>>
       in
       let module_content = create_module_signature_content sg_items in
-      Sig (<:html<$signature$>>, <:html<$module_content$>>)
+      Sig (signature, module_content)
 	
     | Some (Dmty_functor(darg, dbase)), Tmty_functor(id, _, arg, base) ->
       let arg = match generate_module_type local (Some darg) arg with
@@ -842,8 +841,8 @@ let rec generate_module_type local dmty mty =
       let signature = <:html<with $insert_between " and " cnstrs$>> in
 	begin
 	  match base with 
-	    | Ident (msig, p) -> Ident (<:html<$signature$$msig$>>, p)
-	    | Sig (msig, content) -> Sig (<:html<$signature$$msig$>>, content)
+	    | Ident (msig, p) -> Ident (<:html<$msig$ $signature$>>, p)
+	    | Sig (msig, content) -> Sig (<:html<$msig$ $signature$>>, content)
 	end
 	
     | None, Tmty_with(base, cnstrs) ->
@@ -853,8 +852,8 @@ let rec generate_module_type local dmty mty =
       let signature = <:html<with $insert_between " and " cnstrs$>> in
       begin
 	match base with 
-	  | Ident (msig, p) -> Ident (<:html<$signature$$msig$>>, p)
-	  | Sig (msig, content) -> Sig (<:html<$signature$$msig$>>, content)
+	  | Ident (msig, p) -> Ident (<:html<$msig$$signature$>>, p)
+	  | Sig (msig, content) -> Sig (<:html<$msig$$signature$>>, content)
       end
 	
     | Some (Dmty_typeof dexpr), Tmty_typeof mexpr ->
@@ -1048,7 +1047,9 @@ and generate_signature_item_list local dsig_items tsig_items =
 	| ditem :: drest, item :: rest ->
           let jitem = generate_signature_item local (Some ditem) item in
           loop_with_doctree drest rest (jitem :: acc) is_stopped
-	| _, _ -> raise (Failure "generate_signature_item_list: Mismatch")
+	| _, _ -> 
+	  (* raise (Failure "generate_signature_item_list: Mismatch") *)
+	  List.rev acc
     in
   
     let rec loop_without_doctree items acc =
@@ -1162,7 +1163,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	| ditem :: drest, item :: rest ->
           let jitem = generate_structure_item local (Some ditem) item in
           loop_with_doctree drest rest (jitem :: acc) is_stopped
-	| _, _ -> raise (Failure "generate_structure_item_list: Mismatch")
+	| _, _ -> 
+	  (* raise (Failure "generate_structure_item_list: Mismatch") *)
+	  List.rev acc
+    
     in
     
     let rec loop_without_doctree items acc =
@@ -1272,7 +1276,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_module_item name module_result item_info =
       let open Html_utils in
-	  let reference = <:html<<a href="$uri:current_uri `Nothing$">$str:name$</a>&>> in
+	  let reference = <:html<<a href="$uri:current_uri `Module$">$str:name$</a>&>> in
 
 	  (* TODO constraints *)
 	  
@@ -1285,12 +1289,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	      <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>
 	    | Sig (body, content) ->
 	      let signature = make_pre <:html<$keyword "module"$ $reference$ : $code "type" body$$item_info$>> in 
-	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
+	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$$content$</div>&>>
 
   and generate_module_type_item name module_result item_info =
       let open Html_utils in
-	  let reference = 
-	    <:html<<a href="$uri:current_uri (`Type name)$">$str:name$</a>&>> in
+	  let reference = <:html<<a href="$uri:current_uri `Module$">$str:name$</a>&>> in
 
 	  match module_result with 
 	    | Ident (body, Gentyp_html.Resolved (uri, _)) -> 
@@ -1301,7 +1304,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	      <:html<<div class="ocaml_module ident" name="$str:name$">$signature$</div>&>>
 	    | Sig (body, content) ->
 	      let signature = make_pre <:html<$keyword "module type"$ $reference$ = $code "type" body$$item_info$>> in 
-	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$</div>&>>
+	      <:html<<div class="ocaml_module sig" name="$str:name$">$signature$$content$</div>&>>
 	
   and generate_include_item module_result typ_sig item_info =
       let open Html_utils in
@@ -1332,7 +1335,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
 	let signature = <:html<$keyword "class"$>> in
 	let signature = 
-	  <:html<$signature$$if virt then keyword " virtual" else Html.nil$>> in
+	  <:html<$signature$ $if virt then keyword "virtual " else Html.nil$>> in
 	let signature = <:html<$signature$$params_html$$reference$>> in
 	
 	match class_result with 
@@ -1344,10 +1347,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 		| Gentyp_html.Resolved (uri, _) -> <:html<<div class="ocaml_class ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>
                 | Gentyp_html.Unresolved _ | _ -> <:html<<div class="ocaml_class ident" name="$str:name$">$signature$</div>&>>	   
              end 
-          | Sig (s, c) ->
+          | Sig (s, content) ->
 	    let signature = make_pre <:html<$id signature$ : $s$>> in
 	    let signature = <:html<$signature$$item_info$>> in    
-	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$c$</div>&>>
+	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$content$</div>&>>
 			 
 
  and generate_class_type_item name params variance virt class_result item_info =
@@ -1358,9 +1361,9 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	let reference = 
 	    <:html<<a href="$uri:current_uri (`Class name)$">$str:name$</a>&>> in
 
-	let signature = <:html<$keyword "class type"$>> in
+	let signature = <:html<$keyword "class type"$ >> in
 	let signature = 
-	  <:html<$signature$$if virt then keyword " virtual" else Html.nil$>> in
+	  <:html<$signature$$if virt then keyword "virtual " else Html.nil$>> in
 	let signature = <:html<$signature$$params_html$$reference$>> in
 	
 	match class_result with 
@@ -1372,10 +1375,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 		| Gentyp_html.Resolved (uri, _) -> <:html<<div class="ocaml_class ident" name="$str:name$" path="$uri:uri$">$signature$</div>&>>
                 | Gentyp_html.Unresolved _ | _ -> <:html<<div class="ocaml_class ident" name="$str:name$">$signature$</div>&>>	   
              end 
-          | Sig (s, c) ->
+          | Sig (s, content) ->
 	    let signature = make_pre <:html<$id signature$ : $s$>> in
 	    let signature = <:html<$signature$$item_info$>> in    
-	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$c$</div>&>>
+	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$content$</div>&>>
 			 
 			 
   and generate_signature_item local (ditem : Doctree.signature_item option) item : Html.t= 
@@ -1427,10 +1430,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  | Some (Dsig_module(_, dmty)) | Some (Dsig_recmodule (_, dmty)) -> Some dmty
 	  | _ -> None)
 	mty in
-      
+
+      let res = generate_module_item id.Ident.name module_result item_info in
       glob_env := prev_env;
-      
-      generate_module_item id.Ident.name module_result item_info
+      res
 
     | dsig_modtype, Tsig_modtype(id, _, tmtydecl) -> 
       add_internal_reference id;
@@ -1448,9 +1451,9 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  | Tmodtype_abstract -> Sig (Html.nil, Html.nil) (* to check *)
       in
       
+      let res = generate_module_type_item id.Ident.name module_result item_info in
       glob_env := prev_env;
-
-      generate_module_type_item id.Ident.name module_result item_info
+      res
 
     | dsig_include, Tsig_include(mty, typ_sig) ->
       
@@ -1500,7 +1503,9 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       generate_class_type_item clty_decl.ci_id_class.Ident.name 
 	params variance virt class_result item_info
 
-    | _ , _ -> assert false
+    | _ , _ -> 
+      (* assert false *)
+      <:html<Item error -- To debug>>
 
   and generate_structure_item local (ditem : Doctree.structure_item option) item : Html.t = 
       let open Html_utils in
@@ -1516,7 +1521,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	| (None | Some (Dstr_value _)) , Tstr_value (rec_flag, [(patt,_)])  ->
 	  let name = match patt.pat_desc with
 	    | Tpat_var (id, _) -> id.Ident.name
-	    | _ -> assert false
+	    | _ -> "Unknown name -- to fix"
 	  in
 	  
 	  let typ = Gentyp_html.type_scheme local patt.pat_type in
@@ -1556,9 +1561,9 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	      | _ -> None)
 	    mtexpr in
 
+	  let res = generate_module_item id.Ident.name module_result item_info in
 	  glob_env := prev_env;
-
-	  generate_module_item id.Ident.name module_result item_info
+	  res
 	    
 	| dstr_modtype, Tstr_modtype(id, _, tmty) ->
 
@@ -1573,10 +1578,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 		| Some (Dstr_modtype (_,dmty)) -> Some dmty | None | _ -> None)
 	      tmty
 	  in
-
-	  glob_env := prev_env;
 	  
-	  generate_module_type_item id.Ident.name module_result item_info
+	  let res =  generate_module_type_item id.Ident.name module_result item_info in
+	  glob_env := prev_env;
+	  res
 	
 	| dstr_include, Tstr_include(mexpr, typ_sig) ->
 	  
@@ -1633,40 +1638,45 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  Printf.eprintf "Exception rebind : Not yet implemented\n%!";
 	  Html.nil
 	  
-	| _, _ -> assert false
+	| _, _ -> 
+	  (* assert false *)
+	  <:html<Item error -- To debug>>
+
 
 let output_toplevel_module module_name html_elements =
   let filename = !Opam_doc_config.current_package ^ "/" ^  module_name ^ ".html" in
   let oc = open_out filename in
-  List.iter (fun e -> output_string oc (Html_utils.string_of_html e)) html_elements;
+  output_string oc "<div class=\"ocaml_toplevel_module\">";
+  List.iter 
+    (fun e -> output_string oc ((Html_utils.string_of_html e) ^ "\n"))
+    html_elements;
+  output_string oc "</div>";
   close_out oc
 
-let generate_file_from_interface local module_name ?doctree intf =
+let generate_file_from_interface local module_name doctree intf =
   glob_env := [module_name];
   let ditems_opt, info = match doctree with 
-      | Some (Dfile_intf dintf) -> Some dintf.dintf_items, dintf.dintf_info
-      | None | _ -> None, None in
+      | Some (Dfile_intf dintf) -> 
+	Some dintf.dintf_items, 
+	Html_utils.make_info (generate_info_opt local dintf.dintf_info)
+      | None | _ -> None, Html.nil in
   
-  let sig_items =  generate_signature_item_list local ditems_opt intf.sig_items in
-  
-  let items = match generate_info_opt local info with 
-    | Some i -> i :: sig_items
-    | None -> sig_items
-  in
-  output_toplevel_module module_name items
+  let items =  info :: generate_signature_item_list local ditems_opt intf.sig_items in
 
-let generate_file_from_structure  local module_name ?doctree impl =
+  output_toplevel_module module_name items;
+  module_name, (Html_utils.make_first_line_info info)
+
+let generate_file_from_structure local module_name doctree impl =
   glob_env := [module_name];
   let ditems_opt, info = match doctree with 
-    | Some (Dfile_impl dimpl) -> Some dimpl.dimpl_items, dimpl.dimpl_info
-    | None | _ -> None, None in
+    | Some (Dfile_impl dimpl) -> 
+      Some dimpl.dimpl_items,
+      Html_utils.make_info (generate_info_opt local dimpl.dimpl_info)
+    | None | _ -> None, Html.nil in
   
-  let str_items =  generate_structure_item_list local ditems_opt impl.str_items in
-  
-  let items = match generate_info_opt local info with 
-    | Some i -> i :: str_items
-    | None -> str_items
-  in
-  output_toplevel_module module_name items
+  let items = info :: (generate_structure_item_list local ditems_opt impl.str_items) in
+
+  output_toplevel_module module_name items;
+  module_name, (Html_utils.make_first_line_info info)
   
 

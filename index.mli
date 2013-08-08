@@ -19,7 +19,7 @@ val create_local: global -> (string * Digest.t) list -> local
 *)
 val local_lookup: local -> ?is_class:bool -> string list -> string
 
-val get_global_packages: global -> string list
+val get_global_packages: global -> (string* Cow.Html.t option) list
 
 (* debug *)
 val global_print: global -> unit
@@ -32,13 +32,10 @@ val update_global: global -> string list -> global
 
 val write_global_file : global -> string -> unit
 
-
 (* for internal referencing support *)
-val reset_internal_references : string -> unit
+val reset_internal_reference_table : unit -> unit
 val add_internal_reference : Ident.t -> string list -> unit
 val lookup_internal_reference : Ident.t -> string list
 
-(* includes *)
-val add_include_module_type : Docjson.signature_item -> Types.module_type -> unit
-val lookup_include_module_type : Docjson.signature_item -> Types.module_type
-val reset_include_table : unit -> unit 
+val package_exists : global -> string -> bool
+val add_global_package: global -> string -> string -> global

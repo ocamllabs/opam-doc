@@ -144,7 +144,7 @@ let create_class_container class_name signature html_content = function
   | Some (Gentyp_html.Unresolved _) -> 
       <:html<<div class="ocaml_class ident" name="$str:class_name$">$signature$$html_content$</div>&>>
   | Some (Gentyp_html.Resolved (uri, _)) ->
-	  <:html<<div class="ocaml_class ident" name="$str:class_name$">path=$uri:uri$> $signature$$html_content$</div>&>>
+	  <:html<<div class="ocaml_class ident" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
  | None -> 
    <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
  | Some (Gentyp_html.Apply _) -> assert false
@@ -242,33 +242,6 @@ let rec js_array_of_include_items =
       "[" ^ String.concat "," included_items ^ "]"
     | _ -> "[]"
 
-let wrap_include include_item path sig_items signature =
-  let mod_type = Index.lookup_include_module_type include_item in
-  let included_items = 
-    let open Types in 
-	let msig = match mod_type with 
-	  | Mty_signature msig -> msig | _ -> [] 
-	in
-	List.fold_left 
-	  (fun acc -> function 
-	  | Sig_module (id, _, _) | Sig_modtype (id, _) 
-	  | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
-	    -> ("\"" ^ id.Ident.name ^ "\"") ::acc
-	  | _ ->acc)	   
-	[] msig
-    in
-    let js_array = "[" ^ String.concat "," included_items ^ "]" in
-    match path with
-      |	Some p ->
-	<:html<<div class="ocaml_include ident" path=$uri:Uri.of_string p$ items="$str:js_array$">$signature$</div>&>>
-      | None ->
-	let module_content = match sig_items with 
-	  |Some l -> <:html<<div class="ocaml_module_content">$l$</div>&>> 
-	  | None -> Html.nil
-	in
-	<:html<<div class="ocaml_include sig" items="$str:js_array$">$signature$$module_content$</div>&>>
-		      
-
 (** {3 Html pages generators} *)
 
 let create_html_skeleton filename (headers : Html.t list) (body : Html.t list) =
@@ -301,19 +274,8 @@ let create_html_default_skeleton filename title body_list =
 	] 
     in
     create_html_skeleton filename headers body_list
-
-let create_html_default_page global filename title =
-  create_html_default_skeleton filename title 
-    (* package index - links + comm *)
-    (List.map 
-    (fun package -> 
-      let uri = Uri.of_string ("?package=" ^ package) in
-      <:html<<a href=$uri:uri$>$str:String.capitalize package$</a><br/>&>>)
-    (List.sort String.compare (Index.get_global_packages global)))
       
 (** Hacks functions *)
-
-open Docjson 
 
 (* To be removed at some point *)
 
@@ -342,64 +304,50 @@ let extract_name path =
   else
     s
 
-let rec grab_base_module = 
-      function
-	| {mt_kind=`Ident; _}
-	| {mt_kind=`Sig; _} as mty -> mty
-	| {mt_kind=`Functor; mt_base=Some base; _}
-	| {mt_kind=`With; mt_base=Some base; _}
-	| {mt_kind=(`Apply|`TypeOf); mt_base=Some base; _} -> grab_base_module base
-	| _ -> assert false
 
-let extract_constraints = 
-      let generate_constraint =
-	function 
-	  | {wc_typeq = Some typ; wc_path = path; 
-	     wc_subst = subst; _} -> 
-	    let sgn = if subst then ":=" else "=" in
-	    <:html<<div class="ocaml_constraint type" name="$str: extract_name path$">$str:sgn$ $typ$</div>&>>
-	  | {wc_path = path; wc_modeq = Some typ;
-	     wc_subst = subst; _} -> 
-	    let sgn = if subst then ":=" else "=" in
-	    <:html<<div class="ocaml_constraint module" name="$str: extract_name path$">$str:sgn$ $typ$</div>&>>
-	  | _ -> assert false
-      in
-      let rec loop acc = 
-	function
-	  | {mt_kind=(`Ident|`Sig); _} -> acc
-	  | {mt_kind=`With; mt_base=Some base; mt_cnstrs= Some cnstrs; _} ->
-	    loop (acc @ List.map generate_constraint cnstrs) base
-	  | {mt_kind=(`Apply|`TypeOf|`Functor); mt_base=Some base; _} -> loop acc base
-	  (* is that enough? *)
-	  | _ -> assert false
-      in
-      loop []
-	  
-let flatten_symlinks () =
-  let open Unix in 
-      let flatten_link linkfile =
-	let rec loop target =
-	  try
-	    let target_link = readlink target in
-	    loop target_link
-	  with	      
-	    | Unix_error (EINVAL, "readlink", _) ->
-	      target
-	in
-	let target = loop linkfile in
-	unlink linkfile;
-	symlink target linkfile
-      in
-      let curr_dir = opendir !Opam_doc_config.current_package in
-      try
-	while true do
-	  try 
-	    let curr_file  = readdir curr_dir in
-	    match (lstat curr_file).st_kind with
-	      | S_LNK -> flatten_link curr_file
-	      | _ -> () (* Link not built yet? *)
-	  with
-	    | Unix_error _ -> ()
-	done
-      with
-	  End_of_file -> closedir curr_dir
+let output_style_file () =
+  if not (Sys.file_exists Opam_doc_config.style_filename) then
+    begin
+      let oc = open_out Opam_doc_config.style_filename in
+      output_string oc (String.concat "\n" Opam_doc_config.default_stylesheet);
+      close_out oc
+    end
+
+let output_script_file () =
+  if not (Sys.file_exists Opam_doc_config.script_filename) then
+    begin
+      let oc = open_out Opam_doc_config.script_filename in
+      output_string oc Opam_doc_config.default_script;
+      close_out oc
+    end
+
+let generate_module_index = function
+  | [] -> ()
+  | l ->
+    let make_content (m_name, info) = 
+      let uri = Uri.of_string 
+	("?package="^ !Opam_doc_config.current_package ^"&module="^m_name) in
+      <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
+    in
+    let oc = open_out (!Opam_doc_config.current_package ^ "/index.html") in
+    let html_content =
+      <:html<<h1>Modules</h1>
+<table class="indextable">
+    $fold_html (List.map make_content l)$
+</table>&>>
+    in
+    output_string oc (string_of_html html_content);
+    close_out oc
+
+let generate_packages_index global = 
+  let packages = Index.get_global_packages global in
+  let generate_package_entry (package_name, info) = 
+    let uri = Uri.of_string ("?package="^package_name) in
+    <:html<<tr><td class="module"><a href="$uri:uri$">$str:String.capitalize package_name$</a></td><td>$opt:info$</td></tr>&>>
+  in
+  let html_body = 
+    <:html<<h1>Packages list</h1>
+<table class="indextable">
+$fold_html (List.map generate_package_entry packages)$
+</table>&>> in
+  create_html_default_skeleton  !Opam_doc_config.default_index_name "Opam-Doc" [html_body]
