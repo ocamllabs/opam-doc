@@ -1504,8 +1504,8 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	params variance virt class_result item_info
 
     | _ , _ -> 
-      (* assert false *)
-      <:html<Item error -- To debug>>
+      assert false
+      (* <:html<Item error -- To debug>>*)
 
   and generate_structure_item local (ditem : Doctree.structure_item option) item : Html.t = 
       let open Html_utils in
@@ -1639,8 +1639,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  Html.nil
 	  
 	| _, _ -> 
-	  (* assert false *)
-	  <:html<Item error -- To debug>>
+	  assert false
 
 
 let output_toplevel_module module_name html_elements =
@@ -1658,25 +1657,28 @@ let generate_file_from_interface local module_name doctree intf =
   let ditems_opt, info = match doctree with 
       | Some (Dfile_intf dintf) -> 
 	Some dintf.dintf_items, 
-	Html_utils.make_info (generate_info_opt local dintf.dintf_info)
-      | None | _ -> None, Html.nil in
+	generate_info_opt local dintf.dintf_info
+      | None | _ -> None, None in
   
-  let items =  info :: generate_signature_item_list local ditems_opt intf.sig_items in
+  let items = generate_signature_item_list local ditems_opt intf.sig_items in
+  let items,descr = match info with None -> items, Html.nil | Some i -> i :: items, i in
 
   output_toplevel_module module_name items;
-  module_name, (Html_utils.make_first_line_info info)
+  module_name, descr
 
 let generate_file_from_structure local module_name doctree impl =
   glob_env := [module_name];
   let ditems_opt, info = match doctree with 
     | Some (Dfile_impl dimpl) -> 
       Some dimpl.dimpl_items,
-      Html_utils.make_info (generate_info_opt local dimpl.dimpl_info)
-    | None | _ -> None, Html.nil in
+      generate_info_opt local dimpl.dimpl_info
+    | None | _ -> None, Some Html.nil in
   
-  let items = info :: (generate_structure_item_list local ditems_opt impl.str_items) in
-
+  let items = generate_structure_item_list local ditems_opt impl.str_items in
+  let items,descr = match info with None -> items, Html.nil | Some i -> i :: items, i in
+  
   output_toplevel_module module_name items;
-  module_name, (Html_utils.make_first_line_info info)
+  module_name, descr
+(* (Html_utils.make_first_line_info info) *)
   
 

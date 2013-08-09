@@ -48,7 +48,7 @@ let make_info =
        with Not_found -> String.length info in
      let idx = min idx_dot idx_newline in
      
-     <:html<<div class="info">$html_of_string (String.sub info 0 idx)$</div>&>>
+     make_info (Some (html_of_string (String.sub info 0 idx)))
    | _ -> Html.nil
      
 let make_pre data =
