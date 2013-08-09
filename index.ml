@@ -174,7 +174,6 @@ let get_global_packages global =
   global.package_list
 
 let package_exists global package_name =
-
   try 
     ignore (List.find (fun (n,_) -> n = package_name) global.package_list);
     true

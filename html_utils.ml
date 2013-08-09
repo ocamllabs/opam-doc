@@ -8,7 +8,7 @@ $elem$>>) Html.nil
 
 let string_of_html = Html.to_string
 
-let html_of_string = Html.of_string
+let html_of_string = Html.of_string ~enc:`UTF_8
 
 (** {3 Tags generators} *)
 
@@ -48,7 +48,7 @@ let make_info =
        with Not_found -> String.length info in
      let idx = min idx_dot idx_newline in
      
-     make_info (Some (html_of_string (String.sub info 0 idx)))
+     html_of_string (String.sub info 0 idx)
    | _ -> Html.nil
      
 let make_pre data =
@@ -59,11 +59,9 @@ let make_span ?css_class data =
     | Some clazz -> <:html<<span class="$str:clazz$">$data$</span>&>>
     | None -> <:html<<span>$data$</span>&>>
 
-(** Return html code with the given string in the keyword style.*)
 let keyword str =
   make_span ~css_class:"keyword" (html_of_string str)
 
-(** Return html code with the given string in the constructor style. *)
 let constructor str =
   make_span ~css_class:"constructor" (html_of_string str)
 
@@ -73,23 +71,33 @@ let code css_class data =
       "" -> <:html<<code>$data$</code>&>>
     | css -> <:html<<code class="$str:css$">$data$</code>&>>
       
-let make_type_table f l =
+let make_type_table l =
   let table rows =
     <:html<<table class="typetable">
 		    $rows$</table>&>> 
   in 
   table 
     (List.fold_left 
-       (fun acc x -> <:html<$acc$<tr>$f x$</tr>&>>)
+       (fun acc x -> <:html<$acc$<tr>$x$</tr>&>>)
        Html.nil 
        l)
 
 (* Cannot lookup by #id, another type with the same id  could be found in submodules *)
 let generate_mark mark name html =
-  <:html<<span class="$str:mark^name$">$html$</span>&>>
-(* <:html<<span id="$str:mark^name$">$html$</span>&>>*)
+  let open Opam_doc_config in
+      let mark_id = match mark with
+	| Attribute -> "ATT"
+	| Type -> "TYPE"
+	| Type_elt -> "TYPEELT"
+	| Function -> "FUN"
+	| Exception -> "EXCEPTION"
+	| Value -> "VAL"
+	| Method -> "METHOD"
+	| Title -> "TITLE" 
+      in
+  <:html<<span class="$str:mark_id^name$">$html$</span>&>>
 
-let rec insert_between sep = function
+let rec insert_between ~sep:sep = function
   | [] -> Html.nil
   | [h] -> h
   | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
@@ -102,7 +110,7 @@ let make_field_comment comm =
 let make_variant_cell parent_name name args_type info = 
   let html_name = make_span ~css_class:"constructor" (html_of_string name) in
   let html_name = generate_mark 
-    Opam_doc_config.mark_type_elt 
+    Opam_doc_config.Type_elt
     (parent_name^"."^name) html_name in
   
   let html_body = match args_type with
@@ -124,7 +132,7 @@ let make_record_label_cell parent_name name is_mutable label_type info =
       <:html<$keyword "mutable"$ >> (* space is important here *)
     else Html.nil in
   let marked_name = generate_mark 
-    Opam_doc_config.mark_type_elt 
+    Opam_doc_config.Type_elt
     (parent_name^"."^name) (html_of_string name) in
   let html_name = <:html<$html_name$$marked_name$>> in
 
@@ -137,29 +145,24 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   <:html<$spacing_td$$body_td$$info_td$>>
 
+let create_module_signature_content elements = 	
+  <:html<<div class="ocaml_module_content">$fold_html elements$</div>&>>
+
 let create_class_signature_content elements = 	
   <:html<<div class="ocaml_class_content">$fold_html elements$</div>&>>
 
 let create_class_container class_name signature html_content = function
-  | Some (Gentyp_html.Unresolved _) -> 
-      <:html<<div class="ocaml_class ident" name="$str:class_name$">$signature$$html_content$</div>&>>
-  | Some (Gentyp_html.Resolved (uri, _)) ->
-	  <:html<<div class="ocaml_class ident" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
- | None -> 
-   <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
- | Some (Gentyp_html.Apply _) -> assert false
+  | Some (Gentyp.Unresolved _) -> 
+    <:html<<div class="ocaml_class ident" name="$str:class_name$">$signature$$html_content$</div>&>>
+  | Some (Gentyp.Resolved (uri, _)) ->
+    <:html<<div class="ocaml_class ident" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
+  | None -> 
+    <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
+  | Some (Gentyp.Apply _) -> assert false
 
-(* module content *)
-let create_module_signature_content elements = 	
-  <:html<<div class="ocaml_module_content">$fold_html elements$</div>&>>
 
 (* End of generate-utils *)
-
-let make_reference name path = 
-  <:html<<a href="$str:path$">$str:name$</a>&>>
       
-let create_content_to_load_tag content_path =
-  <:html<<div file="$str:content_path$" class="$str:Opam_doc_config.content_to_load_class$"> </div>&>>
 
 let html_of_type_param_list params variances =
   let lstrparam = (List.map2 
@@ -186,48 +189,7 @@ let html_of_type_class_param_list params variances =
     | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
 
 
- (*  :lllll *)
-let wrap_ident_module signature module_name path =
-  match path with 
-    | Some p -> 
-      <:html<<div class="ocaml_module ident" name="$str:module_name$" path=$uri:Uri.of_string p$>
-		    $signature$
-</div>&>>
-    | None ->       
-      <:html<<div class="ocaml_module ident" name="$str:module_name$">
-		    $signature$
-</div>&>>
-
-
-let wrap_sig_module signature elements module_name =
-  <:html<<div class="ocaml_module sig" name="$str:module_name$">
-		$signature$
-		<div class="ocaml_module_content">
-		       $elements$
-		</div>
-</div>&>>
-
-let wrap_ident_class signature class_name path =
-  match path with
-    | Some p ->
-<:html<<div class="ocaml_class ident" name="$str:class_name$" path=$uri:Uri.of_string p$>
-		    $signature$
-</div>&>>
-    | None -> 
-      <:html<<div class="ocaml_class ident" name="$str:class_name$">
-		    $signature$
-</div>&>>
-
-
-let wrap_sig_class signature elements class_name =
-  <:html<<div class="ocaml_class sig" name="$str:class_name$">
-		$signature$
-		<div class="ocaml_class_content">
-		       $elements$
-		</div>
-</div>&>>
-
-		       
+  
 let rec js_array_of_include_items = 
   let open Types in function
     | Mty_signature msig -> 
@@ -321,7 +283,7 @@ let output_script_file () =
       close_out oc
     end
 
-let generate_module_index = function
+let generate_package_index = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
@@ -339,7 +301,7 @@ let generate_module_index = function
     output_string oc (string_of_html html_content);
     close_out oc
 
-let generate_packages_index global = 
+let generate_global_packages_index global = 
   let packages = Index.get_global_packages global in
   let generate_package_entry (package_name, info) = 
     let uri = Uri.of_string ("?package="^package_name) in

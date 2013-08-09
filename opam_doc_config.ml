@@ -134,29 +134,9 @@ let default_stylesheet =
     ".expanding_content button { width:25px; float:left; margin:3px; }";
   ]
 
-(** The prefix for types declaration *)
-let mark_type = "TYPE"
-  
-(** The prefix for types elements (record fields or constructors). *)
-let mark_type_elt = "TYPEELT"
-  
-(** The prefix for functions marks. *)
-let mark_function = "FUN"
 
-(** The prefix for exceptions marks. *)
-let mark_exception = "EXCEPTION"
-
-(** The prefix for values marks. *)
-let mark_value = "VAL"
-
-(** The prefix for attributes marks. *)
-let mark_attribute = "ATT"
-
-(** The prefix for methods marks. *)
-let mark_method = "METHOD"
-
-(** The prefix for title marks. *)
-let mark_title = "TITLE"
+(** Marks used to generate id attributes *)
+type mark = Attribute | Type | Type_elt | Function | Exception | Value | Method | Title
 
 let jquery_online_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jquery.min.js"
 

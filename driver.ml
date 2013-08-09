@@ -1,5 +1,5 @@
 open Index
-open Generate_html
+open Generate
 open Cow
 
 module StringMap = Map.Make(String)
@@ -43,7 +43,6 @@ let check_package_name_conflict global =
     not !Opam_doc_config.always_proceed && loop () do () done
 
 let process_file global cmd cmt = 
-  print_endline ("Processing : "^cmt^" and "^cmd);
   let module_name = String.capitalize 
     (Filename.chop_extension (Filename.basename cmd)) in
   let doctree = process_cmd cmd in
@@ -64,7 +63,8 @@ let process_file global cmd cmt =
           | _ -> raise (Failure "Wrong kind of cmt file") 
       with
 	| Invalid_argument s ->
-	  Printf.eprintf "Error \"%s\". Module %s skipped\n%!" s module_name;
+	  Printf.eprintf "Error \"%s\" while processing module %s. File skipped\n%!" 
+	    s module_name;
 	  None
 	    
 let _ =
@@ -127,8 +127,8 @@ let _ =
       let open Html_utils in
 	  output_style_file ();
 	  output_script_file ();
-	  generate_module_index processed_files;
-	  generate_packages_index global
+	  generate_package_index processed_files;
+	  generate_global_packages_index global
     end;
 
   (* write down the updated global table *)
