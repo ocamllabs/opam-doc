@@ -19,6 +19,10 @@ clean:
 	-rm -f *.cm[dtio]*
 	-rm -f opam-doc
 	-rm -f *~ *.annot *.js *.css *.html
+	
+install: all
+	-mkdir -p ${BINDIR}
+	cp opam-doc ${BINDIR}/opam-doc
 
 opam-doc: opam_doc_config.cmo index.cmo gentyp.cmo doctree.cmo html_utils.cmo cmd_format.cmo generate.cmo driver.cmo
 	$(OCAMLFIND) ${OCAMLC} ${OCAMLCFLAGS} -linkpkg -o $@ $^
