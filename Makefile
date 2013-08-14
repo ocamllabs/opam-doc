@@ -1,3 +1,5 @@
+BINDIR=./bin
+
 OCAMLC=ocamlc
 OCAMLLINK=ocamlc
 OCAMLLEX=ocamllex
