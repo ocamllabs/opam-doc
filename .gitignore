@@ -1,8 +1,5 @@
-dist/
-*.cm[oia]
-*.annot
-opam-doc
-*.cmt
-test/*
-*.cmd*
-*.html
+*~
+_build
+*.byte
+*.native
+bin/

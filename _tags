@@ -1,0 +1,2 @@
+true: package(cow), package(compiler-libs.common), package(unix), package(cow.syntax)
+true: syntax(camlp4o)
