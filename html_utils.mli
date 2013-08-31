@@ -5,8 +5,8 @@ open Cow
 
 (** {3 Utility functions} *)
 
-(** Html folding with a seperator *)
-val insert_between : sep:string -> Html.t list -> Html.t
+(** Html concatenation with a seperator *)
+val insert_between : string -> Html.t list -> Html.t
 
 (** Conversion from string to html *)
 val html_of_string : string -> Html.t
@@ -31,8 +31,7 @@ val code : string -> Html.t -> Html.t
 (** Wrap the column list into a <table class="typetable"> by wraping the
     elements with <tr> tags. The elements should already have the appropriates
     <td> tags *)
-val make_type_table :
-  Html.t list -> Html.t
+val make_type_table : Html.t list -> Html.t
 
 (** Wrap the content into a <span> that will contain a class attribute with
     the unique id used by the javascript to lookup types, classes, values, ...

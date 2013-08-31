@@ -59,7 +59,7 @@ let generate_mark mark name html =
       in
   <:html<<span class="$str:mark_id^name$">$html$</span>&>>
 
-let rec insert_between ~sep:sep = function
+let rec insert_between sep = function
   | [] -> Cow.Html.nil
   | [h] -> h
   | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
@@ -124,7 +124,6 @@ let create_class_container class_name signature html_content = function
 
 
 (* End of generate-utils *)
-      
 
 let html_of_type_param_list params variances =
   let lstrparam = (List.map2 
@@ -149,7 +148,6 @@ let html_of_type_class_param_list params variances =
       [] -> Cow.Html.nil
     | [h] -> code "type" <:html<[$h$] >> (* add some brackets ~~ *)
     | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
-
 
   
 let js_array_of_include_items = 
