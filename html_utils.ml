@@ -60,9 +60,6 @@ let make_span ?css_class data =
 let keyword str =
   make_span ~css_class:"keyword" (html_of_string str)
 
-let constructor str =
-  make_span ~css_class:"constructor" (html_of_string str)
-
 (* can't parse optional arg in called f° in html tags *)
 let code css_class data =
   match css_class with
