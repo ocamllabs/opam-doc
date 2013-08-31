@@ -46,7 +46,7 @@ let process_file global cmd cmt =
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
     | _, None -> raise (Failure "Not a cmt file")
-    | None, Some cmt -> raise (Failure "I need the cmti")
+    | None, Some _ -> raise (Failure "I need the cmti")
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
@@ -114,7 +114,7 @@ let _ =
       (fun cmd -> let cmt = get_cmt cmd cmt_files in
 		  try process_file global cmd cmt with e -> raise e)
       cmd_files
-    >> List.filter (function Some o -> true | None -> false)
+    >> List.filter (function Some _ -> true | None -> false)
     >> List.map (function Some o -> o | None -> assert false)
     >> List.sort (fun (x,_) (y,_) -> compare x y)
   in

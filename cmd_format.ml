@@ -12,17 +12,6 @@ type cmd = {
   cmd_doctree: Doctree.file;
 }
 
-let save_cmd filename modname sourcefile doctree = 
-  let cmd = 
-    { cmd_modname = modname;
-      cmd_sourcefile = sourcefile;
-      cmd_doctree = doctree; }
-  in
-  let oc = open_out_bin filename in
-    output_string oc cmd_magic_number;
-    output_value oc (cmd : cmd);
-    close_out oc
-
 let read_cmd filename = 
   let ic = open_in_bin filename in
   let magic_number = read_magic_number ic in

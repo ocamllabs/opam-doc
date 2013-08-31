@@ -145,15 +145,11 @@ let style_tag =
 
 (* Ajax loading *)
 
-let content_to_load_class = "content_to_load"
-
 let script_filename = "doc_loader.js"
 
 let script_tag =
   <:html<<script type="text/javascript" src="$str:jquery_online_url$"> </script>
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
-
-let page_contents_extension = ".contents"
 
 let default_script = "
 // utility - Parse query string

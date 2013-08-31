@@ -54,7 +54,7 @@ let update_global global filenames =
 	let module_name = cmi.Cmi_format.cmi_name in
 	let (name,crc) =
 	  match cmi.Cmi_format.cmi_crcs with
-	    | e::l ->
+	    | e::_ ->
 	      e
 	    | _ -> assert false
 	in
@@ -88,37 +88,6 @@ let write_global_file global path =
   let oc = open_out path in
   output_value oc global;
   close_out oc
-
-(* debug *)
-let global_print global =
-  CrcMap.iter
-    (fun (x,y) z ->
-      Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y)
-	(match z with
-	    Packed_module _ -> "Packed"
-	  | Direct_path (package, str) -> "Direct path - package : "
-	    ^package^" module : "^str))
-    global.map
-
-let global_find_key (global:global) key =
-  CrcMap.iter
-    (fun (x,y) z ->
-      if x = key then
-	Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y)
-	  (match z with
-	      Packed_module (_, sub_modules) -> "Packed\n"^
-		(List.fold_left
-		   (fun acc (x,y) ->
-		     acc^"\t Modname:"^x^" - Digest : "
-		     ^(Digest.to_hex y)^"\n")
-		   ""
-		   sub_modules)
-	    | Direct_path (_, str) -> "Direct path : "^str))
-    global.map
-
-let local_print table = ()
-
-let global_lookup global md = CrcMap.find md global.map
 
 let create_local global mds =
   let rec doMod pack acc ((name, _) as md)  =
