@@ -1,0 +1,33 @@
+cmd_format.cmi : doctree.cmi
+docjson.cmi :
+doctree.cmi : info.cmi
+generate.cmi : index.cmi doctree.cmi
+gentyp.cmi : index.cmi
+html_utils.cmi : opam_doc_config.cmi index.cmi gentyp.cmi
+index.cmi :
+info.cmi :
+opam_doc_config.cmi :
+cmd_format.cmo : doctree.cmi cmd_format.cmi
+cmd_format.cmx : doctree.cmx cmd_format.cmi
+docjson.cmo : docjson.cmi
+docjson.cmx : docjson.cmi
+doctree.cmo : info.cmi doctree.cmi
+doctree.cmx : info.cmx doctree.cmi
+driver.cmo : opam_doc_config.cmi index.cmi html_utils.cmi generate.cmi \
+    cmd_format.cmi
+driver.cmx : opam_doc_config.cmx index.cmx html_utils.cmx generate.cmx \
+    cmd_format.cmx
+generate.cmo : opam_doc_config.cmi info.cmi index.cmi html_utils.cmi \
+    gentyp.cmi doctree.cmi docjson.cmi generate.cmi
+generate.cmx : opam_doc_config.cmx info.cmx index.cmx html_utils.cmx \
+    gentyp.cmx doctree.cmx docjson.cmx generate.cmi
+gentyp.cmo : opam_doc_config.cmi index.cmi gentyp.cmi
+gentyp.cmx : opam_doc_config.cmx index.cmx gentyp.cmi
+html_utils.cmo : opam_doc_config.cmi index.cmi gentyp.cmi html_utils.cmi
+html_utils.cmx : opam_doc_config.cmx index.cmx gentyp.cmx html_utils.cmi
+index.cmo : opam_doc_config.cmi index.cmi
+index.cmx : opam_doc_config.cmx index.cmi
+info.cmo : info.cmi
+info.cmx : info.cmi
+opam_doc_config.cmo : opam_doc_config.cmi
+opam_doc_config.cmx : opam_doc_config.cmi
