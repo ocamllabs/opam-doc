@@ -860,7 +860,7 @@ let rec generate_module_type local dmty mty =
       let base = generate_module_type local (Some dbase) base in
       let cnstrs = List.map (generate_with_constraint local) cnstrs in
 
-      let constraints = Html.insert_between " and " cnstrs in
+      let constraints = Html.concat ~sep:" and " cnstrs in
       let signature = <:html<with $constraints$>> in
 	begin
 	  match base with 
@@ -871,7 +871,7 @@ let rec generate_module_type local dmty mty =
     | None, Tmty_with(base, cnstrs) ->
       let base = generate_module_type local None base in
       let cnstrs = List.map (generate_with_constraint local) cnstrs in
-      let constraints = Html.insert_between " and " cnstrs in
+      let constraints = Html.concat ~sep:" and " cnstrs in
       let signature = <:html<with $constraints$>> in
       begin
 	match base with 
@@ -1312,7 +1312,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  let args = match args with 
 	    | [] -> Cow.Html.nil 
 	    | _ -> 
-              let cd = Html.code ~cls:"type" (Html.insert_between " * " args) in
+              let cd = Html.code ~cls:"type" (Html.concat ~sep:" * " args) in
               <:html< $keyword "of"$ $cd$>> in
 	  let signature = Html.pre <:html<$id$$args$>> in
 	  <:html<$signature$$info$>>

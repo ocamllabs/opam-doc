@@ -1,10 +1,7 @@
 (** Basic operations on HTML *)
 
-(** Html concatenation *)
-val concat : Cow.Html.t list -> Cow.Html.t
-
-(** Html concatenation with a seperator *)
-val insert_between : string -> Cow.Html.t list -> Cow.Html.t
+(** Html concatenation with an optional separator *)
+val concat : ?sep:string -> Cow.Html.t list -> Cow.Html.t
 
 (** Conversion from string to html *)
 val html_of_string : string -> Cow.Html.t

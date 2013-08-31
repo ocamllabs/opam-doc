@@ -53,7 +53,7 @@ let make_variant_cell parent_name name args_type info =
   
   let html_body = match args_type with
     | [] -> Cow.Html.nil
-    | _ -> let l = Html.insert_between " * " args_type in
+    | _ -> let l = Html.concat ~sep:" * " args_type in
            let cd = Html.code ~cls:"type" l in
 	   <:html<$html_name$ $keyword "of"$ $cd$>>
   in
@@ -85,7 +85,7 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   <:html<$spacing_td$$body_td$$info_td$>>
 
 let create_module_signature_content elements = 	
-  let elems = Html.concat elements in
+  let elems = Html.concat (Cow.Html.nil :: elements) in
   <:html<<div class="ocaml_module_content">$elems$</div>&>>
 
 let create_class_signature_content elements = 	
@@ -114,7 +114,7 @@ let html_of_type_param_list params variances =
     match lstrparam with
 	[] -> Cow.Html.nil
       | [h] -> Html.code ~cls:"type" <:html<$h$ >>
-      | _ -> let h = Html.insert_between ", " lstrparam in
+      | _ -> let h = Html.concat ~sep:", " lstrparam in
              Html.code ~cls:"type" <:html<($h$) >>
 
 let html_of_type_class_param_list params variances =
@@ -127,7 +127,7 @@ let html_of_type_class_param_list params variances =
   match lstrparam with
       [] -> Cow.Html.nil
     | [h] -> Html.code ~cls:"type" <:html<[$h$] >> (* add some brackets ~~ *)
-    | _ -> let h = Html.insert_between ", " lstrparam in
+    | _ -> let h = Html.concat ~sep:", " lstrparam in
            Html.code ~cls:"type" <:html<[$h$] >>
 
   
