@@ -41,8 +41,6 @@ let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
 
 (* Html config *)
 
-open Cow
-
 let doctype = "<!DOCTYPE HTML>\n"
 let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>

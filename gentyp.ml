@@ -16,8 +16,6 @@ open Types
 open Btype
 open Ctype
 
-open Cow
-  
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
@@ -614,7 +612,7 @@ type html_buffer =
     { mutable stack: Cow.Html.t list;
       data: Buffer.t }
       
-let html_buffer () = { stack = [Html.nil]; data = Buffer.create 80 }
+let html_buffer () = { stack = [Cow.Html.nil]; data = Buffer.create 80 }
   
 let flush_data hb = 
   if Buffer.length hb.data <> 0 then begin
@@ -627,7 +625,7 @@ let flush_data hb =
 
 let push_level hb = 
   flush_data hb;
-  hb.stack <- Html.nil :: hb.stack
+  hb.stack <- Cow.Html.nil :: hb.stack
 
 
 let pop_level hb = 

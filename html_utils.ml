@@ -1,27 +1,25 @@
-open Cow
-
 let fold_html =
   List.fold_left
     (fun acc elem ->
       <:html<$acc$
-$elem$>>) Html.nil
+$elem$>>) Cow.Html.nil
 
-let string_of_html = Html.to_string
+let string_of_html = Cow.Html.to_string
 
-let html_of_string = Html.of_string ~enc:`UTF_8
+let html_of_string = Cow.Html.of_string ~enc:`UTF_8
 
 (** {3 Tags generators} *)
 
 let make_info = 
   function 
-    | Some i when i != Html.nil -> 
+    | Some i when i != Cow.Html.nil -> 
       <:html<<div class="info">$i$</div>&>>
-    | _ -> Html.nil
+    | _ -> Cow.Html.nil
 
  (* quick hack to slice comments for index description
     stop at the first dot or at the first newline *)
  let make_first_line_info = function 
-   | Some i when i != Html.nil -> 
+   | Some i when i != Cow.Html.nil -> 
      let info = string_of_html i in
      (* should look for <p> but cow doesn't support mandatory tag policies *)
      let rec index_before_br_tag idx str =
@@ -49,7 +47,7 @@ let make_info =
      let idx = min idx_dot idx_newline in
      
      html_of_string (String.sub info 0 idx)
-   | _ -> Html.nil
+   | _ -> Cow.Html.nil
      
 let make_pre data =
   <:html<<pre>$data$</pre>&>>
@@ -79,7 +77,7 @@ let make_type_table l =
   table 
     (List.fold_left 
        (fun acc x -> <:html<$acc$<tr>$x$</tr>&>>)
-       Html.nil 
+       Cow.Html.nil 
        l)
 
 (* Cannot lookup by #id, another type with the same id  could be found in submodules *)
@@ -98,7 +96,7 @@ let generate_mark mark name html =
   <:html<<span class="$str:mark_id^name$">$html$</span>&>>
 
 let rec insert_between ~sep:sep = function
-  | [] -> Html.nil
+  | [] -> Cow.Html.nil
   | [h] -> h
   | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
 
@@ -114,14 +112,14 @@ let make_variant_cell parent_name name args_type info =
     (parent_name^"."^name) html_name in
   
   let html_body = match args_type with
-    | [] -> Html.nil
+    | [] -> Cow.Html.nil
     | _ -> let l = insert_between " * " args_type in
 	   <:html<$html_name$ $keyword "of"$ $code "type" l$>>
   in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
-	       | _ -> Html.nil in
+	       | _ -> Cow.Html.nil in
 
   <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$html_body$</code></td>$info_td$&>>
 
@@ -130,7 +128,7 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   let html_name = if is_mutable then 
       <:html<$keyword "mutable"$ >> (* space is important here *)
-    else Html.nil in
+    else Cow.Html.nil in
   let marked_name = generate_mark 
     Opam_doc_config.Type_elt
     (parent_name^"."^name) (html_of_string name) in
@@ -141,7 +139,7 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
-	       | _ -> Html.nil in
+	       | _ -> Cow.Html.nil in
   
   <:html<$spacing_td$$body_td$$info_td$>>
 
@@ -172,7 +170,7 @@ let html_of_type_param_list params variances =
 		       | `Negative -> <:html<-$param>>)
 		     params variances) in
     match lstrparam with
-	[] -> Html.nil
+	[] -> Cow.Html.nil
       | [h] -> code "type" <:html<$h$ >>
       | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
 
@@ -184,7 +182,7 @@ let html_of_type_class_param_list params variances =
 		       | `Negative -> <:html<-$param>>)
 		     params variances) in
   match lstrparam with
-      [] -> Html.nil
+      [] -> Cow.Html.nil
     | [h] -> code "type" <:html<[$h$] >> (* add some brackets ~~ *)
     | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
 
@@ -206,7 +204,7 @@ let rec js_array_of_include_items =
 
 (** {3 Html pages generators} *)
 
-let create_html_skeleton filename (headers : Html.t list) (body : Html.t list) =
+let create_html_skeleton filename (headers : Cow.Html.t list) (body : Cow.Html.t list) =
   let oc = open_out filename in
   let header_elements = fold_html headers in
   let body_elements = fold_html body in

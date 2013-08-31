@@ -3,12 +3,11 @@ open Doctree
 open Typedtree
 open Location
 open Asttypes
-open Cow
 
 open Types
 
-type signature = Html.t
-type module_content = Html.t    
+type signature = Cow.Html.t
+type module_content = Cow.Html.t    
 
 type structure_result = 
   | Ident of signature * Gentyp.path
@@ -19,7 +18,7 @@ let get_path local ?(is_class=false) (p : Path.t) =
     
 let path_to_html = Gentyp.html_of_path
 
-let generate_html_path local ?(is_class=false) (p : Path.t) : Html.t =
+let generate_html_path local ?(is_class=false) (p : Path.t) : Cow.Html.t =
   let path = get_path local ~is_class:is_class p in
   Gentyp.html_of_path path
 
@@ -94,13 +93,13 @@ let rec generate_text_element local elem =
 and generate_text local text =
   List.fold_left 
     (fun acc elem -> <:html<$acc$$generate_text_element local elem$>>)
-    Html.nil
+    Cow.Html.nil
     text
 
 and generate_list_items local items =
   List.fold_left 
     (fun acc item -> <:html<$acc$<li>$generate_text local item$</li>&>>)
-    Html.nil
+    Cow.Html.nil
     items
 
 and generate_style local sk t = 
@@ -130,7 +129,7 @@ and generate_title n lbl text =
     | 6 -> <:html<<h6 id="$str:id$">$html$</h6>&>>
     | n when n > 6 -> 
       let clazz = "h"^sn in <:html<<div class="$str:clazz$">$html$</div>&>>
-    | _ -> Html.nil in
+    | _ -> Cow.Html.nil in
   let id = match lbl with 
     | Some s ->  s
     | _ -> sn^"_"^"TITLE"
@@ -155,7 +154,7 @@ let generate_sees local sees =
   let elems = 
     List.fold_left 
       (fun acc see -> <:html< $acc$ <li>$gen_see see$</li>&>>)
-      Html.nil
+      Cow.Html.nil
       sees in
   <:html<<b>See also</b> <ul>$elems$</ul>&>>
 
@@ -165,7 +164,7 @@ let generate_befores local befores =
   in
     List.fold_left 
       (fun acc before -> <:html<$acc$$gen_before before$<br/>&>>)
-      Html.nil
+      Cow.Html.nil
       befores
 
 let generate_params local params = 
@@ -174,7 +173,7 @@ let generate_params local params =
   in
     List.fold_left 
       (fun acc param -> <:html<$acc$$gen_param param$&>>)
-      Html.nil
+      Cow.Html.nil
       params
 
 let generate_raised local raised = 
@@ -183,7 +182,7 @@ let generate_raised local raised =
   in
     List.fold_left 
       (fun acc raised -> <:html<$acc$$gen_raised raised$>>)
-      Html.nil
+      Cow.Html.nil
       raised
 
 
@@ -192,7 +191,7 @@ let generate_info local info =
   let jinfo = 
     match info.i_desc with
 	Some t -> generate_text local t
-      | None -> Html.nil
+      | None -> Cow.Html.nil
   in
   let jinfo = 
     match info.i_authors with
@@ -328,7 +327,7 @@ let generate_type_kind local parent_name dtk tk =
   in
   
   match tk with
-    | Ttype_abstract -> Html.nil
+    | Ttype_abstract -> Cow.Html.nil
 
     | Ttype_variant cstrs ->
       let rec loop cstrs dcstrs acc =
@@ -389,7 +388,7 @@ let rec generate_class_type local dclty clty =
 	let args = 
 	  Html_utils.code "type" (List.fold_left 
 				    (fun acc typ -> <:html<$acc$$typ$ -> >>) 
-				    Html.nil (List.rev args_acc)) in
+				    Cow.Html.nil (List.rev args_acc)) in
 	
 	let params = 
 	  Html_utils.html_of_type_class_param_list
@@ -401,16 +400,16 @@ let rec generate_class_type local dclty clty =
 	Ident (body, path)
 	  
       | dclass_sig, Tcty_signature class_sig ->
-	let fields : Html.t list = 
+	let fields : Cow.Html.t list = 
 	  generate_class_type_fields local 
 	    (match dclass_sig with Some Dcty_signature cl -> Some cl | _ -> None)
 	    (* The fields are apparently reversed... *)
 	    (List.rev class_sig.csig_fields) in
 	
 	let args = match args_acc with
-	  | [] -> Html.nil 
+	  | [] -> Cow.Html.nil 
 	  | l -> Html_utils.code "type"
-	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
+	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Cow.Html.nil l)
 	in 
 	
 	let body = 
@@ -445,7 +444,7 @@ and generate_class_type_fields local dclsigl tclsigl =
 	    match class_result with
 	      | Ident (s, p) ->
 		let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
-		create_class_container "_inherit_field" signature Html.nil (Some p)
+		create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
 	      | Sig (s,c) -> 
 		let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
 		create_class_container "_inherit_field" signature c None
@@ -493,7 +492,7 @@ and generate_class_type_fields local dclsigl tclsigl =
     in
     
     let generate_class_type_fields_with_doctree local dclsigl tclsigl =
-      let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
+      let rec loop (acc: Cow.Html.t list) local dclsigl tclsigl is_stopped =
     	match dclsigl, tclsigl with
 	  | [], r::l -> 
 	    Printf.eprintf 
@@ -518,7 +517,7 @@ and generate_class_type_fields local dclsigl tclsigl =
 		      match class_result with
 			| Ident (s, p) ->
 			  let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
-			  create_class_container "_inherit_field" signature Html.nil (Some p)
+			  create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
 			| Sig (s,c) -> 
 			  let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
 			  create_class_container "_inherit_field" signature c None
@@ -569,9 +568,9 @@ let rec generate_class_expr local dclexpr ci_expr =
 	  fields in
 	
 	let args = match args_acc with
-	  | [] -> Html.nil 
+	  | [] -> Cow.Html.nil 
 	  | l -> Html_utils.code "type"
-	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
+	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Cow.Html.nil l)
 	in
 	let signature = 
 	  let open Html_utils in 
@@ -615,7 +614,7 @@ let rec generate_class_expr local dclexpr ci_expr =
 	let args = 
 	  Html_utils.code "type" (List.fold_left 
 				    (fun acc typ -> <:html<$acc$$typ$ -> >>) 
-				    Html.nil (List.rev args_acc)) in
+				    Cow.Html.nil (List.rev args_acc)) in
 	let params = 
 	  Html_utils.html_of_type_class_param_list
 	    params (List.map (fun _ -> `None) params) (* dummy variance list *)
@@ -635,9 +634,9 @@ let rec generate_class_expr local dclexpr ci_expr =
 	let ctyp_sig = match ctyp with | Ident (s, _) | Sig (s, _) -> s in
 	
 	let args = match args_acc with
-	  | [] -> Html.nil 
+	  | [] -> Cow.Html.nil 
 	  | l -> Html_utils.code "type"
-	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Html.nil l)
+	    (List.fold_left (fun acc typ -> <:html<$acc$$typ$ -> >>) Cow.Html.nil l)
 	in 
 	begin
 	  match cte with
@@ -675,7 +674,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 		match class_result with
 		  | Ident (s, p) -> 
 		    let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
-		    create_class_container "_inherit_field" signature Html.nil (Some p)
+		    create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
 		  | Sig (s,c) -> 
 		    let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
 		    create_class_container "_inherit_field" signature c None
@@ -713,11 +712,11 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 	      let label = <:html<$jtyp1$ = $jtyp2$>> in
 	      let label = <:html<$code "type" label$>> in
 	      make_pre <:html<$keyword "constraint"$ $label$>>	  
-	    | Tcf_init _ -> Html.nil
+	    | Tcf_init _ -> Cow.Html.nil
       in
       
       let generate_class_type_fields_with_doctree local dclexpr tclexpr =
-	let rec loop (acc: Html.t list) local dclsigl tclsigl is_stopped =
+	let rec loop (acc: Cow.Html.t list) local dclsigl tclsigl is_stopped =
     	  match dclsigl, tclsigl with
 	    | [], r::l -> 
 	      Printf.eprintf "generate_class_expr_fields mismatch -- processing without doc\n%!";
@@ -741,7 +740,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
 			    match class_result with
 			      | Ident (s, p) ->
 				let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
-				create_class_container "_inherit_field" signature Html.nil (Some p)
+				create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
 			      | Sig (s,c) -> 
 				let signature = make_pre <:html<$keyword "inherit"$ $s$>> in
 				create_class_container "_inherit_field" signature c None
@@ -1106,7 +1105,7 @@ and generate_signature_item_list local dsig_items tsig_items =
 
 (* Mirror function for structure items *)      
 and generate_structure_item_list local (dstr_items : Doctree.structure_item list option) 
-      tstr_items : Html.t list =
+      tstr_items : Cow.Html.t list =
 
     let rec loop_with_doctree ditems items acc is_stopped =
       match ditems, items with
@@ -1236,14 +1235,14 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
   let priv = 
     match type_decl.typ_private with
         Private -> <:html<$keyword "private"$>>
-      | Public -> Html.nil
+      | Public -> Cow.Html.nil
   in
   let manifest = 
     match type_decl.typ_manifest, type_decl.typ_kind with
       | Some typ, Ttype_record _ -> <:html<= {$code "type" (generate_typ local typ)$}>>
       | Some typ, _ -> <:html<= $code "type" (generate_typ local typ)$>>
       | None, Ttype_record _ ->  <:html<= {>>
-      | None, Ttype_abstract -> Html.nil
+      | None, Ttype_abstract -> Cow.Html.nil
       | None, _ -> <:html<= >>
   in
 					  
@@ -1272,7 +1271,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	  let id = generate_mark Opam_doc_config.Exception name
 	    <:html<$keyword "exception"$ $str:name$>> in 
 	  let args = match args with 
-	    | [] -> Html.nil 
+	    | [] -> Cow.Html.nil 
 	    | _ -> <:html< $keyword "of"$ $code "type" (insert_between " * " args)$>> in
 	  let signature = make_pre <:html<$id$$args$>> in
 	  <:html<$signature$$info$>>
@@ -1338,7 +1337,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
 	let signature = <:html<$keyword "class"$>> in
 	let signature = 
-	  <:html<$signature$ $if virt then keyword "virtual " else Html.nil$>> in
+	  <:html<$signature$ $if virt then keyword "virtual " else Cow.Html.nil$>> in
 	let signature = <:html<$signature$$params_html$$reference$>> in
 	
 	match class_result with 
@@ -1366,7 +1365,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
 	let signature = <:html<$keyword "class type"$ >> in
 	let signature = 
-	  <:html<$signature$$if virt then keyword "virtual " else Html.nil$>> in
+	  <:html<$signature$$if virt then keyword "virtual " else Cow.Html.nil$>> in
 	let signature = <:html<$signature$$params_html$$reference$>> in
 	
 	match class_result with 
@@ -1384,13 +1383,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	    <:html<<div class="ocaml_class sig" name="$str:name$">$signature$$content$</div>&>>
 			 
 			 
-  and generate_signature_item local (ditem : Doctree.signature_item option) item : Html.t= 
+  and generate_signature_item local (ditem : Doctree.signature_item option) item : Cow.Html.t= 
     let open Html_utils in
     let ditem_desc, item_info = match ditem with 
       | Some {dsig_desc=desc; dsig_info=i1; dsig_after_info=i2} ->
 	Some desc, 
 	make_info (generate_info_opt2 local i1 i2)
-      | None -> None, Html.nil
+      | None -> None, Cow.Html.nil
     in
     
     match ditem_desc, item.sig_desc with
@@ -1451,7 +1450,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	      (match dsig_modtype with
 		| Some (Dsig_modtype (_,dmty)) -> dmty | None | _ -> None)
 	      mty
-	  | Tmodtype_abstract -> Sig (Html.nil, Html.nil) (* to check *)
+	  | Tmodtype_abstract -> Sig (Cow.Html.nil, Cow.Html.nil) (* to check *)
       in
       
       let res = generate_module_type_item id.Ident.name module_result item_info in
@@ -1508,15 +1507,15 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
     | _ , _ -> 
       Printf.eprintf "[Warning] Mismatching items\n%!";
-      Html.nil
+      Cow.Html.nil
 
-  and generate_structure_item local (ditem : Doctree.structure_item option) item : Html.t = 
+  and generate_structure_item local (ditem : Doctree.structure_item option) item : Cow.Html.t = 
       let open Html_utils in
       let ditem_desc, item_info = match ditem with 
       | Some {dstr_desc=desc; dstr_info=i1} ->
 	Some desc, 
 	make_info (generate_info_opt local i1)
-      | None -> None, Html.nil
+      | None -> None, Cow.Html.nil
       in
       
       match ditem_desc, item.str_desc with
@@ -1531,7 +1530,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	| _, Tstr_value _ -> 
 	  (* Other values kind (tuple, etc) - TODO for next version *)
 	  Printf.eprintf "Unsupported value representation\n%!";
-	  Html.nil
+	  Cow.Html.nil
 
 	| dstr_type, Tstr_type [id, _, tdecl] -> 
 	  
@@ -1638,11 +1637,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
 	| (None | Some (Dstr_exn_rebind _)), Tstr_exn_rebind (id, _, path, _) ->
 	  Printf.eprintf "Exception rebind : Not yet implemented\n%!";
-	  Html.nil
+	  Cow.Html.nil
 	    
-	| (None | Some Dstr_eval), Tstr_eval _ -> Html.nil
+	| (None | Some Dstr_eval), Tstr_eval _ -> Cow.Html.nil
 	| _, _ -> 
-	  Printf.eprintf "[Warning] Mismatching items\n%!"; Html.nil
+	  Printf.eprintf "[Warning] Mismatching items\n%!"; Cow.Html.nil
 
 
 let output_toplevel_module module_name html_elements =
@@ -1664,7 +1663,7 @@ let generate_file_from_interface local module_name doctree intf =
       | None | _ -> None, None in
   
   let items = generate_signature_item_list local ditems_opt intf.sig_items in
-  let items,descr = match info with None -> items, Html.nil | Some i -> i :: items, i in
+  let items,descr = match info with None -> items, Cow.Html.nil | Some i -> i :: items, i in
 
   output_toplevel_module module_name items;
   module_name, descr
@@ -1675,10 +1674,10 @@ let generate_file_from_structure local module_name doctree impl =
     | Some (Dfile_impl dimpl) -> 
       Some dimpl.dimpl_items,
       generate_info_opt local dimpl.dimpl_info
-    | None | _ -> None, Some Html.nil in
+    | None | _ -> None, Some Cow.Html.nil in
   
   let items = generate_structure_item_list local ditems_opt impl.str_items in
-  let items,descr = match info with None -> items, Html.nil | Some i -> i :: items, i in
+  let items,descr = match info with None -> items, Cow.Html.nil | Some i -> i :: items, i in
   
   output_toplevel_module module_name items;
   module_name, descr
