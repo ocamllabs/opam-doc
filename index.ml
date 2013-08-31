@@ -1,17 +1,17 @@
-(* | Direct_path : package * module 
+(* | Direct_path : package * module
    | Packed_module : package * imports
 *)
 
-type t_value = 
+type t_value =
   | Direct_path of string * string
   | Packed_module of string * (string * Digest.t) list
 
-module CrcMap = 
-  Map.Make(struct 
+module CrcMap =
+  Map.Make(struct
     type t = string * Digest.t
-    let compare (s1, d1) (s2, d2) = 
+    let compare (s1, d1) (s2, d2) =
       let sc = String.compare s1 s2 in
-      if sc = 0 then 
+      if sc = 0 then
         Digest.compare d1 d2
       else sc
   end)
@@ -189,13 +189,11 @@ let add_global_package global package_name info =
   {global with package_list = (add_or_replace [] global.package_list)}
 
 (* Internal references part *)
-open Hashtbl
-
-let internal_table = create 32
+let internal_table = Hashtbl.create 32
 
 let reset_internal_reference_table () =
-  reset internal_table
+  Hashtbl.reset internal_table
 
-let add_internal_reference = add internal_table
+let add_internal_reference = Hashtbl.add internal_table
 
-let lookup_internal_reference = find internal_table
+let lookup_internal_reference = Hashtbl.find internal_table
