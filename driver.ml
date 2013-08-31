@@ -1,8 +1,5 @@
 open Index
 open Generate
-open Cow
-
-module StringMap = Map.Make(String)
 
 let (>>) h f = f h
 

@@ -1,4 +1,3 @@
-open Docjson
 open Info
 open Doctree
 open Typedtree
