@@ -30,7 +30,7 @@ let get_full_path_name () =
 
 let current_uri arg =
   Uri.of_string (
-    "?package=" ^ !Opam_doc_config.current_package
+    "?package=" ^ Opam_doc_config.current_package ()
     ^"&module="^get_full_path_name ()
     ^(match arg with 
       | `Class n -> "&class="^n
@@ -1695,7 +1695,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
 
 let output_toplevel_module module_name html_elements =
-  let filename = !Opam_doc_config.current_package ^ "/" ^  module_name ^ ".html" in
+  let filename = Opam_doc_config.current_package () ^ "/" ^  module_name ^ ".html" in
   let oc = open_out filename in
   output_string oc "<div class=\"ocaml_toplevel_module\">";
   List.iter 

@@ -1,10 +1,11 @@
-val index_file_path : string ref
-val default_index_name : string ref
-val filter_pervasives : bool ref
-val clear_index : bool ref
-val always_proceed : bool ref
-val package_descr : string ref
-val current_package : string ref
+val index_file_path : unit -> string
+val default_index_name : unit -> string
+val filter_pervasives : unit -> bool
+val clear_index : unit -> bool
+val always_proceed : unit -> bool
+val package_descr : unit -> string
+val current_package : unit -> string
+val set_current_package : string -> unit 
 val options : (string * Arg.spec * string) list
 val usage : string
 val doctype : string

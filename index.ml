@@ -34,7 +34,7 @@ type global = { map: t_value CrcMap.t
 type local = t_value LocalMap.t
 
 let read_global_file path =
-  if !Opam_doc_config.clear_index then
+  if Opam_doc_config.clear_index () then
     {map= CrcMap.empty; package_list= []}
   else
     try
@@ -67,13 +67,13 @@ let update_global global filenames =
 		(module_name, crc)
 		(* Filter the self-references *)
 		(Packed_module
-		    (!Opam_doc_config.current_package,
-		     (List.filter ((<>) (name,crc)) cmi.Cmi_format.cmi_crcs)))
+		   (Opam_doc_config.current_package (),
+		    (List.filter ((<>) (name,crc)) cmi.Cmi_format.cmi_crcs)))
 		acc
 	    | Cmt_format.Implementation _
 	    | Cmt_format.Interface _ ->
 	      CrcMap.add (module_name, crc)
-		(Direct_path (!Opam_doc_config.current_package, module_name))
+		(Direct_path (Opam_doc_config.current_package (), module_name))
 		acc
 	    | _ -> acc (* shouldn't happen but you never know :l *)
 	end

@@ -203,10 +203,10 @@ let generate_package_index = function
   | l ->
     let make_content (m_name, info) = 
       let uri = Uri.of_string 
-	("?package="^ !Opam_doc_config.current_package ^"&module="^m_name) in
+	("?package="^ Opam_doc_config.current_package () ^"&module="^m_name) in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
-    let oc = open_out (!Opam_doc_config.current_package ^ "/index.html") in
+    let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in
     let content = Html.concat (List.map make_content l) in
     let html_content =
       <:html<<h1>Modules</h1>
@@ -229,4 +229,4 @@ let generate_global_packages_index global =
 <table class="indextable">
 $h$
 </table>&>> in
-  create_html_default_skeleton  !Opam_doc_config.default_index_name "Opam-Doc" [html_body]
+  create_html_default_skeleton (Opam_doc_config.default_index_name ()) "Opam-Doc" [html_body]
