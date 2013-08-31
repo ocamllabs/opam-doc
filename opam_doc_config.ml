@@ -45,7 +45,7 @@ let doctype = "<!DOCTYPE HTML>\n"
 let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 
-let default_stylesheet =
+let default_stylesheet = String.concat "\n"
   [ ".keyword { color: #f47421; font-weight: bold }";
     ".keywordsign { color: #f47421 }";
     ".superscript { font-size : 4 }";

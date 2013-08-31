@@ -9,7 +9,7 @@ val options : (string * Arg.spec * string) list
 val usage : string
 val doctype : string
 val character_encoding : Cow.Xml.t
-val default_stylesheet : string list
+val default_stylesheet : string
 type mark =
     Attribute
   | Type

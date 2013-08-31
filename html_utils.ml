@@ -45,7 +45,7 @@ let make_info =
      let idx_newline = try index_before_br_tag 0 info 
        with Not_found -> String.length info in
      let idx = min idx_dot idx_newline in
-     
+
      html_of_string (String.sub info 0 idx)
    | _ -> Cow.Html.nil
      
@@ -264,22 +264,23 @@ let extract_name path =
   else
     s
 
+let write_unless_exists ~filename ~contents =
+  if not (Sys.file_exists filename) then
+    begin
+      let oc = open_out filename in
+      output_string oc contents;
+      close_out oc
+    end
 
 let output_style_file () =
-  if not (Sys.file_exists Opam_doc_config.style_filename) then
-    begin
-      let oc = open_out Opam_doc_config.style_filename in
-      output_string oc (String.concat "\n" Opam_doc_config.default_stylesheet);
-      close_out oc
-    end
+  write_unless_exists
+    ~filename:Opam_doc_config.style_filename
+    ~contents:Opam_doc_config.default_stylesheet
 
 let output_script_file () =
-  if not (Sys.file_exists Opam_doc_config.script_filename) then
-    begin
-      let oc = open_out Opam_doc_config.script_filename in
-      output_string oc Opam_doc_config.default_script;
-      close_out oc
-    end
+  write_unless_exists
+    ~filename:Opam_doc_config.script_filename
+    ~contents:Opam_doc_config.default_script
 
 let generate_package_index = function
   | [] -> ()
