@@ -21,22 +21,21 @@ let options  =
   ; ("-p", Set_string current_package, "Specify the package")
   ; ("--package-description", Set_string package_descr, "Add a description to the package")
   ; ("-descr", Set_string package_descr, "Add a description to the package")
-      
+
   ; ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one")
-    
+
   ; ("--filter-pervasives", Set filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references")
-    
+
   ; ("--clear-index", Set clear_index, "Clear the global index before processing")
 
   ; ("-y", Set always_proceed, "Answer yes to all questions prompted")
-    
+
 (*    ("-online-url", Set_string online_url, "Give the path to an online documentation, references to this library using the -online-links option will use this url");
 *)
 (*    ("-online-links", Set use_online_links, "Generate online references instead of locals one");
-*)  
+*)
   ]
 
-    
 let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
 
 
@@ -45,7 +44,7 @@ let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
 open Cow
 
 let doctype = "<!DOCTYPE HTML>\n"
-let character_encoding = 
+let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 
 let default_stylesheet =
@@ -142,7 +141,7 @@ let jquery_online_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jque
 
 let style_filename = "style.css"
 
-let style_tag = 
+let style_tag =
   <:html<<link rel="stylesheet" href="$str:style_filename$" type="text/css" />&>>
 
 
@@ -152,12 +151,12 @@ let content_to_load_class = "content_to_load"
 
 let script_filename = "doc_loader.js"
 
-let script_tag = 
+let script_tag =
   <:html<<script type="text/javascript" src="$str:jquery_online_url$"> </script>
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
 let page_contents_extension = ".contents"
-  
+
 let default_script = "
 // utility - Parse query string
 (function($) {
@@ -203,7 +202,6 @@ function create_menu(){
 	var parent_module = module_arr.join(\".\");
 	var url = '?package='+args.package
 	    +(parent_module!=''?'&module='+parent_module:\"\");
-	
 	return '<a class=\"up\" title=\"'+parent_module+'\" href=\"'+url+'\">Up</a>';
     }
 }
@@ -234,22 +232,22 @@ function expand_all(){
 
 // node : dom node = <div *>..</div>contents_to_be_hidden</div></div>- is_diplayed = boolean
 function wrap_element(node, is_shrinked, extra_handler){
-    
+
     node.classList.add('expanding_content');
     node.lastElementChild.style.display = is_shrinked?'none':'block';
-    
+
     var button = document.createElement(\"button\");
     button.innerHTML = is_shrinked?'+':'-';
     button.onclick = expand_content;
     if (typeof extra_handler !== 'undefined')
 	on(button, \"click\", extra_handler);
-    
+
     node.insertBefore(button, node.firstChild);
 }
 
 function expand_includes(){
     var $mod_includes = $(document).find(\"div.ocaml_include\");
-    
+
     if ($mod_includes.length != 0){
 	$mod_includes.each(function(){
           try {
@@ -261,22 +259,22 @@ function expand_includes(){
 
 		var args = $.parseParams(path.substring(1));
 		var module_arr = args.module.split(\".\");
-		
+
 		var $data = perform_ajax_request(args.package+'/'+ module_arr[0]+'.html', false);
 		var result = lookup_module($data, module_arr.slice(1));
 		result.content.find(\"> div.info\").remove();
-		
+
 		//.wrap(\"<div></div>\").parent() doesn't work here - Oo
 		var new_node = $(document.createElement(\"div\"));
 		$(this).append($(new_node).append(result.content).html());
 	    }
-	    
+
 	    wrap_element($(this)[0], false);
 	  } catch (e){
 		console.log('Error on expanding an incude');
 	  }
          });
-	
+
 	expand_includes(); // the processed includes could unwrap others includes
 
         //should continue?
