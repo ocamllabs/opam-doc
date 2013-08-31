@@ -1,13 +1,3 @@
-let concat_html =
-  List.fold_left
-    (fun acc elem ->
-      <:html<$acc$
-$elem$>>) Cow.Html.nil
-
-let string_of_html = Cow.Html.to_string
-
-let html_of_string = Cow.Html.of_string ~enc:`UTF_8
-
 (** {3 Tags generators} *)
 
 let make_info = 
@@ -16,23 +6,14 @@ let make_info =
       <:html<<div class="info">$i$</div>&>>
     | _ -> Cow.Html.nil
 
-let make_pre data =
-  <:html<<pre>$data$</pre>&>>
-
 let make_span ?css_class data = 
   match css_class with
     | Some clazz -> <:html<<span class="$str:clazz$">$data$</span>&>>
     | None -> <:html<<span>$data$</span>&>>
 
 let keyword str =
-  make_span ~css_class:"keyword" (html_of_string str)
+  make_span ~css_class:"keyword" (Html.html_of_string str)
 
-(* can't parse optional arg in called f° in html tags *)
-let code css_class data =
-  match css_class with
-      "" -> <:html<<code>$data$</code>&>>
-    | css -> <:html<<code class="$str:css$">$data$</code>&>>
-      
 let make_type_table l =
   let table rows =
     <:html<<table class="typetable">
@@ -59,32 +40,27 @@ let generate_mark mark name html =
       in
   <:html<<span class="$str:mark_id^name$">$html$</span>&>>
 
-let rec insert_between sep = function
-  | [] -> Cow.Html.nil
-  | [h] -> h
-  | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
-
 (* Beginning of generate-utils *)
 
 let make_field_comment comm =
   <:html<<td class="typefieldcomment" align="left">$comm$</td>&>>
 
 let make_variant_cell parent_name name args_type info = 
-  let html_name = make_span ~css_class:"constructor" (html_of_string name) in
+  let html_name = make_span ~css_class:"constructor" (Html.html_of_string name) in
   let html_name = generate_mark 
     Opam_doc_config.Type_elt
     (parent_name^"."^name) html_name in
   
   let html_body = match args_type with
     | [] -> Cow.Html.nil
-    | _ -> let l = insert_between " * " args_type in
-	   <:html<$html_name$ $keyword "of"$ $code "type" l$>>
+    | _ -> let l = Html.insert_between " * " args_type in
+           let cd = Html.code ~cls:"type" l in
+	   <:html<$html_name$ $keyword "of"$ $cd$>>
   in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
 	       | _ -> Cow.Html.nil in
-
   <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$html_body$</code></td>$info_td$&>>
 
 let make_record_label_cell parent_name name is_mutable label_type info = 
@@ -95,11 +71,12 @@ let make_record_label_cell parent_name name is_mutable label_type info =
     else Cow.Html.nil in
   let marked_name = generate_mark 
     Opam_doc_config.Type_elt
-    (parent_name^"."^name) (html_of_string name) in
+    (parent_name^"."^name) (Html.html_of_string name) in
   let html_name = <:html<$html_name$$marked_name$>> in
 
   let body_td = 
-    <:html<<td align="left" valign="top"><code>$html_name$ : $code "type" label_type$</code></td>&>> in
+    let cd = Html.code ~cls:"type" label_type in
+    <:html<<td align="left" valign="top"><code>$html_name$ : $cd$</code></td>&>> in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
@@ -108,10 +85,12 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   <:html<$spacing_td$$body_td$$info_td$>>
 
 let create_module_signature_content elements = 	
-  <:html<<div class="ocaml_module_content">$concat_html elements$</div>&>>
+  let elems = Html.concat elements in
+  <:html<<div class="ocaml_module_content">$elems$</div>&>>
 
 let create_class_signature_content elements = 	
-  <:html<<div class="ocaml_class_content">$concat_html elements$</div>&>>
+  let elems = Html.concat elements in
+  <:html<<div class="ocaml_class_content">$elems$</div>&>>
 
 let create_class_container class_name signature html_content = function
   | Some (Gentyp.Unresolved _) -> 
@@ -134,8 +113,9 @@ let html_of_type_param_list params variances =
 		     params variances) in
     match lstrparam with
 	[] -> Cow.Html.nil
-      | [h] -> code "type" <:html<$h$ >>
-      | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
+      | [h] -> Html.code ~cls:"type" <:html<$h$ >>
+      | _ -> let h = Html.insert_between ", " lstrparam in
+             Html.code ~cls:"type" <:html<($h$) >>
 
 let html_of_type_class_param_list params variances =
   let lstrparam = (List.map2 
@@ -146,8 +126,9 @@ let html_of_type_class_param_list params variances =
 		     params variances) in
   match lstrparam with
       [] -> Cow.Html.nil
-    | [h] -> code "type" <:html<[$h$] >> (* add some brackets ~~ *)
-    | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
+    | [h] -> Html.code ~cls:"type" <:html<[$h$] >> (* add some brackets ~~ *)
+    | _ -> let h = Html.insert_between ", " lstrparam in
+           Html.code ~cls:"type" <:html<[$h$] >>
 
   
 let js_array_of_include_items = 
@@ -168,8 +149,8 @@ let js_array_of_include_items =
 
 let create_html_skeleton filename (headers : Cow.Html.t list) (body : Cow.Html.t list) =
   let oc = open_out filename in
-  let header_elements = concat_html headers in
-  let body_elements = concat_html body in
+  let header_elements = Html.concat headers in
+  let body_elements = Html.concat body in
   output_string oc Opam_doc_config.doctype;
   let page =
     <:html<<html>
@@ -181,7 +162,7 @@ $body_elements$
 </body>
 </html>&>> in
   begin
-    output_string oc (string_of_html page);
+    output_string oc (Html.string_of_html page);
     close_out oc
   end
     
@@ -226,13 +207,14 @@ let generate_package_index = function
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
     let oc = open_out (!Opam_doc_config.current_package ^ "/index.html") in
+    let content = Html.concat (List.map make_content l) in
     let html_content =
       <:html<<h1>Modules</h1>
 <table class="indextable">
-    $concat_html (List.map make_content l)$
+    $content$
 </table>&>>
     in
-    output_string oc (string_of_html html_content);
+    output_string oc (Html.string_of_html html_content);
     close_out oc
 
 let generate_global_packages_index global = 
@@ -241,9 +223,10 @@ let generate_global_packages_index global =
     let uri = Uri.of_string ("?package="^package_name) in
     <:html<<tr><td class="module"><a href="$uri:uri$">$str:String.capitalize package_name$</a></td><td>$opt:info$</td></tr>&>>
   in
+  let h = Html.concat (List.map generate_package_entry packages) in
   let html_body = 
     <:html<<h1>Packages list</h1>
 <table class="indextable">
-$concat_html (List.map generate_package_entry packages)$
+$h$
 </table>&>> in
   create_html_default_skeleton  !Opam_doc_config.default_index_name "Opam-Doc" [html_body]

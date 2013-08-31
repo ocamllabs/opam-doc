@@ -3,30 +3,13 @@
 
 open Cow
 
-(** {3 Utility functions} *)
-
-(** Html concatenation with a seperator *)
-val insert_between : string -> Html.t list -> Html.t
-
-(** Conversion from string to html *)
-val html_of_string : string -> Html.t
-
-(** Conversion from html to string *)
-val string_of_html : Html.t -> string
-
 (** {3 Html tags generators} *)
 
 (** Generate a <div class="info">xxx</div> tag or Html.nil if None*)
 val make_info : Html.t option -> Html.t
 
-(** Wrap the content into a <pre> html tag*)
-val make_pre : Html.t -> Html.t
-
 (** Wrap the content into a <span class="keyword"> html tag *)
 val keyword : string -> Html.t
-
-(** Wrap the content into a \<code\> html tag with a class label option *)
-val code : string -> Html.t -> Html.t
 
 (** Wrap the column list into a <table class="typetable"> by wraping the
     elements with <tr> tags. The elements should already have the appropriates
