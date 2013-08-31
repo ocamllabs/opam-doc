@@ -4,9 +4,6 @@ open Cow
 
 (** {3 Utility functions} *)
 
-(** Html folding *)
-val fold_html : Html.t list -> Html.t
-
 (** Html folding with a seperator *)
 val insert_between : sep:string -> Html.t list -> Html.t
 

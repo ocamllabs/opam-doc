@@ -1,4 +1,4 @@
-let fold_html =
+let concat_html =
   List.fold_left
     (fun acc elem ->
       <:html<$acc$
@@ -144,10 +144,10 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   <:html<$spacing_td$$body_td$$info_td$>>
 
 let create_module_signature_content elements = 	
-  <:html<<div class="ocaml_module_content">$fold_html elements$</div>&>>
+  <:html<<div class="ocaml_module_content">$concat_html elements$</div>&>>
 
 let create_class_signature_content elements = 	
-  <:html<<div class="ocaml_class_content">$fold_html elements$</div>&>>
+  <:html<<div class="ocaml_class_content">$concat_html elements$</div>&>>
 
 let create_class_container class_name signature html_content = function
   | Some (Gentyp.Unresolved _) -> 
@@ -206,8 +206,8 @@ let rec js_array_of_include_items =
 
 let create_html_skeleton filename (headers : Cow.Html.t list) (body : Cow.Html.t list) =
   let oc = open_out filename in
-  let header_elements = fold_html headers in
-  let body_elements = fold_html body in
+  let header_elements = concat_html headers in
+  let body_elements = concat_html body in
   output_string oc Opam_doc_config.doctype;
   let page =
     <:html<<html>
@@ -294,7 +294,7 @@ let generate_package_index = function
     let html_content =
       <:html<<h1>Modules</h1>
 <table class="indextable">
-    $fold_html (List.map make_content l)$
+    $concat_html (List.map make_content l)$
 </table>&>>
     in
     output_string oc (string_of_html html_content);
@@ -309,6 +309,6 @@ let generate_global_packages_index global =
   let html_body = 
     <:html<<h1>Packages list</h1>
 <table class="indextable">
-$fold_html (List.map generate_package_entry packages)$
+$concat_html (List.map generate_package_entry packages)$
 </table>&>> in
   create_html_default_skeleton  !Opam_doc_config.default_index_name "Opam-Doc" [html_body]
