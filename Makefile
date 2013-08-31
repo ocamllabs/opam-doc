@@ -21,7 +21,7 @@ clean:
 	-rm -f *.cm[dtio]*
 	-rm -f opam-doc
 	-rm -f *~ *.annot *.js *.css *.html
-	
+
 install: all
 	-mkdir -p ${BINDIR}
 	cp opam-doc ${BINDIR}/opam-doc
