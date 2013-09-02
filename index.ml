@@ -107,16 +107,19 @@ let is_module name =
   name.[0] >= 'A' && name.[0] <= 'Z'
 
 (* assuming that if a type name is present, it is at the end of the list *)
-let rec assemble_path is_class (pack, path) = function
-  | [] -> "?package="^pack^"&module="^path
+let rec assemble_path is_class (package, path) = function
+  | [] -> Uris.module_uri ~package path
   | h::[] ->
     if is_module h then
-      "?package="^pack^"&module="^path^"."^h
+      Uris.module_uri ~package (path^"."^h)
     else
-      "?package="^pack^"&module="^path^(if is_class then "&class=" else "&type=")^h
+      if is_class then
+        Uris.class_uri ~package path h
+      else
+        Uris.type_uri ~package path h
   | h::t ->
     if not (is_module h) then raise (Failure "Incorrect signature");
-    assemble_path is_class (pack, path^"."^h) t
+    assemble_path is_class (package, path^"."^h) t
 
 let local_lookup local ?(is_class=false) path_elems =
   let rec loop pack = function
@@ -142,10 +145,7 @@ let get_global_packages global =
   global.package_list
 
 let package_exists global package_name =
-  try
-    ignore (List.find (fun (n,_) -> n = package_name) global.package_list);
-    true
-  with Not_found -> false
+  List.exists (fun (n,_) -> n = package_name) global.package_list
 
 let add_global_package global package_name info =
   let info_opt = if info = "" then None else Some (Cow.Html.of_string info) in
