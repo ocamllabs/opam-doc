@@ -28,13 +28,13 @@ let glob_env = ref []
 let get_full_path_name () =
   String.concat "." !glob_env
 
-let current_uri arg =
-  Uri.of_string (
-    "?package=" ^ Opam_doc_config.current_package ()
-    ^"&module="^get_full_path_name ()
-    ^(match arg with 
-      | `Class n -> "&class="^n
-      | `Module -> ""))
+let current_class_uri name =
+  let modpath = get_full_path_name () in
+  Uris.class_uri modpath name
+
+let current_module_uri () =
+  let modpath = get_full_path_name () in
+  Uris.module_uri modpath
     
 let add_internal_reference id =
    Index.add_internal_reference id !glob_env
@@ -1319,7 +1319,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_module_item name module_result item_info =
       let open Html_utils in
-	  let reference = <:html<<a href="$uri:current_uri `Module$">$str:name$</a>&>> in
+	  let reference = <:html<<a href="$uri:current_module_uri ()$">$str:name$</a>&>> in
 
 	  (* TODO constraints *)
 
@@ -1339,7 +1339,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_module_type_item name module_result item_info =
       let open Html_utils in
-	  let reference = <:html<<a href="$uri:current_uri `Module$">$str:name$</a>&>> in
+	  let reference = <:html<<a href="$uri:current_module_uri ()$">$str:name$</a>&>> in
 
 	  match module_result with 
 	    | Ident (body, Gentyp.Resolved (uri, _)) -> 
@@ -1383,7 +1383,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	let params_html = html_of_type_class_param_list params variance in
 	
 	let reference = 
-	    <:html<<a href="$uri:current_uri (`Class name)$">$str:name$</a>&>> in
+	    <:html<<a href="$uri:current_class_uri name$">$str:name$</a>&>> in
 
 	let signature = <:html<$keyword "class"$>> in
 	let signature = 
@@ -1411,7 +1411,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 	let params_html = html_of_type_class_param_list params variance in
 		
 	let reference = 
-	    <:html<<a href="$uri:current_uri (`Class name)$">$str:name$</a>&>> in
+	    <:html<<a href="$uri:current_class_uri name$">$str:name$</a>&>> in
 
 	let signature = <:html<$keyword "class type"$ >> in
 	let signature = 
