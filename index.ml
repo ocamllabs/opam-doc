@@ -1,17 +1,17 @@
-(* | Direct_path : package * module 
+(* | Direct_path : package * module
    | Packed_module : package * imports
 *)
 
-type t_value = 
+type t_value =
   | Direct_path of string * string
   | Packed_module of string * (string * Digest.t) list
 
-module CrcMap = 
-  Map.Make(struct 
+module CrcMap =
+  Map.Make(struct
     type t = string * Digest.t
-    let compare (s1, d1) (s2, d2) = 
+    let compare (s1, d1) (s2, d2) =
       let sc = String.compare s1 s2 in
-      if sc = 0 then 
+      if sc = 0 then
         Digest.compare d1 d2
       else sc
   end)
@@ -34,7 +34,7 @@ type global = { map: t_value CrcMap.t
 type local = t_value LocalMap.t
 
 let read_global_file path =
-  if !Opam_doc_config.clear_index then
+  if Opam_doc_config.clear_index () then
     {map= CrcMap.empty; package_list= []}
   else
     try
@@ -54,7 +54,7 @@ let update_global global filenames =
 	let module_name = cmi.Cmi_format.cmi_name in
 	let (name,crc) =
 	  match cmi.Cmi_format.cmi_crcs with
-	    | e::l ->
+	    | e::_ ->
 	      e
 	    | _ -> assert false
 	in
@@ -67,13 +67,13 @@ let update_global global filenames =
 		(module_name, crc)
 		(* Filter the self-references *)
 		(Packed_module
-		    (!Opam_doc_config.current_package,
-		     (List.filter ((<>) (name,crc)) cmi.Cmi_format.cmi_crcs)))
+		   (Opam_doc_config.current_package (),
+		    (List.filter ((<>) (name,crc)) cmi.Cmi_format.cmi_crcs)))
 		acc
 	    | Cmt_format.Implementation _
 	    | Cmt_format.Interface _ ->
 	      CrcMap.add (module_name, crc)
-		(Direct_path (!Opam_doc_config.current_package, module_name))
+		(Direct_path (Opam_doc_config.current_package (), module_name))
 		acc
 	    | _ -> acc (* shouldn't happen but you never know :l *)
 	end
@@ -88,37 +88,6 @@ let write_global_file global path =
   let oc = open_out path in
   output_value oc global;
   close_out oc
-
-(* debug *)
-let global_print global =
-  CrcMap.iter
-    (fun (x,y) z ->
-      Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y)
-	(match z with
-	    Packed_module _ -> "Packed"
-	  | Direct_path (package, str) -> "Direct path - package : "
-	    ^package^" module : "^str))
-    global.map
-
-let global_find_key (global:global) key =
-  CrcMap.iter
-    (fun (x,y) z ->
-      if x = key then
-	Printf.printf "key : (%s,%s) - value: %s\n" x (Digest.to_hex y)
-	  (match z with
-	      Packed_module (_, sub_modules) -> "Packed\n"^
-		(List.fold_left
-		   (fun acc (x,y) ->
-		     acc^"\t Modname:"^x^" - Digest : "
-		     ^(Digest.to_hex y)^"\n")
-		   ""
-		   sub_modules)
-	    | Direct_path (_, str) -> "Direct path : "^str))
-    global.map
-
-let local_print table = ()
-
-let global_lookup global md = CrcMap.find md global.map
 
 let create_local global mds =
   let rec doMod pack acc ((name, _) as md)  =
@@ -189,13 +158,11 @@ let add_global_package global package_name info =
   {global with package_list = (add_or_replace [] global.package_list)}
 
 (* Internal references part *)
-open Hashtbl
-
-let internal_table = create 32
+let internal_table = Hashtbl.create 32
 
 let reset_internal_reference_table () =
-  reset internal_table
+  Hashtbl.reset internal_table
 
-let add_internal_reference = add internal_table
+let add_internal_reference = Hashtbl.add internal_table
 
-let lookup_internal_reference = find internal_table
+let lookup_internal_reference = Hashtbl.find internal_table

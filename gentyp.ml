@@ -16,8 +16,6 @@ open Types
 open Btype
 open Ctype
 
-open Cow
-  
 type out_ident =
   | Oide_apply of out_ident * out_ident
   | Oide_dot of out_ident * string
@@ -74,7 +72,7 @@ let rec lookup_ident id =
 	      None
       in
       let concrete_name = String.concat "."
-	(if name = "Pervasives" && !(Opam_doc_config.filter_pervasives) then
+	(if name = "Pervasives" && Opam_doc_config.filter_pervasives () then
 	    elems 
 	 else name::elems)
       in
@@ -95,12 +93,12 @@ let rec lookup_ident id =
 	      let base_path = String.concat "." module_list in
 	      let html_path =
 		if List.length elems = 0 then 
-		  "?package="^ !Opam_doc_config.current_package
+		  "?package="^ Opam_doc_config.current_package ()
 		  ^ "&module="^base_path^"."^name
 		else
 		  let res, last_item = 
 		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
-		  "?package="^ !Opam_doc_config.current_package
+		  "?package="^ Opam_doc_config.current_package ()
 		  ^"&module="^base_path^"."^name
 		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
 		  ^(if is_class then "&class=" else "&type=")^last_item 
@@ -109,7 +107,7 @@ let rec lookup_ident id =
 	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
 	    else
 	      let html_path = 
-		"?package=" ^ !Opam_doc_config.current_package 
+		"?package=" ^ Opam_doc_config.current_package ()
 		^"&module=" ^ (String.concat "." (elems@module_list))
 		^(if is_class then "&class=" else "&type=")^name in
 	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
@@ -614,7 +612,7 @@ type html_buffer =
     { mutable stack: Cow.Html.t list;
       data: Buffer.t }
       
-let html_buffer () = { stack = [Html.nil]; data = Buffer.create 80 }
+let html_buffer () = { stack = [Cow.Html.nil]; data = Buffer.create 80 }
   
 let flush_data hb = 
   if Buffer.length hb.data <> 0 then begin
@@ -627,7 +625,7 @@ let flush_data hb =
 
 let push_level hb = 
   flush_data hb;
-  hb.stack <- Html.nil :: hb.stack
+  hb.stack <- Cow.Html.nil :: hb.stack
 
 
 let pop_level hb = 

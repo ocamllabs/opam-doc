@@ -3,32 +3,37 @@
 open Arg
 
 (* Todo : find a proper place to put the file *)
-let index_file_path = ref ((Sys.getcwd ())^"/opam-doc.idx")
+let _index_file_path = ref ((Sys.getcwd ())^"/opam-doc.idx")
+let _default_index_name = ref "index.html"
+let _filter_pervasives = ref false
+let _clear_index = ref false
+let _always_proceed = ref false
+let _package_descr = ref ""
+let _current_package = ref "test"
 
-let default_index_name = ref "index.html"
+let index_file_path () = !_index_file_path
+let default_index_name () = !_default_index_name
+let filter_pervasives () = !_filter_pervasives
+let clear_index () = !_clear_index
+let always_proceed () = !_always_proceed
+let package_descr () = !_package_descr
+let current_package () = !_current_package
 
-let filter_pervasives = ref false
-let clear_index = ref false
-
-let always_proceed = ref false
-
-let package_descr = ref ""
-
-let current_package = ref "test"
+let set_current_package p = _current_package := p
 
 let options  = 
-  [ ("--package", Set_string current_package, "Specify the package")
-  ; ("-p", Set_string current_package, "Specify the package")
-  ; ("--package-description", Set_string package_descr, "Add a description to the package")
-  ; ("-descr", Set_string package_descr, "Add a description to the package")
+  [ ("--package", Set_string _current_package, "Specify the package")
+  ; ("-p", Set_string _current_package, "Specify the package")
+  ; ("--package-description", Set_string _package_descr, "Add a description to the package")
+  ; ("-descr", Set_string _package_descr, "Add a description to the package")
+      
+  ; ("-index", Set_string _index_file_path, "Use a specific index file to use rather than the default one")
+    
+  ; ("--filter-pervasives", Set _filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references")
+    
+  ; ("--clear-index", Set _clear_index, "Clear the global index before processing")
 
-  ; ("-index", Set_string index_file_path, "Use a specific index file to use rather than the default one")
-
-  ; ("--filter-pervasives", Set filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references")
-
-  ; ("--clear-index", Set clear_index, "Clear the global index before processing")
-
-  ; ("-y", Set always_proceed, "Answer yes to all questions prompted")
+  ; ("-y", Set _always_proceed, "Answer yes to all questions prompted")
 
 (*    ("-online-url", Set_string online_url, "Give the path to an online documentation, references to this library using the -online-links option will use this url");
 *)
@@ -41,13 +46,11 @@ let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
 
 (* Html config *)
 
-open Cow
-
 let doctype = "<!DOCTYPE HTML>\n"
 let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 
-let default_stylesheet =
+let default_stylesheet = String.concat "\n"
   [ ".keyword { color: #f47421; font-weight: bold }";
     ".keywordsign { color: #f47421 }";
     ".superscript { font-size : 4 }";
@@ -147,15 +150,11 @@ let style_tag =
 
 (* Ajax loading *)
 
-let content_to_load_class = "content_to_load"
-
 let script_filename = "doc_loader.js"
 
 let script_tag =
   <:html<<script type="text/javascript" src="$str:jquery_online_url$"> </script>
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
-
-let page_contents_extension = ".contents"
 
 let default_script = "
 // utility - Parse query string

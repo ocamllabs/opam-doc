@@ -1,58 +1,10 @@
-open Cow
-
-let fold_html =
-  List.fold_left
-    (fun acc elem ->
-      <:html<$acc$
-$elem$>>) Html.nil
-
-let string_of_html = Html.to_string
-
-let html_of_string = Html.of_string ~enc:`UTF_8
-
 (** {3 Tags generators} *)
 
 let make_info = 
   function 
-    | Some i when i != Html.nil -> 
+    | Some i when i != Cow.Html.nil -> 
       <:html<<div class="info">$i$</div>&>>
-    | _ -> Html.nil
-
- (* quick hack to slice comments for index description
-    stop at the first dot or at the first newline *)
- let make_first_line_info = function 
-   | Some i when i != Html.nil -> 
-     let info = string_of_html i in
-     (* should look for <p> but cow doesn't support mandatory tag policies *)
-     let rec index_before_br_tag idx str =
-       let i = String.index_from str idx '<' in
-       if str.[i+1] = 'b' && str.[i+2] = 'r' then
-	 i-1
-       else
-	 index_before_br_tag (i+1) str
-     in
-     let rec index_after_a_dot_with_a_space idx str = 
-       let i = String.index_from info idx '.' + 1 in
-       try 
-	 if str.[i] = ' ' || str.[i] = '<' then
-	   i
-	 else
-	   index_after_a_dot_with_a_space i str
-       with 
-	   Invalid_argument _ -> i (* out of bounds *)
-     in
-     let idx_dot = try index_after_a_dot_with_a_space 0 info 
-       with Not_found -> String.length info 
-     in
-     let idx_newline = try index_before_br_tag 0 info 
-       with Not_found -> String.length info in
-     let idx = min idx_dot idx_newline in
-     
-     html_of_string (String.sub info 0 idx)
-   | _ -> Html.nil
-     
-let make_pre data =
-  <:html<<pre>$data$</pre>&>>
+    | _ -> Cow.Html.nil
 
 let make_span ?css_class data = 
   match css_class with
@@ -60,17 +12,8 @@ let make_span ?css_class data =
     | None -> <:html<<span>$data$</span>&>>
 
 let keyword str =
-  make_span ~css_class:"keyword" (html_of_string str)
+  make_span ~css_class:"keyword" (Html.html_of_string str)
 
-let constructor str =
-  make_span ~css_class:"constructor" (html_of_string str)
-
-(* can't parse optional arg in called f° in html tags *)
-let code css_class data =
-  match css_class with
-      "" -> <:html<<code>$data$</code>&>>
-    | css -> <:html<<code class="$str:css$">$data$</code>&>>
-      
 let make_type_table l =
   let table rows =
     <:html<<table class="typetable">
@@ -79,7 +22,7 @@ let make_type_table l =
   table 
     (List.fold_left 
        (fun acc x -> <:html<$acc$<tr>$x$</tr>&>>)
-       Html.nil 
+       Cow.Html.nil 
        l)
 
 (* Cannot lookup by #id, another type with the same id  could be found in submodules *)
@@ -97,32 +40,27 @@ let generate_mark mark name html =
       in
   <:html<<span class="$str:mark_id^name$">$html$</span>&>>
 
-let rec insert_between ~sep:sep = function
-  | [] -> Html.nil
-  | [h] -> h
-  | h::t -> <:html<$h$$str:sep$$insert_between sep t$>>
-
 (* Beginning of generate-utils *)
 
 let make_field_comment comm =
   <:html<<td class="typefieldcomment" align="left">$comm$</td>&>>
 
 let make_variant_cell parent_name name args_type info = 
-  let html_name = make_span ~css_class:"constructor" (html_of_string name) in
+  let html_name = make_span ~css_class:"constructor" (Html.html_of_string name) in
   let html_name = generate_mark 
     Opam_doc_config.Type_elt
     (parent_name^"."^name) html_name in
   
   let html_body = match args_type with
-    | [] -> Html.nil
-    | _ -> let l = insert_between " * " args_type in
-	   <:html<$html_name$ $keyword "of"$ $code "type" l$>>
+    | [] -> Cow.Html.nil
+    | _ -> let l = Html.concat ~sep:" * " args_type in
+           let cd = Html.code ~cls:"type" l in
+	   <:html<$html_name$ $keyword "of"$ $cd$>>
   in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
-	       | _ -> Html.nil in
-
+	       | _ -> Cow.Html.nil in
   <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$html_body$</code></td>$info_td$&>>
 
 let make_record_label_cell parent_name name is_mutable label_type info = 
@@ -130,26 +68,29 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   let html_name = if is_mutable then 
       <:html<$keyword "mutable"$ >> (* space is important here *)
-    else Html.nil in
+    else Cow.Html.nil in
   let marked_name = generate_mark 
     Opam_doc_config.Type_elt
-    (parent_name^"."^name) (html_of_string name) in
+    (parent_name^"."^name) (Html.html_of_string name) in
   let html_name = <:html<$html_name$$marked_name$>> in
 
   let body_td = 
-    <:html<<td align="left" valign="top"><code>$html_name$ : $code "type" label_type$</code></td>&>> in
+    let cd = Html.code ~cls:"type" label_type in
+    <:html<<td align="left" valign="top"><code>$html_name$ : $cd$</code></td>&>> in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
-	       | _ -> Html.nil in
+	       | _ -> Cow.Html.nil in
   
   <:html<$spacing_td$$body_td$$info_td$>>
 
 let create_module_signature_content elements = 	
-  <:html<<div class="ocaml_module_content">$fold_html elements$</div>&>>
+  let elems = Html.concat (Cow.Html.nil :: elements) in
+  <:html<<div class="ocaml_module_content">$elems$</div>&>>
 
 let create_class_signature_content elements = 	
-  <:html<<div class="ocaml_class_content">$fold_html elements$</div>&>>
+  let elems = Html.concat elements in
+  <:html<<div class="ocaml_class_content">$elems$</div>&>>
 
 let create_class_container class_name signature html_content = function
   | Some (Gentyp.Unresolved _) -> 
@@ -162,7 +103,6 @@ let create_class_container class_name signature html_content = function
 
 
 (* End of generate-utils *)
-      
 
 let html_of_type_param_list params variances =
   let lstrparam = (List.map2 
@@ -172,9 +112,10 @@ let html_of_type_param_list params variances =
 		       | `Negative -> <:html<-$param>>)
 		     params variances) in
     match lstrparam with
-	[] -> Html.nil
-      | [h] -> code "type" <:html<$h$ >>
-      | _ -> code "type" <:html<($insert_between ", " lstrparam$) >>
+	[] -> Cow.Html.nil
+      | [h] -> Html.code ~cls:"type" <:html<$h$ >>
+      | _ -> let h = Html.concat ~sep:", " lstrparam in
+             Html.code ~cls:"type" <:html<($h$) >>
 
 let html_of_type_class_param_list params variances =
   let lstrparam = (List.map2 
@@ -184,13 +125,13 @@ let html_of_type_class_param_list params variances =
 		       | `Negative -> <:html<-$param>>)
 		     params variances) in
   match lstrparam with
-      [] -> Html.nil
-    | [h] -> code "type" <:html<[$h$] >> (* add some brackets ~~ *)
-    | _ -> code "type" <:html<[$insert_between ", " lstrparam$] >>
-
+      [] -> Cow.Html.nil
+    | [h] -> Html.code ~cls:"type" <:html<[$h$] >> (* add some brackets ~~ *)
+    | _ -> let h = Html.concat ~sep:", " lstrparam in
+           Html.code ~cls:"type" <:html<[$h$] >>
 
   
-let rec js_array_of_include_items = 
+let js_array_of_include_items = 
   let open Types in function
     | Mty_signature msig -> 
       let included_items = List.fold_left
@@ -206,10 +147,10 @@ let rec js_array_of_include_items =
 
 (** {3 Html pages generators} *)
 
-let create_html_skeleton filename (headers : Html.t list) (body : Html.t list) =
+let create_html_skeleton filename (headers : Cow.Html.t list) (body : Cow.Html.t list) =
   let oc = open_out filename in
-  let header_elements = fold_html headers in
-  let body_elements = fold_html body in
+  let header_elements = Html.concat headers in
+  let body_elements = Html.concat body in
   output_string oc Opam_doc_config.doctype;
   let page =
     <:html<<html>
@@ -221,7 +162,7 @@ $body_elements$
 </body>
 </html>&>> in
   begin
-    output_string oc (string_of_html page);
+    output_string oc (Html.string_of_html page);
     close_out oc
   end
     
@@ -239,66 +180,41 @@ let create_html_default_skeleton filename title body_list =
       
 (** Hacks functions *)
 
-(* To be removed at some point *)
-
-(** Extract the reference from a '<a .* href="...".*</a>' tag *)
-let extract_path path = 
-  (* there are some \n generated by the string_of_html *)
-  let s = String.trim (string_of_html path) in
-  if s.[0] = '<' && s.[1] = 'a' then
-    let open String in
-	let i = index s '"' + 1 in
-	let j = index_from s i '"' in
-	sub s i (j-i)
-  else
-    raise Not_found
-
-
-(** Extract the innerHTML from a '<a .*> ... </a>' tag or identity if <a is not matched *)
-let extract_name path = 
-  (* there could be some \n generated by the string_of_html *)
-  let s = String.trim (string_of_html path) in
-  if s.[0] = '<' && s.[1] = 'a' then
-    let open String in
-	let i = index s '>' + 1 in
-	let j = index_from s i '<' in
-	sub s i (j-i)
-  else
-    s
-
+let write_unless_exists ~filename ~contents =
+  if not (Sys.file_exists filename) then
+    begin
+      let oc = open_out filename in
+      output_string oc contents;
+      close_out oc
+    end
 
 let output_style_file () =
-  if not (Sys.file_exists Opam_doc_config.style_filename) then
-    begin
-      let oc = open_out Opam_doc_config.style_filename in
-      output_string oc (String.concat "\n" Opam_doc_config.default_stylesheet);
-      close_out oc
-    end
+  write_unless_exists
+    ~filename:Opam_doc_config.style_filename
+    ~contents:Opam_doc_config.default_stylesheet
 
 let output_script_file () =
-  if not (Sys.file_exists Opam_doc_config.script_filename) then
-    begin
-      let oc = open_out Opam_doc_config.script_filename in
-      output_string oc Opam_doc_config.default_script;
-      close_out oc
-    end
+  write_unless_exists
+    ~filename:Opam_doc_config.script_filename
+    ~contents:Opam_doc_config.default_script
 
 let generate_package_index = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
       let uri = Uri.of_string 
-	("?package="^ !Opam_doc_config.current_package ^"&module="^m_name) in
+	("?package="^ Opam_doc_config.current_package () ^"&module="^m_name) in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
-    let oc = open_out (!Opam_doc_config.current_package ^ "/index.html") in
+    let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in
+    let content = Html.concat (List.map make_content l) in
     let html_content =
       <:html<<h1>Modules</h1>
 <table class="indextable">
-    $fold_html (List.map make_content l)$
+    $content$
 </table>&>>
     in
-    output_string oc (string_of_html html_content);
+    output_string oc (Html.string_of_html html_content);
     close_out oc
 
 let generate_global_packages_index global = 
@@ -307,9 +223,10 @@ let generate_global_packages_index global =
     let uri = Uri.of_string ("?package="^package_name) in
     <:html<<tr><td class="module"><a href="$uri:uri$">$str:String.capitalize package_name$</a></td><td>$opt:info$</td></tr>&>>
   in
+  let h = Html.concat (List.map generate_package_entry packages) in
   let html_body = 
     <:html<<h1>Packages list</h1>
 <table class="indextable">
-$fold_html (List.map generate_package_entry packages)$
+$h$
 </table>&>> in
-  create_html_default_skeleton  !Opam_doc_config.default_index_name "Opam-Doc" [html_body]
+  create_html_default_skeleton (Opam_doc_config.default_index_name ()) "Opam-Doc" [html_body]
