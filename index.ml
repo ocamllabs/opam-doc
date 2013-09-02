@@ -142,10 +142,7 @@ let get_global_packages global =
   global.package_list
 
 let package_exists global package_name =
-  try
-    ignore (List.find (fun (n,_) -> n = package_name) global.package_list);
-    true
-  with Not_found -> false
+  List.exists (fun (n,_) -> n = package_name) global.package_list
 
 let add_global_package global package_name info =
   let info_opt = if info = "" then None else Some (Cow.Html.of_string info) in
