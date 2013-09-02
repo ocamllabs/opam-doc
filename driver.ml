@@ -1,13 +1,10 @@
 open Index
 open Generate
-open Cow
-
-module StringMap = Map.Make(String)
 
 let (>>) h f = f h
 
 let create_package_directory () =
-  let package_name = !Opam_doc_config.current_package in
+  let package_name = Opam_doc_config.current_package () in
   if not Sys.(file_exists package_name && is_directory package_name) then
     Unix.mkdir package_name 0o755
 
@@ -29,18 +26,18 @@ let process_cmd cmd =
 let check_package_name_conflict global =
   let rec loop () =
     Printf.printf "Package '%s' already exists. Proceed anyway? [Y/n/r] \n%!"
-      !Opam_doc_config.current_package;
+      (Opam_doc_config.current_package ());
     Scanf.scanf "%c" (function
       | 'Y' | '\n' -> false
       | 'n' -> Printf.printf "Conflict unresolved. Exiting now..."; exit 0
       | 'r' ->
 	Printf.printf "New package name : ";
-	Opam_doc_config.current_package := read_line ();
+	Opam_doc_config.set_current_package (read_line ());
 	false
       | _ -> loop ())
   in
-  while Index.package_exists global !Opam_doc_config.current_package &&
-    not !Opam_doc_config.always_proceed && loop () do () done
+  while Index.package_exists global (Opam_doc_config.current_package ()) &&
+    not (Opam_doc_config.always_proceed ()) && loop () do () done
 
 let process_file global cmd cmt =
   let module_name = String.capitalize
@@ -49,7 +46,7 @@ let process_file global cmd cmt =
   let cmi, cmt = Cmt_format.read cmt in
   match cmi, cmt with
     | _, None -> raise (Failure "Not a cmt file")
-    | None, Some cmt -> raise (Failure "I need the cmti")
+    | None, Some _ -> raise (Failure "I need the cmti")
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
@@ -75,13 +72,13 @@ let _ =
   );
 
   (* read the saved global table *)
-  let global = read_global_file !Opam_doc_config.index_file_path in
-
+  let global = read_global_file (Opam_doc_config.index_file_path ()) in
+  
   check_package_name_conflict global;
 
   let global = add_global_package global
-    !Opam_doc_config.current_package
-    !Opam_doc_config.package_descr in
+    (Opam_doc_config.current_package ())
+    (Opam_doc_config.package_descr ()) in
 
   let cmt_files = List.filter
     (fun file -> Filename.check_suffix file ".cmti"
@@ -117,7 +114,7 @@ let _ =
       (fun cmd -> let cmt = get_cmt cmd cmt_files in
 		  try process_file global cmd cmt with e -> raise e)
       cmd_files
-    >> List.filter (function Some o -> true | None -> false)
+    >> List.filter (function Some _ -> true | None -> false)
     >> List.map (function Some o -> o | None -> assert false)
     >> List.sort (fun (x,_) (y,_) -> compare x y)
   in
@@ -132,4 +129,4 @@ let _ =
     end;
 
   (* write down the updated global table *)
-  write_global_file global !Opam_doc_config.index_file_path
+  write_global_file global (Opam_doc_config.index_file_path ())
