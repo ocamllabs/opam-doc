@@ -202,8 +202,7 @@ let generate_package_index = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
-      let uri = Uri.of_string 
-	("?package="^ Opam_doc_config.current_package () ^"&module="^m_name) in
+      let uri = Uris.module_uri m_name in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
     let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in
@@ -220,7 +219,7 @@ let generate_package_index = function
 let generate_global_packages_index global = 
   let packages = Index.get_global_packages global in
   let generate_package_entry (package_name, info) = 
-    let uri = Uri.of_string ("?package="^package_name) in
+    let uri = Uris.package_uri package_name in
     <:html<<tr><td class="module"><a href="$uri:uri$">$str:String.capitalize package_name$</a></td><td>$opt:info$</td></tr>&>>
   in
   let h = Html.concat (List.map generate_package_entry packages) in

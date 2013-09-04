@@ -79,7 +79,7 @@ let rec lookup_ident id =
       begin
 	match html_path with
 	  | Some path ->
-	    Resolved (Uri.of_string path, concrete_name)
+	    Resolved (path, concrete_name)
 	  | None ->
 	    Unresolved concrete_name
       end
@@ -92,25 +92,27 @@ let rec lookup_ident id =
 	    if name.[0] >= 'A' && name.[0] <= 'Z' then
 	      let base_path = String.concat "." module_list in
 	      let html_path =
-		if List.length elems = 0 then 
-		  "?package="^ Opam_doc_config.current_package ()
-		  ^ "&module="^base_path^"."^name
+		if List.length elems = 0 then Uris.module_uri (base_path^ "." ^name)
 		else
-		  let res, last_item = 
-		    let rev = List.rev elems in List.rev (List.tl rev), List.hd rev in
-		  "?package="^ Opam_doc_config.current_package ()
-		  ^"&module="^base_path^"."^name
-		  ^(List.fold_left (fun acc s -> acc^"."^s) "" res)
-		  ^(if is_class then "&class=" else "&type=")^last_item 
+		  let rev = List.rev elems in
+		  let res = List.rev (List.tl rev)
+                  and last_item = List.hd rev in
+                  let modpath = base_path^"."^name^
+                    (List.fold_left (fun acc s -> acc^"."^s) "" res) in
+                  if is_class then
+                    Uris.class_uri modpath last_item
+                  else
+                    Uris.type_uri modpath last_item
 	      in
-
-	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
+	      Resolved (html_path, String.concat "." (name::elems))
 	    else
-	      let html_path = 
-		"?package=" ^ Opam_doc_config.current_package ()
-		^"&module=" ^ (String.concat "." (elems@module_list))
-		^(if is_class then "&class=" else "&type=")^name in
-	      Resolved (Uri.of_string html_path, String.concat "." (name::elems))
+              let html_path =
+                if is_class then
+                  Uris.class_uri (String.concat "." (elems@module_list)) name
+                else
+                  Uris.type_uri (String.concat "." (elems@module_list)) name
+              in
+	      Resolved (html_path, String.concat "." (name::elems))
 	  with 
 	      Not_found -> 
 		(*(* debug *)
