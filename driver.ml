@@ -1,8 +1,6 @@
 open Index
 open Generate
 
-let (>>) h f = f h
-
 let create_package_directory () =
   let package_name = Opam_doc_config.current_package () in
   if not Sys.(file_exists package_name && is_directory package_name) then
@@ -11,9 +9,9 @@ let create_package_directory () =
 let get_cmt cmd cmt_list =
   let base = Filename.chop_extension cmd in
   let pSameBase cmt = (Filename.chop_extension cmt) = base in
-    try
-      List.find pSameBase cmt_list
-    with Not_found -> raise (Failure ("Missing cmt file: " ^ cmd))
+  try
+    Some (List.find pSameBase cmt_list)
+  with Not_found -> None
 
 let process_cmd cmd =
   Cmd_format.(
@@ -109,14 +107,22 @@ let _ =
 
   create_package_directory ();
 
-  let processed_files =
-    List.map
-      (fun cmd -> let cmt = get_cmt cmd cmt_files in
-		  try process_file global cmd cmt with e -> raise e)
+  let processed_files = 
+    List.fold_left
+      (fun l cmd -> 
+         match get_cmt cmd cmt_files with
+         | Some cmt -> begin match process_file global cmd cmt with
+           | Some o -> o :: l
+           | None -> assert false
+         end
+         | None ->
+           prerr_endline ("Warning: missing cmt file: " ^ cmd);
+           l)
+      []
       cmd_files
-    >> List.filter (function Some _ -> true | None -> false)
-    >> List.map (function Some o -> o | None -> assert false)
-    >> List.sort (fun (x,_) (y,_) -> compare x y)
+  in
+  let processed_files =
+    List.sort (fun (x,_) (y,_) -> compare x y) processed_files
   in
 
   if processed_files != [] then
