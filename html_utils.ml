@@ -50,17 +50,15 @@ let make_variant_cell parent_name name args_type info =
   let html_name = generate_mark 
     Opam_doc_config.Type_elt
     (parent_name^"."^name) html_name in
-  
   let html_body = match args_type with
-    | [] -> Cow.Html.nil
+    | [] -> <:html<$html_name$>>
     | _ -> let l = Html.concat ~sep:" * " args_type in
            let cd = Html.code ~cls:"type" l in
 	   <:html<$html_name$ $keyword "of"$ $cd$>>
   in
-  
   let info_td = match info with 
-	       | Some i -> make_field_comment i
-	       | _ -> Cow.Html.nil in
+    | Some i -> make_field_comment i
+    | _ -> Cow.Html.nil in
   <:html<<td align="left" valign="top"><code>$keyword "|"$</code></td><td align="left" valign="top"><code>$html_body$</code></td>$info_td$&>>
 
 let make_record_label_cell parent_name name is_mutable label_type info = 
