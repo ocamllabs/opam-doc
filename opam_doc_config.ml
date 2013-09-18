@@ -157,6 +157,8 @@ let script_tag =
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
 let default_script = "
+opamdoc_contents = document.getElementsByTagName('body')[0];
+
 // utility - Parse query string
 (function($) {
     var re = /([^&=]+)=?([^&]*)/g;
@@ -207,9 +209,9 @@ function create_menu(){
 
 //load package only
 function load_package_index(package_name){
-    $(\"body\").load(package_name+\"/index.html\",
+    $(opamdoc_contents).load(package_name+\"/index.html\",
 		   function(response, status, xhr){
-		       $(\"body\")
+		       $(opamdoc_contents)
 			   .prepend(\"<h1>Package \"+package_name+\"</h1>\")
 			   .prepend('<a href=\"?\">Package list</a>');
 		   });
@@ -381,7 +383,7 @@ function expand_sub_nodes(){
 	b = shrink_classes() || b; // inherits could contains inherits as well
     } while (b); // modules aliases may contain includes as well
        
-    // $(\"body\").append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
+    // $(opamdoc_contents).append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
 }
 
 function replace_with_constraints($module_content, $constraints){
@@ -407,12 +409,12 @@ function replace_with_constraints($module_content, $constraints){
 */
 function write_content($module_content, page_title, signature, $constraints){
     //Clear the page
-    $('body').empty();
+    $(opamdoc_contents).empty();
 
     //Replace the constraints
     replace_with_constraints($module_content, $constraints)
 
-    $('body')
+    $(opamdoc_contents)
 	.append(create_menu())
 	.append('<h1>'+page_title+'</h1>')
 	.append(signature.html())
