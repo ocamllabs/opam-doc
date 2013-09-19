@@ -8,7 +8,7 @@ J?=4
 
 all: _build/$(TARGET).byte _build/$(TARGET).native
 
-_build/$(TARGET).byte _build/$(TARGET).native:
+_build/$(TARGET).byte _build/$(TARGET).native: *.mli *.ml
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind $(TARGET).byte $(TARGET).native
 
 clean:
