@@ -14,3 +14,12 @@ val code : ?cls:string -> Cow.Html.t -> Cow.Html.t
 
 (** Wrap the content into a <pre> html tag*)
 val pre : Cow.Html.t -> Cow.Html.t
+
+(** Wrap the content into a <div> html tag*)
+val div : Cow.Html.t -> Cow.Html.t
+
+(** no Wrap *)
+val id : Cow.Html.t -> Cow.Html.t
+
+(** Wrap the content into a <pre> html tag *)
+val pretrack : int -> Cow.Html.t -> Cow.Html.t
