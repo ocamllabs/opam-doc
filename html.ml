@@ -14,3 +14,19 @@ let code ?cls data =
 
 let pre data =
   <:html<<pre>$data$</pre>&>>
+
+let div data =
+  <:html<<div>$data$</div>&>>
+
+let id data =
+  data
+
+let pretrack = 
+  let track =
+    try ignore(Sys.getenv "TRACK") ; true with Not_found -> false
+  in fun id data ->
+    if track then
+      <:html<<pre class="TRACK_$html_of_string(string_of_int id)$">$data$</pre>&>>
+    else
+      <:html<<pre>$data$</pre>&>>
+
