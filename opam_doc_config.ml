@@ -156,10 +156,10 @@ let script_tag =
   <:html<<script type="text/javascript" src="$str:jquery_online_url$"> </script>
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
-let default_script = "
-// opamdoc_contents = document.getElementsByTagName('body')[0];
+let default_script = 
+"// var opamdoc_contents = document.getElementsByTagName('body')[0];
 // line above doesn't work well if script loaded before body is created.
-opamdoc_contents = 'body'
+var opamdoc_contents = 'body';
 
 // utility - Parse query string
 (function($) {
