@@ -157,7 +157,9 @@ let script_tag =
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
 let default_script = "
-opamdoc_contents = document.getElementsByTagName('body')[0];
+// opamdoc_contents = document.getElementsByTagName('body')[0];
+// line above doesn't work well if script loaded before body is created.
+opamdoc_contents = 'body'
 
 // utility - Parse query string
 (function($) {
