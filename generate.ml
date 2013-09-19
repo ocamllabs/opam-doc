@@ -133,7 +133,7 @@ and generate_title n lbl text =
   let id = match lbl with 
     | Some s ->  s
     | _ -> sn^"_"^"TITLE"
-  in <:html<<br/>$ftag id text$<br/>&>>
+  in ftag id text
   
 let generate_authors local authors = 
   List.fold_left 
