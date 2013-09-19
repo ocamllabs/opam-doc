@@ -1195,6 +1195,19 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           in
           let jitem = generate_structure_item local (Some ditem) item in
           loop_with_doctree drest rest (jitem :: acc) is_stopped
+
+	(* split the values' pattern *)
+	| ({dstr_desc = Dstr_value _; _} as ditem) :: drest, 
+          ({str_desc = Tstr_value (rflags, (cnext :: crest))} as item) :: rest -> 
+	  let item = {item with str_desc = Tstr_value (rflags, [cnext])}
+          and rest = 
+            match crest with
+	      | [] -> rest
+              | _ -> {item with str_desc = Tstr_value (rflags, crest)} :: rest
+          in
+          let jitem = generate_structure_item local (Some ditem) item in
+          loop_with_doctree drest rest (jitem :: acc) is_stopped
+	  
 	| ditem :: drest, item :: rest ->
           let jitem = generate_structure_item local (Some ditem) item in
           loop_with_doctree drest rest (jitem :: acc) is_stopped
@@ -1566,15 +1579,23 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       
       match ditem_desc, item.str_desc with
 	| (None | Some (Dstr_value _)) , Tstr_value (rec_flag, [(patt,_)])  ->
-	  let name = match patt.pat_desc with
-	    | Tpat_var (id, _) -> id.Ident.name
-	    | _ -> "Unknown name -- to fix" (* TODO <----- *)
+	  let rec get_pattern_name = function
+	    | {pat_desc=Tpat_var (id, _); _} -> id.Ident.name
+	    | {pat_desc=Tpat_tuple patl; _}-> 
+	      "(" ^ String.concat ", " (List.map get_pattern_name patl) ^")"
+	    | {pat_desc=Tpat_construct _; _} -> "()"
+	    | _ -> "Unknown name"
 	  in
-	  
-	  let typ = Gentyp.type_scheme local patt.pat_type in
-	  generate_value_item name typ item_info
+	  begin
+	  match patt.pat_desc with
+	    | Tpat_construct _ -> Cow.Html.nil (* skipping the 'let () = ...' elements *)
+	    | _ -> 
+	      let name = get_pattern_name patt in
+	      let typ = Gentyp.type_scheme local patt.pat_type in
+	      generate_value_item name typ item_info
+	  end	    
+
 	| _, Tstr_value _ -> 
-	  (* Other values kind (tuple, etc) - TODO for next version *)
 	  Printf.eprintf "Unsupported value representation\n%!";
 	  Cow.Html.nil
 
