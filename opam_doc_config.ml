@@ -233,63 +233,85 @@ function expand_all(){
     })
 }
 
-// node : dom node = <div *>..</div>contents_to_be_hidden</div></div>- is_diplayed = boolean
-function wrap_element(node, is_shrinked, extra_handler){
 
-    node.classList.add('expanding_content');
-    node.lastElementChild.style.display = is_shrinked?'none':'block';
-
+function add_button(node, is_shrinked, handler, extra_handler){
     var button = document.createElement(\"button\");
     button.innerHTML = is_shrinked?'+':'-';
-    button.onclick = expand_content;
+    button.onclick = handler;
     if (typeof extra_handler !== 'undefined')
 	on(button, \"click\", extra_handler);
 
     node.insertBefore(button, node.firstChild);
 }
 
+// node : dom node = <div *>..</div>contents_to_be_hidden</div></div>- is_diplayed = boolean
+function wrap_element(node, is_shrinked){
+    node.classList.add('expanding_content');
+    node.lastElementChild.style.display = is_shrinked?'none':'block';
+    add_button(node, is_shrinked, expand_content);
+}
+
+
+function expand_include(include){
+    try {
+        if ($(include).is(\".ident\")){
+            var path = $(include).attr(\"path\");
+            
+            var args = $.parseParams(path.substring(1));
+            var module_arr = args.module.split(\".\");
+            
+            var $data = perform_ajax_request(args.package+'/'+ module_arr[0]+'.html', false);
+            var result = lookup_module($data, module_arr.slice(1));
+            result.content.find(\"> div.info\").remove();
+            
+            //.wrap(\"<div></div>\").parent() doesn't work here - Oo
+            var new_node = $(document.createElement(\"div\"));
+            $(include).append($(new_node).append(result.content).html());
+        }
+        
+    } catch (e){
+        console.log('Error on expanding an incude');
+    }
+}
+
+function expand_include_lazy(include, depth){
+    var node = $(include)[0];
+    node.classList.add('expanding_content');
+    add_button(node, true,
+               function () { 
+                   this.innerHTML = '-';
+                   this.onclick = expand_content;
+                   expand_include(include);
+                   expand_includes(depth + 1);
+               });
+}
+
+
 function expand_includes(depth){
     var $mod_includes = $(document).find(\"div.ocaml_include\");
 
-    if(depth < 3){
-        if ($mod_includes.length != 0){
-            $mod_includes.each(function(){
-              try {
-                $(this).removeClass('ocaml_include');
-                $(this).addClass('processed_include');
-     
-                if ($(this).is(\".ident\")){
-            	var path = $(this).attr(\"path\");
-     
-            	var args = $.parseParams(path.substring(1));
-            	var module_arr = args.module.split(\".\");
-     
-            	var $data = perform_ajax_request(args.package+'/'+ module_arr[0]+'.html', false);
-            	var result = lookup_module($data, module_arr.slice(1));
-            	result.content.find(\"> div.info\").remove();
-     
-            	//.wrap(\"<div></div>\").parent() doesn't work here - Oo
-            	var new_node = $(document.createElement(\"div\"));
-            	$(this).append($(new_node).append(result.content).html());
-                }
-     
-                wrap_element($(this)[0], false);
-              } catch (e){
-            	console.log('Error on expanding an incude');
-              }
-             });
-     
-            expand_includes(depth + 1); // the processed includes could unwrap others includes
-     
-            //should continue?
-            return true;
-        } else {
-            //should continue?
-            return false;
-        }
-    } else {
-        return false;
-    }
+     if ($mod_includes.length != 0){
+
+         $mod_includes.each(function(){
+            $(this).removeClass('ocaml_include');
+            $(this).addClass('processed_include');
+
+             if(depth < 2){
+                 expand_include(this)
+                 wrap_element($(this)[0], false);
+             } else {
+                 expand_include_lazy($(this)[0], depth);
+             }
+          });
+  
+         expand_includes(depth + 1); // the processed includes could unwrap others includes
+  
+         //should continue?
+         return true;
+     } else {
+         //should continue?
+         return false;
+     }
 }
 
 function shrink_modules (){
