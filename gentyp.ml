@@ -53,7 +53,7 @@ let index = ref None
 
    
 (* Added semantic tags to identifiers and special handling of pervasives *)
-let rec lookup_ident id = 
+let rec lookup_ident local id = 
   
   let rec loop (elems:string list) = function
     (* lib externe, index a interrogé *)
@@ -61,9 +61,6 @@ let rec lookup_ident id =
 
       let html_path =
 	try
-	  let local = match !index with 
-	    | Some local -> local 
-	    | None -> raise Not_found in
 	  Some (Index.local_lookup local ~is_class:is_class (name::elems))
 	with 
 	    Not_found -> 
@@ -123,20 +120,24 @@ let rec lookup_ident id =
     | Oide_dot (sub_id, name) ->
       loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->
-      Apply (lookup_ident id1, lookup_ident id2)
+      Apply (lookup_ident local id1, lookup_ident local id2)
   in
 
   loop [] id
 
 let rec print_ident ppf id =
-  match lookup_ident id with
-    | Unresolved name -> fprintf ppf "@{<unresolved>%s@}" name
-    | Resolved (uri, name) -> fprintf ppf "@{<path:%s>%s@}" (Uri.to_string uri) name
-    | Apply _ -> 
-      (match id with 
-	| Oide_apply (id1, id2) -> 
-	  fprintf ppf "%a(%a)" print_ident id1 print_ident id2
-	| _ -> fprintf ppf "ident print bug")
+  let local = match !index with 
+    | Some local -> local 
+    | None -> assert false 
+  in
+    match lookup_ident local id with
+      | Unresolved name -> fprintf ppf "@{<unresolved>%s@}" name
+      | Resolved (uri, name) -> fprintf ppf "@{<path:%s>%s@}" (Uri.to_string uri) name
+      | Apply _ -> 
+        (match id with 
+          | Oide_apply (id1, id2) -> 
+            fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+          | _ -> fprintf ppf "ident print bug")
       
 (* Types *)
 (* Types *)
@@ -291,8 +292,8 @@ let rec tree_of_path ?(is_class=false) p =
   | Path.Papply(p1, p2) ->
     Oide_apply (tree_of_path ~is_class:is_class p1, tree_of_path ~is_class:is_class p2)
       
-let path ppf is_class p =
-   lookup_ident (tree_of_path ~is_class:is_class p)
+let path local is_class p =
+   lookup_ident local (tree_of_path ~is_class:is_class p)
      
 (* Print a type expression *)
 
