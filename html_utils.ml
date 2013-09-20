@@ -74,7 +74,7 @@ let make_record_label_cell parent_name name is_mutable label_type info =
 
   let body_td = 
     let cd = Html.code ~cls:"type" label_type in
-    <:html<<td align="left" valign="top"><code>$html_name$ : $cd$</code></td>&>> in
+    <:html<<td align="left" valign="top"><code>$html_name$ : $cd$;</code></td>&>> in
   
   let info_td = match info with 
 	       | Some i -> make_field_comment i
