@@ -14,7 +14,7 @@ _build/$(TARGET).byte _build/$(TARGET).native: *.mli *.ml
 clean:
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind -clean
 
-install:
+install:all
 	mkdir -p $(BINDIR)
 	cp $(TARGET).byte $(BINDIR)/$(BINNAME)
 	cp $(TARGET).native $(BINDIR)/$(BINNAME).opt
