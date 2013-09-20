@@ -293,14 +293,18 @@ function expand_includes(depth){
      if ($mod_includes.length != 0){
 
          $mod_includes.each(function(){
-            $(this).removeClass('ocaml_include');
-            $(this).addClass('processed_include');
+             $(this).removeClass('ocaml_include');
+             $(this).addClass('processed_include');
 
-             if(depth < 2){
-                 expand_include(this)
-                 wrap_element($(this)[0], false);
-             } else {
-                 expand_include_lazy($(this)[0], depth);
+             var path = $(this).attr(\"path\");
+	     if (typeof path !== 'undefined'){
+
+                 if(depth < 2){
+                     expand_include(this)
+                     wrap_element($(this)[0], false);
+                 } else {
+                     expand_include_lazy($(this)[0], depth);
+                 }
              }
           });
   
