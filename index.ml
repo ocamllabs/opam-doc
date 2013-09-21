@@ -44,7 +44,7 @@ let read_global_file path =
       global
     with
       | Sys_error _ -> {map= CrcMap.empty; package_list= []}
-
+	
 let update_global global filenames =
   let doFile acc fname =
     let cmio, cmto = Cmt_format.read fname in
@@ -69,6 +69,29 @@ let update_global global filenames =
 		(Packed_module
 		   (Opam_doc_config.current_package (),
 		    (List.filter ((<>) (name,crc)) cmi.Cmi_format.cmi_crcs)))
+		acc
+	    | Cmt_format.Implementation _
+	    | Cmt_format.Interface _ ->
+	      CrcMap.add (module_name, crc)
+		(Direct_path (Opam_doc_config.current_package (), module_name))
+		acc
+	    | _ -> acc (* shouldn't happen but you never know :l *)
+	end
+      (** In case the cmi is not included in the cmt file *)
+      | None, Some cmt ->
+	let module_name = cmt.Cmt_format.cmt_modname in
+	let (name, crc) = 
+	  List.find (fun (n,_) -> module_name = n) cmt.Cmt_format.cmt_imports in
+	begin
+	  match cmt.Cmt_format.cmt_annots with
+	    | Cmt_format.Packed _ ->
+	      (* The references should be present in the table after the update *)
+	      CrcMap.add
+		(module_name, crc)
+		(* Filter the self-references *)
+		(Packed_module
+		   (Opam_doc_config.current_package (),
+		    (List.filter ((<>) (name,crc)) cmt.Cmt_format.cmt_imports)))
 		acc
 	    | Cmt_format.Implementation _
 	    | Cmt_format.Interface _ ->
