@@ -308,7 +308,8 @@ function expand_includes(depth){
              }
           });
   
-         expand_includes(depth + 1); // the processed includes could unwrap others includes
+         // expand_includes(depth + 1); // the processed includes could unwrap others includes
+         window.setTimeout(function(){expand_includes(depth + 1);},1)
   
          //should continue?
          return true;
@@ -409,11 +410,22 @@ function shrink_classes (){
 function expand_sub_nodes(){
 
     var b = false; 
-    do {
-	b = expand_includes(0);
-	shrink_modules();
-	b = shrink_classes() || b; // inherits could contains inherits as well
-    } while (b); // modules aliases may contain includes as well
+    // do {
+    //     b = expand_includes(0);
+    //     shrink_modules();
+    //     b = shrink_classes() || b; // inherits could contains inherits as well
+    // } while (b); // modules aliases may contain includes as well
+
+    function loop() {
+        b = expand_includes(0);
+        shrink_modules();
+        b = shrink_classes() || b; // inherits could contains inherits as well
+        if (b) {  // modules aliases may contain includes as well
+            window.setTimeout(loop, 1)
+        }
+    }
+    window.setTimeout(loop, 1);
+
        
     // $(opamdoc_contents).append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
 }

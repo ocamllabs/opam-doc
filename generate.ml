@@ -72,6 +72,9 @@ let rec add_include_references sig_list =
     ) 
     sig_list      	  
  
+
+
+
 (* TODO add support for references *)
 let rec generate_text_element local elem =
   match elem with
@@ -86,9 +89,88 @@ let rec generate_text_element local elem =
     | Block text -> <:html<<blockquote>$generate_text local text$</blockquote>&>>
     | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
     | Ref(rk, s, t) -> (* ref check*)
-      <:html<TODO reference : $str:s$>>
+        reference local rk s t (* <:html<TODO reference : $str:s$>> *)
     | Special_ref _ -> <:html<TODO special ref>> (* raise (Failure "Not implemented") *)
     | Target _ -> <:html<TODO target>> (* raise (Failure "Not implemented") *)
+
+and reference local (rk:ref_kind) (s:string) (t:text option) = match rk with
+    RK_element ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_element $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_element $str:s$">$str:s$</a>&>>
+      end
+  | RK_module ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_module $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_module $str:s$">$str:s$</a>&>>
+      end
+  | RK_module_type ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_module_type $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_module_type $str:s$">$str:s$</a>&>>
+      end
+  | RK_class ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_class $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_class $str:s$">$str:s$</a>&>>
+      end
+  | RK_class_type ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_class_type $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_class_type $str:s$">$str:s$</a>&>>
+      end
+  | RK_value ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_value $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_value $str:s$">$str:s$</a>&>>
+      end
+  | RK_type ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_type $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_type $str:s$">$str:s$</a>&>>
+      end
+  | RK_exception ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_exception $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_exception $str:s$">$str:s$</a>&>>
+      end
+  | RK_attribute ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_attribute $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_attribute $str:s$">$str:s$</a>&>>
+      end
+  | RK_method ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_method $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_method $str:s$">$str:s$</a>&>>
+      end
+  | RK_section ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_section $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_section $str:s$">$str:s$</a>&>>
+      end
+  | RK_recfield ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_recfield $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_recfield $str:s$">$str:s$</a>&>>
+      end
+  | RK_const ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_const $str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_const $str:s$">$str:s$</a>&>>
+      end
+  | RK_link ->
+      begin match t with
+        | Some t -> <:html< <a href="$str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a href="$str:s$">$str:s$</a>&>>
+      end
+  | RK_custom c ->
+      begin match t with
+        | Some t -> <:html< <a title="RK_custom c" href="$str:s$">$generate_text local t$</a>&>>
+        | None -> <:html<<a title="RK_custom: $str:c$" href="$str:s$">$str:s$</a>&>>
+      end
+
+
 
 and generate_text local text =
   List.fold_left 
