@@ -106,10 +106,10 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
         | Some t -> <:html< <a title="$str:c$" href="$str:s$">$generate_text local t$</a>&>>
         | None -> <:html< <a title="$str:c$" href="$str:s$">$str:s$</a>&>>
       end
-  | RK_element -> let title = "RK_element " ^ s in
+  | RK_element -> let title = "#" ^ s in
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html< <a href="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a href="$str:title$">$str:s$</a>&>>
       end
   | RK_module -> let title = "RK_module " ^ s in
       begin match t with
