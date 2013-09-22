@@ -94,80 +94,80 @@ let rec generate_text_element local elem =
     | Target _ -> <:html<TODO target>> (* raise (Failure "Not implemented") *)
 
 and reference local (rk:ref_kind) (s:string) (t:text option) = match rk with
-    RK_element ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_element $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_element $str:s$">$str:s$</a>&>>
-      end
-  | RK_module ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_module $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_module $str:s$">$str:s$</a>&>>
-      end
-  | RK_module_type ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_module_type $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_module_type $str:s$">$str:s$</a>&>>
-      end
-  | RK_class ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_class $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_class $str:s$">$str:s$</a>&>>
-      end
-  | RK_class_type ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_class_type $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_class_type $str:s$">$str:s$</a>&>>
-      end
-  | RK_value ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_value $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_value $str:s$">$str:s$</a>&>>
-      end
-  | RK_type ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_type $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_type $str:s$">$str:s$</a>&>>
-      end
-  | RK_exception ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_exception $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_exception $str:s$">$str:s$</a>&>>
-      end
-  | RK_attribute ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_attribute $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_attribute $str:s$">$str:s$</a>&>>
-      end
-  | RK_method ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_method $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_method $str:s$">$str:s$</a>&>>
-      end
-  | RK_section ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_section $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_section $str:s$">$str:s$</a>&>>
-      end
-  | RK_recfield ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_recfield $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_recfield $str:s$">$str:s$</a>&>>
-      end
-  | RK_const ->
-      begin match t with
-        | Some t -> <:html< <a title="RK_const $str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_const $str:s$">$str:s$</a>&>>
-      end
   | RK_link ->
       begin match t with
         | Some t -> <:html< <a href="$str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a href="$str:s$">$str:s$</a>&>>
+        | None -> <:html< <a href="$str:s$">$str:s$</a>&>>
       end
   | RK_custom c ->
       begin match t with
-        | Some t -> <:html< <a title="RK_custom c" href="$str:s$">$generate_text local t$</a>&>>
-        | None -> <:html<<a title="RK_custom: $str:c$" href="$str:s$">$str:s$</a>&>>
+        | Some t -> <:html< <a title="$str:c$" href="$str:s$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:c$" href="$str:s$">$str:s$</a>&>>
+      end
+  | RK_element -> let title = "RK_element " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_module -> let title = "RK_module " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_module_type -> let title = "RK_module_type " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_class -> let title = "RK_class " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_class_type -> let title = "RK_class_type " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_value -> let title = "RK_value " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_type -> let title = "RK_type " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_exception -> let title = "RK_exception " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_attribute -> let title = "RK_attribute " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_method -> let title = "RK_method " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_section -> let title = "RK_section " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_recfield -> let title = "RK_recfield " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+      end
+  | RK_const -> let title = "RK_const " ^ s in
+      begin match t with
+        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
       end
 
 
