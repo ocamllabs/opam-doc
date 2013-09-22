@@ -89,11 +89,13 @@ let rec generate_text_element local elem =
     | Block text -> <:html<<blockquote>$generate_text local text$</blockquote>&>>
     | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
     | Ref(rk, s, t) -> (* ref check*)
-        reference local rk s t (* <:html<TODO reference : $str:s$>> *)
+        reference local rk s t
     | Special_ref _ -> <:html<TODO special ref>> (* raise (Failure "Not implemented") *)
-    | Target _ -> <:html<TODO target>> (* raise (Failure "Not implemented") *)
+    | Target (target, code) -> <:html< <code class="Target">$str:code$</code>&>> (* TODO: fixme *)
 
-and reference local (rk:ref_kind) (s:string) (t:text option) = match rk with
+and reference local (rk:ref_kind) (s:string) (t:text option) =
+  (* TODO: fixme *)
+  match rk with
   | RK_link ->
       begin match t with
         | Some t -> <:html< <a href="$str:s$">$generate_text local t$</a>&>>
@@ -170,8 +172,6 @@ and reference local (rk:ref_kind) (s:string) (t:text option) = match rk with
         | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
       end
 
-
-
 and generate_text local text =
   List.fold_left 
     (fun acc elem -> <:html<$acc$$generate_text_element local elem$>>)
@@ -195,7 +195,7 @@ and generate_style local sk t =
     | SK_right -> <:html<<div align="right">$elem$</div>&>>
     | SK_superscript -> <:html<<sup class="superscript">$elem$</sup>&>>
     | SK_subscript -> <:html<<sub class="subscript">$elem$</sub>&>>
-    | SK_custom _ -> <:html<TODO custom>> 
+    | SK_custom c -> let sk = "SK_custom_" ^ c in <:html<<span class="$str:sk$"> custom</span>&>> 
   (*TODO raise (Failure "Not implemented: Custom styles")*)
   in
   f (generate_text local t)
