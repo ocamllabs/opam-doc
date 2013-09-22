@@ -106,25 +106,36 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
         | Some t -> <:html< <a title="$str:c$" href="$str:s$">$generate_text local t$</a>&>>
         | None -> <:html< <a title="$str:c$" href="$str:s$">$str:s$</a>&>>
       end
-  | RK_element -> let title = "#" ^ s in
+  | RK_element -> let href = "#" ^ s in
       begin match t with
-        | Some t -> <:html< <a href="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a href="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html< <a href="$str:href$">$generate_text local t$</a>&>>
+        | None -> <:html< <a href="$str:href$">$str:s$</a>&>>
       end
-  | RK_module -> let title = "RK_module " ^ s in
+  | RK_module -> let x = "javascript:document.location.href += &module='" ^ s ^ "'" in
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html< <a href="$str:x$">$generate_text local t$</a>&>>
+        | None -> <:html< <a href="$str:x$">$str:s$</a>&>>
       end
   | RK_module_type -> let title = "RK_module_type " ^ s in
       begin match t with
         | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
         | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
       end
-  | RK_class -> let title = "RK_class " ^ s in
-      begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+  | RK_class ->
+      begin
+        if String.contains s '.' then
+          let ri = String.rindex s '.' in
+          let m = String.sub s 0 ri
+          and c = String.sub s (ri+1) (String.length s - ri - 1) in
+          let onclick = Printf.sprintf "document.location.href += '&module=%s#%s'" m c in
+          match t with
+          | Some t -> <:html< <a onclick="$str:onclick$">$generate_text local t$</a>&>>
+          | None -> <:html< <a onclick="$str:onclick$">$str:s$</a>&>>
+        else
+          let href = Printf.sprintf "#%s" s in
+          match t with
+          | Some t -> <:html< <a href="$str:href$">$generate_text local t$</a>&>>
+          | None -> <:html< <a href="$str:href$">$str:s$</a>&>>
       end
   | RK_class_type -> let title = "RK_class_type " ^ s in
       begin match t with
@@ -195,8 +206,10 @@ and generate_style local sk t =
     | SK_right -> <:html<<div align="right">$elem$</div>&>>
     | SK_superscript -> <:html<<sup class="superscript">$elem$</sup>&>>
     | SK_subscript -> <:html<<sub class="subscript">$elem$</sub>&>>
-    | SK_custom c -> let sk = "SK_custom_" ^ c in <:html<<span class="$str:sk$"> custom</span>&>> 
-  (*TODO raise (Failure "Not implemented: Custom styles")*)
+    | SK_custom c -> let sk = "SK_custom" in <:html<<span class="$str:sk$">{$str:c$ $elem$}</span>&>> 
+        (* TODO: check SK_custom. 
+           pw374: This feature seems not to be documented in
+           http://caml.inria.fr/pub/docs/manual-ocaml-4.00/manual029.html *)
   in
   f (generate_text local t)
 
@@ -297,7 +310,7 @@ let generate_info local info =
     match info.i_since with
       | None -> jinfo
       | Some s -> 
-        <:html<$jinfo$<b>Since</b> $str:s$&>>
+        <:html<$jinfo$ <b>Since</b> $str:s$&>>
   in
   let jinfo = 
     match info.i_before with
@@ -321,13 +334,13 @@ let generate_info local info =
     match info.i_raised_exceptions with
       | [] -> jinfo
       | raised -> 
-        <:html<$jinfo$<b>Raises</b> $generate_raised local raised$&>>
+        <:html<$jinfo$ <b>Raises</b> $generate_raised local raised$&>>
   in
   let jinfo = 
     match info.i_return_value with
       | None -> jinfo
       | Some t -> 
-	<:html<$jinfo$<b>Returns</b> $generate_text local t$>>
+	<:html<$jinfo$ <b>Returns</b> $generate_text local t$>>
   in
   Html_utils.make_info (Some jinfo)
     
