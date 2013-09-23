@@ -1417,7 +1417,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           sprintf "( %s )" name
         else
           match name.[0] with
-          | '+' | '-' | '/' | '@' | '^' | '!' | ':' | '<' | '=' | '>' -> sprintf "(%s)" name
+          | '&' | '|' | '~' | '+' | '-' | '/' | '@' | '^' | '!' | ':' | '<' | '=' | '>' -> sprintf "(%s)" name
           | _ -> name
     in
       let signature = generate_mark Opam_doc_config.Value 
