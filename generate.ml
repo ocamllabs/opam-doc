@@ -1407,6 +1407,19 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_value_item name typ info =
     let open Html_utils in
+    let open Printf in
+    let name =
+      match name with
+      | "lsl" | "lsr" | "asr" | "mod" | "land" | "lor" | "lxor" | "or" ->
+         sprintf "(%s)" name
+      | _ ->
+        if name.[0] = '*' || name.[String.length name - 1] = '*' then
+          sprintf "( %s )" name
+        else
+          match name.[0] with
+          | '+' | '-' | '/' | '@' | '^' | '!' | ':' | '<' | '=' | '>' -> sprintf "(%s)" name
+          | _ -> name
+    in
       let signature = generate_mark Opam_doc_config.Value 
 	name <:html<$keyword "val"$ $str:name$>> in
       let cd = Html.code ~cls:"type" typ in
