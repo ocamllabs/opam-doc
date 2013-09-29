@@ -1831,31 +1831,45 @@ let output_toplevel_module module_name html_elements =
 
 let generate_file_from_interface local module_name doctree intf =
   glob_env := [module_name];
-  let ditems_opt, info = match doctree with
+  let ditems_opt, info, descr = match doctree with
       | Some (Dfile_intf dintf) ->
 	Some dintf.dintf_items,
-	generate_info_opt local dintf.dintf_info
-      | None | _ -> None, None in
-
+	generate_info_opt local dintf.dintf_info,
+	begin
+	  match dintf.dintf_info with
+	    | Some info -> 
+	      let shorten_info = Html_utils.cut_first_sentence info in
+	      generate_info local shorten_info
+	    | None -> Cow.Html.nil
+	end
+	
+      | None | _ -> None, None, Cow.Html.nil in
+  
   let items = generate_signature_item_list local ditems_opt intf.sig_items in
-  let items,descr = match info with None -> items, Cow.Html.nil | Some i -> i :: items, i in
+  let items = match info with None -> items | Some i -> i :: items in
 
   output_toplevel_module module_name items;
   module_name, descr
 
 let generate_file_from_structure local module_name doctree impl =
   glob_env := [module_name];
-  let ditems_opt, info = match doctree with
+  let ditems_opt, info, descr = match doctree with
     | Some (Dfile_impl dimpl) ->
       Some dimpl.dimpl_items,
-      generate_info_opt local dimpl.dimpl_info
-    | None | _ -> None, Some Cow.Html.nil in
+      generate_info_opt local dimpl.dimpl_info,
+      begin
+	match dimpl.dimpl_info with
+	  | Some info -> 
+	    let shorten_info = Html_utils.cut_first_sentence info in
+	    generate_info local shorten_info
+	  | None -> Cow.Html.nil
+      end
+	
+    | None | _ -> None, None, Cow.Html.nil in
 
   let items = generate_structure_item_list local ditems_opt impl.str_items in
-  let items,descr = match info with None -> items, Cow.Html.nil | Some i -> i :: items, i in
+  let items = match info with None -> items | Some i -> i :: items in
 
   output_toplevel_module module_name items;
   module_name, descr
-(* (Html_utils.make_first_line_info info) *)
-
 

@@ -227,3 +227,44 @@ let generate_global_packages_index global =
 $h$
 </table>&>> in
   create_html_default_skeleton (Opam_doc_config.default_index_name ()) "Opam-Doc" [html_body]
+
+
+(* Module description shortener *)
+
+let find_end_of_sentence s =
+  let i = ref 0 in
+  let len = String.length s in
+  try
+    while true do
+      i := String.index_from s !i '.';
+      incr i;
+      if !i < (len - 1) then
+	begin
+	  match s.[!i] with
+	    | '\n' | '\t' | ' ' -> raise Exit
+	    | _ -> ()
+	end
+    done;
+    assert false
+  with  
+    | Exit -> String.sub s 0 !i
+
+(** Info.t -> Info.t *)
+let cut_first_sentence info =
+  let open Info in
+      match info.i_desc with
+	| None -> Info.dummy
+	| Some text ->
+	  let rec loop acc = function
+	    | ((Raw s) as e)::t -> 
+	      begin
+		try		
+		  let s = find_end_of_sentence s in
+		  List.rev (Raw s::acc)
+		with
+		  | Not_found -> loop (e::acc) t
+	      end
+	    | [] | Newline::_ -> List.rev acc
+	    | h::t -> loop (h::acc) t
+	  in
+	  {Info.dummy with i_desc=Some (loop [] text)}	    

@@ -76,3 +76,6 @@ val create_class_signature_content : Html.t list -> Html.t
 (** Create a class container used by the javascript inliner *)
 val create_class_container : string -> Html.t -> Html.t -> Gentyp.path option
   -> Html.t
+
+(** Extract the first sentence out of an info *)
+val cut_first_sentence : Info.t -> Info.t
