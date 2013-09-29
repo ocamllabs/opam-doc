@@ -206,7 +206,7 @@ let generate_package_index = function
     let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in
     let content = Html.concat (List.map make_content l) in
     let html_content =
-      <:html<<h1>Modules</h1>
+      <:html<<h2>Modules</h2>
 <table class="indextable">
     $content$
 </table>&>>
