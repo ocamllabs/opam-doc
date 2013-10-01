@@ -74,24 +74,88 @@ let rec add_include_references sig_list =
 
 
 
+let rec generate_text local text =
+  let make_paragraph p =
+    if p = Cow.Html.nil then
+       Cow.Html.nil
+    else
+       <:html<<p>$p$</p>&>> 
+  in
+  let rec loop accu current_paragraph p = function
+    | [] ->
+        let cp = make_paragraph current_paragraph in
+        <:html<$accu$$cp$>>
+    | Raw s :: tl ->
+        if p then
+          loop accu <:html<$current_paragraph$$str:s$>> p tl
+        else
+          loop <:html<$accu$$str:s$>> current_paragraph p tl
+    | Code s :: tl ->
+        if p then
+          loop accu <:html<$current_paragraph$<code class="code">$str:s$</code>&>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$<code class="code">$str:s$</code>&>> current_paragraph p tl
+    | PreCode s :: tl ->
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$<code class="code">$str:s$</code>&>> Cow.Html.nil false tl
+    | Verbatim s :: tl ->
+        if p then
+          loop accu <:html<$current_paragraph$<span class="verbatim">$str:s$</span>&>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$<span class="verbatim">$str:s$</span>&>> current_paragraph p tl
+    | Style(sk, t) :: tl ->
+        let s = generate_style local sk t in
+        if p then
+          loop accu <:html<$current_paragraph$$s$>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$$s$>> current_paragraph p tl
+    | List items :: tl ->
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$<ul>$generate_list_items local items$</ul>&>> Cow.Html.nil false tl
+    | Enum items :: tl ->
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$<ol>$generate_list_items local items$</ol>&>> Cow.Html.nil false tl
+    | Newline :: tl ->
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$>> Cow.Html.nil true tl
+    | Block text :: tl ->
+        let s = <:html<<blockquote>$generate_text local text$</blockquote>&>> in
+        if p then
+          loop accu <:html<$current_paragraph$$s$>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$$s$>> current_paragraph p tl
+    | Title(n, lbl, t) :: tl ->
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$$generate_title n lbl (generate_text local t)$>> Cow.Html.nil false tl
+    | Ref(rk, s, t) :: tl -> (* ref check*)
+        let s = reference local rk s t in
+        if p then
+          loop accu <:html<$current_paragraph$$s$>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$$s$>> current_paragraph p tl
 
-(* TODO add support for references *)
-let rec generate_text_element local elem =
-  match elem with
-    | Raw s -> <:html<$str:s$>>
-    | Code s -> <:html<<code class="code">$str:s$</code>&>>
-    | PreCode s -> <:html<<pre class="codepre"><code class="code">$str:s$</code></pre>&>>
-    | Verbatim s -> <:html<<span class="verbatim">$str:s$</span>&>>
-    | Style(sk, t) -> generate_style local sk t
-    | List items -> <:html<<ul>$generate_list_items local items$</ul>&>>
-    | Enum items -> <:html<<ol>$generate_list_items local items$</ol>&>>
-    | Newline -> <:html<<br/>&>>(*should be : <:html<<p>&>>*)
-    | Block text -> <:html<<blockquote>$generate_text local text$</blockquote>&>>
-    | Title(n, lbl, t) -> generate_title n lbl (generate_text local t)
-    | Ref(rk, s, t) -> (* ref check*)
-        reference local rk s t
-    | Special_ref _ -> <:html<TODO special ref>> (* raise (Failure "Not implemented") *)
-    | Target (target, code) -> <:html< <code class="Target">$str:code$</code>&>> (* TODO: fixme *)
+    | Special_ref _ :: tl ->
+        let s = <:html<TODO special ref>> (* raise (Failure "Not implemented") *) in
+        if p then
+          loop accu <:html<$current_paragraph$$s$>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$$s$>> current_paragraph p tl
+
+    | Target (target, code) :: tl ->
+        let s = <:html< <code class="Target">$str:code$</code>&>> (* TODO: fixme *) in
+        if p then
+          loop accu <:html<$current_paragraph$$s$>> p tl
+        else
+          let () = assert (Cow.Html.nil = current_paragraph) in
+          loop <:html<$accu$$s$>> current_paragraph p tl
+  in
+  loop Cow.Html.nil Cow.Html.nil false text
 
 and reference local (rk:ref_kind) (s:string) (t:text option) =
   (* TODO: fixme *)
@@ -183,11 +247,6 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
         | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
       end
 
-and generate_text local text =
-  List.fold_left
-    (fun acc elem -> <:html<$acc$$generate_text_element local elem$>>)
-    Cow.Html.nil
-    text
 
 and generate_list_items local items =
   List.fold_left
