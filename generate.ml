@@ -98,7 +98,7 @@ let rec generate_text local text =
           loop <:html<$accu$<code class="code">$str:s$</code>&>> current_paragraph p tl
     | PreCode s :: tl ->
         let cp = make_paragraph current_paragraph in
-        loop <:html<$accu$$cp$<code class="code">$str:s$</code>&>> Cow.Html.nil false tl
+        loop <:html<$accu$$cp$<pre class="code"><code>$str:s$</code></pre>&>> Cow.Html.nil false tl
     | Verbatim s :: tl ->
         if p then
           loop accu <:html<$current_paragraph$<span class="verbatim">$str:s$</span>&>> p tl
