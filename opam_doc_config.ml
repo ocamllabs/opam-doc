@@ -134,6 +134,21 @@ let default_stylesheet = String.concat "\n"
     (* My stuff *)
     ".expanding_content { border-left:1px solid black; padding: 5px; margin-bottom:5px }";
     ".expanding_content button { width:25px; float:left; margin:3px; }";
+    ".expander { width:1.5em; height:1.5em; border-radius:0.3em; font-weight: bold }";
+    ".expanding_module { border-spacing: 5px 1px }";
+    ".expanding_module td { vertical-align: text-top }";
+    ".expanding_class { border-spacing: 5px 1px }";
+    "table.expanding_include_0, table.expanding_include_1, table.expanding_include_2, table.expanding_include_3, 
+     table.expanding_include_4, table.expanding_include_5, table.expanding_include_6 
+     { border-top: thin dashed; border-bottom: thin dashed; border-collapse: collapse}";
+    "td.expanding_include_0 { background-color: #FFF5F5; }"; 
+    "td.expanding_include_1 { background-color: #F5F5FF; }"; 
+    "td.expanding_include_2 { background-color: #F5FFF5; }"; 
+    "td.expanding_include_3 { background-color: #FFF5FF; }"; 
+    "td.expanding_include_4 { background-color: #FFFFF5; }"; 
+    "td.expanding_include_5 { background-color: #F5FFFF; }"; 
+    "td.expanding_include_6 { background-color: #FFF5EB; }"; 
+    ".edge_column { border-right: 3px solid lightgrey }";
   ]
 
 
@@ -157,658 +172,501 @@ let script_tag =
 <script type="text/javascript" src="$str:script_filename$"> </script>&>>
 
 let default_script = 
-"// var opamdoc_contents = document.getElementsByTagName('body')[0];
-// line above doesn't work well if script loaded before body is created.
-var opamdoc_contents = 'body';
+"var opamdoc_contents = 'body'
 
 // utility - Parse query string
-(function($) {
+function parseParams(query) {
     var re = /([^&=]+)=?([^&]*)/g;
-    var decodeRE = /\\+/g; // Regex for replacing addition symbol with a space
-    var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, \" \") );};
-    $.parseParams = function(query) {
-	query = query.replace(/&amp;/g, '&'); // <= THIS FIXES THE COW HTTP ESCAPING THE &s WHEN IT SHOULDN'T
-	var params = {}, e;
-	while ( e = re.exec(query) ) {
-	    var k = decode( e[1] ), v = decode( e[2] );
-	    if (k.substring(k.length - 2) === '[]') {
-		k = k.substring(0, k.length - 2);
-		(params[k] || (params[k] = [])).push(v);
-	    }
-	    else params[k] = v;
-	}
-	return params;
-    };
-})(jQuery);
-
-//Add event
-var on = (function(){
-    if (window.addEventListener) {
-        return function(target, type, listener){
-            target.addEventListener(type, listener, false);
-        };
-    }
-    else {
-        return function(object, sEvent, fpNotify){
-            object.attachEvent(\"on\" + sEvent, fpNotify);
-        };
-    }
-}());
-
-// OPAM DOC SCRIPT
-
-function create_menu(){
-    var args = $.parseParams(location.search.substring(1));
-    if (typeof args.module !== 'undefined' && args.module != ''){
-	var module_arr = args.module.split(\".\");
-	module_arr.pop();
-	var parent_module = module_arr.join(\".\");
-	var url = '?package='+args.package
-	    +(parent_module!=''?'&module='+parent_module:\"\");
-	return '<a class=\"up\" title=\"'+parent_module+'\" href=\"'+url+'\">Up</a>';
-    }
-}
-
-//load package only
-function load_package_index(package_name){
-    $(opamdoc_contents).load(package_name+\"/index.html\",
-		   function(response, status, xhr){
-		       $(opamdoc_contents)
-			   .prepend(\"<h1>Package \"+package_name+\"</h1>\")
-			   .prepend('<a href=\"?\">Package list</a>');
-		   });
-}
-
-//toggle elements
-function expand_content(){
-    var expand = this.innerHTML == '+'?true:false;
-    this.innerHTML = expand?'-':'+';
-    this.parentNode.lastElementChild.style.display = expand?'block':'none';
-}
-
-function expand_all(){
-    $(\"button\").each(function(){
-        if ($(this)[0].innerHTML == '+')
-           $(this).click();
-    })
-}
-
-
-function add_button(node, is_shrinked, handler, extra_handler){
-    var button = document.createElement(\"button\");
-    button.innerHTML = is_shrinked?'+':'-';
-    button.onclick = handler;
-    if (typeof extra_handler !== 'undefined')
-	on(button, \"click\", extra_handler);
-
-    node.insertBefore(button, node.firstChild);
-}
-
-// node : dom node = <div *>..</div>contents_to_be_hidden</div></div>- is_diplayed = boolean
-function wrap_element(node, is_shrinked){
-    node.classList.add('expanding_content');
-    node.lastElementChild.style.display = is_shrinked?'none':'block';
-    add_button(node, is_shrinked, expand_content);
-}
-
-
-function expand_include(include){
-    try {
-        if ($(include).is(\".ident\")){
-            var path = $(include).attr(\"path\");
-            
-            var args = $.parseParams(path.substring(1));
-            var module_arr = args.module.split(\".\");
-            
-            var $data = perform_ajax_request(args.package+'/'+ module_arr[0]+'.html', false);
-            var result = lookup_module($data, module_arr.slice(1));
-            result.content.find(\"> div.info\").remove();
-            
-            //.wrap(\"<div></div>\").parent() doesn't work here - Oo
-            var new_node = $(document.createElement(\"div\"));
-            $(include).append($(new_node).append(result.content).html());
+    var decodeRE = /\+/g; // Regex for replacing addition symbol with a space
+    var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, ' ') );};
+    query = query.replace(/&amp;/g, '&'); // <= THIS FIXES THE COW HTTP ESCAPING THE &s WHEN IT SHOULDN'T
+    var params = {}, e;
+    while ( e = re.exec(query) ) {
+        var k = decode( e[1] ), v = decode( e[2] );
+        if (k.substring(k.length - 2) === '[]') {
+            k = k.substring(0, k.length - 2);
+            (params[k] || (params[k] = [])).push(v);
         }
-        
-    } catch (e){
-        console.log('Error on expanding an incude');
+        else params[k] = v;
     }
+    return params;
 }
 
-function expand_include_lazy(include, depth){
-    var node = $(include)[0];
-    node.classList.add('expanding_content');
-    add_button(node, true,
-               function () { 
-                   this.innerHTML = '-';
-                   this.onclick = expand_content;
-                   expand_include(include);
-                   expand_includes(depth + 1);
-               });
-}
-
-
-function expand_includes(depth){
-    var $mod_includes = $(document).find(\"div.ocaml_include\");
-
-     if ($mod_includes.length != 0){
-
-         $mod_includes.each(function(){
-             $(this).removeClass('ocaml_include');
-             $(this).addClass('processed_include');
-
-             var path = $(this).attr(\"path\");
-	     if (typeof path !== 'undefined'){
-
-                 if(depth < 2){
-                     expand_include(this)
-                     wrap_element($(this)[0], false);
-                 } else {
-                     expand_include_lazy($(this)[0], depth);
-                 }
-             }
-          });
-  
-         // expand_includes(depth + 1); // the processed includes could unwrap others includes
-         window.setTimeout(function(){expand_includes(depth + 1);},1)
-  
-         //should continue?
-         return true;
-     } else {
-         //should continue?
-         return false;
-     }
-}
-
-function shrink_modules (){
-    var rec_call = false;
-
-    $(\"div.ocaml_module.sig\").each(function (){
-       try {
-	$(this).removeClass(\"ocaml_module sig\");
-	wrap_element($(this)[0], true);
-	} catch (e){
-	    console.log('Error on shrinking with '+$(this).attr('name'));
-	}
-    });
-
-    $(\"div.ocaml_module.ident\").each(function (){
-	try {
-	$(this).removeClass(\"ocaml_module ident\");
-	var path = $(this).attr(\"path\");
-	
-	if (typeof path !== 'undefined'){
-	    var args = $.parseParams(path.substring(1));
-	    var module_arr = args.module.split(\".\");
-	    var url = args.package+'/'+ module_arr[0]+'.html';
-	    
-	    var $data = perform_ajax_request(url, false);
-	    
-	    var result = lookup_module($data, module_arr.slice(1));
-	    result.content.find(\"> div.info\").remove();
-
-	    //.wrap(\"<div></div>\").parent() doesn't work here - Oo
-	    var new_node = $(document.createElement(\"div\"));
-	    $(this).append($(new_node).append(result.content).html());
-
-	    wrap_element($(this)[0], true);
-	    
-	    rec_call = true; // ask for a recursion
-	  }
-	} catch (e){
-	    console.log('Error on expanding : '+$(this).attr('name'));
-	}
-    });
-				     
-    if (rec_call){ shrink_modules();}
-}
-
-function shrink_classes (){
-    var b = false;
-
-    $(\"div.ocaml_class.sig\").each(function (){
-       try {
-	   $(this).removeClass(\"ocaml_class sig\");
-	   wrap_element($(this)[0], true);
-           b = true;
-       } catch (e){
-	   console.log('Error on shrinking with '+$(this).attr('name'));
-       }
-    });
-
-
-    $(\"div.ocaml_class.ident\").each(function (){
-	try {
-	$(this).removeClass(\"ocaml_class ident\");
-	var path = $(this).attr(\"path\");
-	
-	if (typeof path !== 'undefined'){
-	    var args = $.parseParams(path.substring(1));
-	    var module_arr = args.module.split(\".\");
-	    var url = args.package+'/'+ module_arr[0]+'.html';
-	    
-	    var $data = perform_ajax_request(url, false);
-	    
-	    var result = lookup_module($data, module_arr.slice(1));
-	    result = lookup_class(result.content, args.class);
-
-	    //.wrap(\"<div></div>\").parent() doesn't work here - Oo
-	    var new_node = $(document.createElement(\"div\"));
-	    $(this).append($(new_node).append(result.content.html()));
-	    
-	    wrap_element($(this)[0], true);
-            b = true;
-	}
-	} catch (e){
-	    console.log('Error on expanding : '+$(this).attr('name'));
-	}
-    });
-
-    return b;
-}
-
-// Load the included modules, wraps the module content with a button and hides it
-function expand_sub_nodes(){
-
-    var b = false; 
-    // do {
-    //     b = expand_includes(0);
-    //     shrink_modules();
-    //     b = shrink_classes() || b; // inherits could contains inherits as well
-    // } while (b); // modules aliases may contain includes as well
-
-    function loop() {
-        b = expand_includes(0);
-        shrink_modules();
-        b = shrink_classes() || b; // inherits could contains inherits as well
-        if (b) {  // modules aliases may contain includes as well
-            window.setTimeout(loop, 1)
-        }
-    }
-    window.setTimeout(loop, 1);
-
-       
-    // $(opamdoc_contents).append(\"<br/><button onclick='expand_all()'>Expand all</button>\");
-}
-
-function replace_with_constraints($module_content, $constraints){
-    if ($constraints == null) return;
-
-    $constraints.each(function(){
-	var name=$(this).attr('name');
-	
-	if ($(this).is('.type')){
-	    var $node = $module_content.find('> pre > span.TYPE'+name).parent();
-	    $node.append('<code class=\\'type\\'>'+$(this).html()+'</code>');
-	} else {
-	    var $node = $module_content.find('> div[name=\\''+name+'\\'] > pre');
-	    $node.append(' <code class=\\'type\\'>'+$(this).html()+'</code>');
-	}
-    });    
-}
-
-/*
-  module_content => <div> (<pre>|<div class=ocaml_module>) list </div>
-  page_title => B.M.X = Ext.T
-  signature => <div> module a = x  <div class='info'> </div> </div>
-*/
-function write_content($module_content, page_title, signature, $constraints){
-    //Clear the page
-    $(opamdoc_contents).empty();
-
-    //Replace the constraints
-    replace_with_constraints($module_content, $constraints)
-
-    $(opamdoc_contents)
-	.append(create_menu())
-	.append('<h1>'+page_title+'</h1>')
-	.append(signature.html())
-	.append('<hr width=\\'100%\\'>')
-	.append($module_content.html());
-    
-    expand_sub_nodes();
-}
-
-function perform_ajax_request(url, async){
-    console.log('doing ajax request with : '+url);
-    var $data;
+// utility - Fetch HTML from URL using ajax
+function ajax(url, cont){
+    console.log('AJAX request : ' + url);
     $.ajax({
-	type: \"GET\",
-	url:url,
-	async:async
-    }).done(function(data_received){
-	$data = $(data_received.firstChild);
-	if ($data.length == 0)
-	    $data = $(data_received);
+        type: 'GET',
+        url:url,
+        async:true,
+        dataType: 'html'
+    }).done(function(data){
+        cont($(data));
     }).fail(function(){
-	console.log(\"Ajax request failed on : \"+url);
+        console.log('AJAX request failed : ' + url);
     });
-
-    return $data;
 }
 
-// Fetch first found signature
-function lookup_module_rec($data, module_arr, title, signature, constraints){
-    console.log(\"[DEBUG] Call - lookup_module_rec(data:\"+$data+\", module_arr:\"+module_arr+\", title:\"+title+\", signature:\"+signature+\")\");
-    
-    if (module_arr.length == 0)
-	return {content:$data, title:title, signature:signature, constraints:constraints};
+function Path(pathStr){
 
-    // else {
-    var content, target_title;
-    var $query = $data.find('> div.ocaml_module[name='+module_arr[0]+']');
-    
-    // If there are no matching elements, then it can be in an include
-    if ($query.length == 0){
+    var args = parseParams(pathStr);
 
-	var includes = $data.find('> div.ocaml_include');
-	for (var i = 0; i < includes.length; i++){
-	    var item_attr = $(includes[i]).attr('items');
-	    
-	    if (typeof str === undefined){
-		continue;
-	    }
-	    
-	    var items = JSON.parse(item_attr);
+    this.package = null;
+    this.module = null;
+    this.submodules = [];
+    this.class = null;
 
-	    console.log(\"looking for : \"+module_arr[0]);
-	    
-	    // if the include contains the module we are looking for :
-	    if (items.indexOf(module_arr[0]) !== -1){
-		
-		var next_path = $(includes[i]).attr('path');
-		//if this include is an anonymous declaration we do a recursion on the internal content
-		if (typeof next_path === 'undefined'){
-		    var include_sig_content = $(includes[i]).find(\"> div.ocaml_module_content\");
-		    if (include_sig_content.length > 0){
-			return lookup_module_rec(include_sig_content, module_arr, title, signature, constraints);
-		    } else {
-			console.log(\"this include : \"+ includes[i] +\" is weird - it points items it doesn't have -- continue..\");
-			continue;
-		    }
-		} 
-		// if there is a path then we do an ajax request on this
-		else {
-		    var args = $.parseParams(next_path.substring(1));
-
-		    var alias_module_arr = args.module.split('.');
-		
-		    $data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
-		    return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr), title, signature, constraints); 
-		}
-		
-	    } //end of : we found the good entry somewhere
-	    else {
-		// not found, we continue
-		continue;
-	    }
-	}
+    if(typeof args.package !== 'undefined') {
+        this.package = args.package;
+        if(typeof args.module !== 'undefined') {
+            var modules = args.module.split('.');
+            this.module = modules[0];
+            if(modules.length > 1) {
+                this.submodules = modules.splice(1);
+            }
+            if(typeof args.class !== 'undefined') {
+                this.class = args.class;
+            }
+        } 
     }
-    // There is a module we found with that name
-    else {
-	// Retrieve the possible constraints
-	var $constraints = $query.find(\"> div.constraints > * \");
-	if ($constraints.length > 0)
-	    constraints = $constraints;
-	
-	
-	//check sig or ident
-	//if sig, recursion with module_content ~ like the include one
-	//else ident, recursion on the ajax request... ~like the include one
+}
 
-	if ($query.is(\"div.sig\")){
-	    var module_sig_content =  $query.find(\"> div.ocaml_module_content\");
-	    title.addSig(module_arr[0]);
-	    
-	    if (signature == null && module_arr.length == 1){
-		signature = $query.find('> pre:not(div.ocaml_module_content)');
-	    }
-	    
-	    return lookup_module_rec(module_sig_content, module_arr.slice(1), title, signature, constraints);
-	} 
-	else {
-	    var next_path = $query.attr('path');
-	    
-	    if (signature == null){
-		signature = $query.find('> pre:not(div.ocaml_module_content)');
-	    }
-	    
-	    if (typeof next_path === 'undefined'){
-		//if this is an ident and there is no path, it is very wrong
-		console.log(\"Incomplete path -- Missing dependencies\");
-		var info_content = $query.prepend('<div class=\"failed_lookup\">Could not lookup the content, process the package\\'s dependencies</div>');
-		return lookup_module_rec(info_content, [], undefined, signature, constraints);
-	    } 
-	    // if there is a path then we do an ajax request on this
-	    else {
-		var args = $.parseParams(next_path.substring(1));
-		var alias_module_arr = args.module.split('.');
-		
-		$data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
-		title.setAlias(args.package, alias_module_arr[0]);
+Path.prototype.name = function () {
+    var name = null;
+    if(this.package !== null) {
+        name = this.package;
+        if(this.module !== null) {
+            name = this.module;
+            if(this.submodules.length > 0){
+                name += '.' + this.submodules.join('.');
+            } 
+            if(this.class !== null){
+                name += '.' + this.class;
+            } 
+        }
+    }        
+    return name;
+}
 
-		return lookup_module_rec($data, alias_module_arr.slice(1).concat(module_arr.slice(1)), title, signature, constraints); 
-	    }
-	}
+Path.prototype.fullName = function () {
+    var fullName = null;
+    if(this.package !== null) {
+        fullName = 'Package ' + this.package;
+        if(this.module !== null) {
+            var module = this.module;
+            if(this.submodules.length > 0){
+                module += '.' + this.submodules.join('.');
+            } 
+            if(this.class === null){
+                fullName = 'Module ' + module;   
+            } else {
+                fullName = 'Class ' + module + '.' + this.class;
+            }
+        }
+    }        
+    return fullName;
+}
+
+Path.prototype.url = function () { 
+    var url = null;
+    if(this.package !== null) {
+        url = '?package=' + this.package;
+        if(this.module !== null) {
+            url += '&module=' + this.module;
+            if(this.submodules.length > 0){
+                url += '.' + this.submodules.join('.');
+            } 
+            if(this.class !== null){
+                url += '.' + this.class;
+            } 
+        }
+    }        
+    return url;
+}
+
+function Parent(path) {
+    this.package = null;
+    this.module = null;
+    this.submodules = [];
+    this.class = null;
+
+    if(path.package !== null) {
+        if(path.module !== null) {
+            this.package = path.package;
+            if(path.submodules.length > 0 || path.class !== null) {
+                this.module = path.module;
+                if(path.class !== null) {
+                    this.submodules = path.submodules;
+                } else {
+                    this.submodules = path.submodules.slice(0, -1);
+                }
+            }
+        } 
     }
-    // }
 }
 
-// data : <div ..> <div include>.</> .. <div module> </> .. <pre></pre> .. </div>
-// Should only be called for internal modules
-function lookup_module($data, module_arr){
-    var empty_title = {_package:'', _module:'', isAlias:false,
-		       setAlias: function(new_package, new_module){
-			   this.isAlias=true; 
-			   this._package=new_package;
-			   this._module = new_module;
-		       },
-		       addSig: function(s){
-			   this._module+=\".\"+s;
-		       },
-		       getLinkedTitle:function(callee_package){
-			   var url = '?package='+(this._package==''?callee_package:this._package)
-			       +'&module='+this._module;
-			   // name = package + module or name = module ****?****
-			   return '<a href=\"'+url+'\">'+this._module+'</a>';
-		       } // Add package into the alias ?
-		      };
-    return lookup_module_rec($data, module_arr, empty_title, null, null);
+Path.prototype.parent = function () { return new Parent(this) }
+
+Parent.prototype = Path.prototype
+
+function PathVisitor(path) {
+    this.path = path;
+    this.submodules = path.submodules.slice(0);
+    this.class = path.class
 }
 
-function lookup_class_rec($data, _class, title, signature){
-    var $query = $data.find('> div.ocaml_class[name='+_class+']');
-    if ($query.length == 0){
-	//Check the includes
+PathVisitor.prototype.current = function (){
+    if(this.submodules.length > 0) {
+        return {kind: 'module', name: this.submodules[0]};
+    } else {
+        if(this.class !== null) {
+            return {kind: 'class', name: this.class};
+        } else {
+            return null;
+        }
+    }
+}
 
-	var includes = $data.find('> div.ocaml_include');
-	for (var i = 0; i < includes.length; i++){
-	    var item_attr = $(includes[i]).attr('items');
-	    
-	    if (typeof str === undefined){
-		continue;
-	    }
-	    
-	    var items = JSON.parse(item_attr);
+PathVisitor.prototype.next = function (){
+    if(this.submodules.length > 0) {
+        this.submodules.shift();
+    } else {
+        if(this.class !== null) {
+            this.class = null;
+        } 
+    }
+    return this;
+}
 
-	    console.log(\"looking for : \"+_class);
-	    
-	    // if the include contains the module we are looking for :
-	    if (items.indexOf(_class) !== -1){
-		
-		var next_path = $(includes[i]).attr('path');
-		//if this include is an anonymous declaration we do a recursion on the internal content
-		if (typeof next_path === 'undefined'){
-		    var include_sig_content = $(includes[i]).find(\"> div.ocaml_module_content\");
-		    if (include_sig_content.length > 0){
-			return lookup_class_rec(include_sig_content, _class, title, signature);
-		    } else {
-			console.log(\"this include : \"+ includes[i] +\" is weird - it points items it doesn't have -- continue..\");
-			continue;
-		    }
-		} 
-		// if there is a path then we do an ajax request on this
-		else {
-		    var args = $.parseParams(next_path.substring(1));
+PathVisitor.prototype.concat = function(pv){
+    this.submodules = this.submodules.concat(pv.submodules);
+    this.class = pv.class;
+    return this;
+}
 
-		    var alias_module_arr = args.module.split('.');
+
+function Page(path){
+    this.path = path;
+    this.alias = null;
+    this.summary = null;
+    this.body = null;
+    this.constraints = null;
+}
+
+Page.prototype.parent_link = function(){
+    var parent = this.path.parent();
+    var title = parent.name();
+    var url = parent.url();
+    if(title !== null && url !== null) {
+        return $('<a>', 
+                 {'class' : 'up', 
+                  title   : title,
+                  href    : url,
+                  text    : 'Up' });
+    }
+    return null;
+}
+
+Page.prototype.title = function(){
+    var alias = null;
+    var equals = '';
+    if(this.alias !== null) {
+        equals = ' = ';
+        alias = $('<a>', 
+                  {href    : this.alias.url(),
+                   text    : this.alias.name()});
+    }
+     
+    return $('<h1>').append(this.path.fullName() + equals).append(alias);
+}
+
+function display_page(page){
+    var plink = page.parent_link();
+    var title = page.title();
+    var summary = page.summary;
+    var rule = $('<hr/>').attr('width','100%');
+    var body = page.body;
+
+    var content = $('<div>')
+        .append(plink)
+        .append(title)
+        .append(summary)
+        .append(rule)
+        .append(body);
+
+    $(opamdoc_contents).html(content);
+}
+
+function load_page(page, pv, data, cont) {
+
+    var current = pv.current();
+
+    if(current === null) {
+        page.summary = $('> div.info', data).first();
+        page.body = data;
+        if(page.path !== pv.path) {
+            page.alias = pv.path
+        }
+        cont(page);
+    } else {
+
+        var kind = current.kind;
+        var name = current.name;
+
+        var query = '> div.ocaml_' + kind + '[name=' + name + ']'
+        var subdata = $(query, data)
+
+        if(subdata.length === 0) {
+
+	    var includes = $('> div.ocaml_include', data);
+
+	    for (var i = 0; i < includes.length; i++){
+
+	        var items = JSON.parse($(includes[i]).attr('items'));
+
+	        if (items.indexOf(name) !== -1){
 		    
-		    $data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
-		    var $include_data = lookup_module($data, alias_module_arr.slice(1)); 
-		    return lookup_class_rec($include_data.content, _class, title, signature);
-		}
-		
-	    } //end of : we found the good entry somewhere
-	    else {
-		// not found, we continue
-		continue;
+		    var pathAttr = $(includes[i]).attr('path');
+
+		    if (typeof pathAttr === 'undefined'){
+		        var content = $('> div.ocaml_' + kind + '_content', includes[i]);
+
+			load_page(page, pv, content, cont);
+		    } else {
+		        var include_path = new Path(pathAttr.substring(1));
+                        var include_pv = new PathVisitor(path);
+
+                        var include_url = include_path.package + '/' + include_path.module +'.html'
+                        
+		        ajax(include_url, function(data){
+                            load_page(page, include_pv.concat(pv), data, cont);
+                        });
+		    }
+	        }
 	    }
-	}
-	
+        } else {
+
+	    var pathAttr = subdata.attr('path');
+
+	    if (typeof pathAttr === 'undefined'){
+	        var content = $('> div.ocaml_' + kind + '_content', subdata);
+	        
+	        load_page(page, pv.next(), content, cont);
+	    } else {
+	       
+		var alias_path = new Path(pathAttr.substring(1));
+                var alias_pv = new PathVisitor(alias_path);
+
+                var alias_url = alias_path.package + '/' + alias_path.module +'.html'
+
+		ajax(alias_url, function(data){
+                    load_page(page, alias_pv.concat(pv.next()), data, cont);
+                });
+	    }
+        }
+    }
+}
+
+function load_path(path, cont) {
+    if(path.module !== null) {
+        var url = path.package + '/' + path.module + '.html';
+        ajax(url, function(data){
+            var pg = new Page(path);
+            var pv = new PathVisitor(path);
+            
+            load_page(pg, pv, data, cont);
+        });
     } else {
-	if ($query.is('div.sig')){
-	    var $class_content = $query.find(\"> div.ocaml_class_content\")
-	    
-	    if (signature == null){
-		signature = $query.find('> :not(div.ocaml_class_content)');
-	    }
-	    
-	    return {content:$class_content, signature:signature, title:title};
-	} 
-	else {
-	    //is('div.ident')
-	    var next_path = $query.attr('path');
-	    	    
-	    if (signature == null){
-		signature = $query.find('> *');
-	    }
-
-	    if (typeof next_path === 'undefined'){
-		//if this is an ident and there is no path, it is very wrong
-		console.log(\"Incomplete path -- Missing dependencies\");
-		return $query;
-	    } 
-	    // if there is a path then we do an ajax request on this
-	    else {
-
-		var args = $.parseParams(next_path.substring(1));
-		var alias_module_arr = args.module.split('.');
-		
-		$data = perform_ajax_request(args.package+'/'+ alias_module_arr[0]+'.html', false);
-		module = lookup_module($data, alias_module_arr.slice(1));
-		
-		module.title._module = alias_module_arr[0] + module.title._module;
-		title.setDecorator(module.title);
-		title.setAlias(args.class);
-		
-		$data = module.content;
-		
-		return lookup_class_rec($data, args.class, title, signature);
-	    }
-	}
+        var url = path.package + '/index.html';
+        ajax(url, function(data){
+            var pg = new Page(path);
+            pg.body = data;
+            cont(pg);
+        });
     }
 }
 
-function lookup_class($data, _class){
-    var empty_title = { decorator:null,
-			_class:'',
-			setDecorator: function(title){
-			    this.decorator = title;
-			},
-			setAlias: function(new_class){
-			    this._class = new_class;
-			},
-			isClassAlias : function(){
-			    return this.decorator != null;
-			},
-			getLinkedTitle: function(callee_package){
-			   var url = '?package='+
-				(this.decorator._package==''?callee_package:this.decorator._package)
-				+'&module='+this.decorator._module+'&class='+this._class;
-			   // name = package + module or name = module ****?****
-			   return '<a href=\"'+url+'\">'+this.decorator._module+'.'+this._class+'</a>';
-			}
-		      };
-    return lookup_class_rec($data, _class, empty_title, null);
+function Expander(expanded, button, expansion) {
+    if(expanded) { 
+        button.html('-');
+        expansion.show();
+    } else { 
+        button.html('+');
+        expansion.hide();
+    }
+    this.expanded = expanded;
+    this.button = button;
+    this.expansion = expansion;
 }
 
-function fetch_module_content(_package, _module, _class){
-    var class_def = typeof _class !== 'undefined' && _class != '';
-    
-    var module_arr = _module.split(\".\");
+Expander.prototype.expand = function(expand){
+    if(typeof expand === 'undefined') {
+        expand = ! this.expanded;
+    }
+    if(expand !== this.expanded) {
+        this.button.html(expand ? '-' : '+');
+        if(expand) {
+            this.expansion.show('fast');
+        } else {
+            this.expansion.hide('fast');
+        }
+        this.expanded = expand;
+    }
+}
 
-    var $data = perform_ajax_request(_package+\"/\"+module_arr[0]+\".html\", false);
+function Sig(parent) {
+    if(typeof parent !== 'undefined'){
+        this.cls = null;
+        this.content = null;
+        this.path = null;
+        if(parent !== null) {
+            this.depth = parent.depth + 1;
+            this.icount = parent.icount;
+            this.auto_expand = parent.auto_expand;
+        } else {
+            this.depth = 0;
+            this.icount = 6;
+            this.auto_expand = true;
+        }
+    }
+}
 
-    var $content, signature, title, $constraints;
+Sig.prototype.load_content = function(data){
+    this.load_children(data);
+    this.content = data;
+}
 
-    if (class_def){
-	title = 'Class '+ _class;
+Sig.prototype.load_path = function(data){
+    var pathAttr = data.attr('path');
+    if(typeof pathAttr !== 'undefined') {
+        this.path = new Path(pathAttr.substring(1));
+    }
+}
+
+Sig.prototype.decorate = function(node){
+    var button = $('<button>').addClass('expander');
+    var btn_cell = $('<td>').addClass('expanding_' + this.cls).append(button);
+    var node_cell = $('<td>').addClass('expanding_' + this.cls)
+        .append(node.children()).width('100%');
+    var node_row = $('<tr>').append(btn_cell).append(node_cell);
+    var table = $('<table>')
+        .addClass('expanding_' + this.cls)
+        .width('100%')
+        .append(node_row);
+    if(this.content !== null) {
+        table.append(this.content);
+        var expander = new Expander(this.auto_expand, button, this.content);
+        button.click(function () { expander.expand() });
+    } else if(this.path !== null) {
+        button.html('+');
+        var self = this;
+        var expand = function(page){
+            self.load_content(page.body);
+            table.append(self.content);
+            var expander = new Expander(self.auto_expand, button, self.content);
+            button.click(function () { expander.expand() });
+            expander.expand(true);
+        };
+        if(this.auto_expand) {
+            load_path(self.path, expand);
+        } else {
+            button.click(function () {
+                button.off('click');
+                load_path(self.path, expand);
+            });
+        }
     } else {
-	title = 'Module '+ _module;
+        button.html('+');
+        button.attr("disabled", true);
     }
+    node.append(table);
+}
 
-    // Look up module 
+function IncludeSig(parent, idx) {
+    Sig.call(this, parent);
+    this.icount = (parent.icount + idx + 2) % 7;
+    this.cls = 'include_' + this.icount;
+    if(this.depth > 2) {
+        this.auto_expand = false;
+    }
+}
 
-    // if : toplevel module
-    if (module_arr.length == 1){
-	//Wrapping to be able to use .html() later.
-	signature = $data.find('> div.info:first');
-	signature.remove();
-	signature = signature.wrap('<div></div>').parent();
-	$content = $data.find('> *').wrapAll('<div></div>').parent();
+IncludeSig.prototype = new Sig();
+
+IncludeSig.label = 'include';
+
+IncludeSig.prototype.load_content = function(data) {
+    this.load_children(data);
+    var cell = $('<td>')
+        .attr('colspan', '2')
+        .css('padding', 0)
+        .addClass('expanding_' + this.cls)
+        .append(data);
+    this.content = $('<tr>').append(cell);
+}
+
+function ModuleSig(parent, idx) {
+    Sig.call(this, parent);
+    this.icount = (parent.icount - idx - 1) % 7;
+    this.cls = 'module';
+    this.auto_expand = false;
+}
+
+ModuleSig.prototype = new Sig();
+
+ModuleSig.label = 'module';
+
+ModuleSig.prototype.load_content = function(data) {
+    this.load_children(data);
+    var edge_cell = $('<td>').addClass('edge_column expanding_' + this.cls);
+    var cnt_cell = $('<td>').addClass('expanding_' + this.cls).append(data);
+    this.content = $('<tr>').append(edge_cell).append(cnt_cell);
+}
+
+function ClassSig(parent) {
+    Sig.call(this, parent);
+    this.cls = 'class';
+    this.auto_expand = false;
+}
+
+ClassSig.prototype = new Sig();
+
+ClassSig.label = 'class'
+
+ClassSig.prototype.load_content = function(data) {
+    this.load_children(data);
+    var edge_cell = $('<td>').addClass('edge_column expanding_' + this.cls);
+    var cnt_cell = $('<td>').append(data);
+    this.content = $('<tr>').append(edge_cell).append(cnt_cell);
+}
+
+Sig.prototype.load_children = function(data, Kind){
+    if(typeof Kind === 'undefined') {
+        this.load_children(data, IncludeSig);
+        this.load_children(data, ModuleSig);
+        this.load_children(data, ClassSig);
     } else {
-	var result = lookup_module($data, module_arr.slice(1));
-	signature = result.signature.wrap('<div></div>').parent();
-
-	$content = result.content;
-	if (typeof result.title !== 'undefined' && result.title.isAlias){
-	    title += \" = \" + result.title.getLinkedTitle(_package);
-	}
-	$constraints = result.constraints;
+        var children = $('> div.ocaml_' + Kind.label, data);
+        var self = this;
+        children.each(function(idx) {
+            var sig = new Kind(self, idx);
+            var content = $('div.ocaml_' + Kind.label + '_content', $(this));
+            if(content.length > 0) {
+                sig.load_content(content);
+            } else {
+                sig.load_path($(this));
+            }
+            sig.decorate($(this));
+        });
     }
-
-    if (class_def){
-	var result = lookup_class($content, _class);
-	signature = result.signature.wrap('<div></div>').parent();
-	if (typeof result.title !== 'undefined' && result.title.isClassAlias()){
-	    title += \" = \" + result.title.getLinkedTitle(_package);
-	}
-
-	$content = result.content;
-    }
-
-    write_content($content, title, signature, $constraints);
 }
 
-function main(_package, _module, _type, _class){
-    var pack_def = typeof _package !== 'undefined' && _package != '', 
-    mod_def = typeof _module !== 'undefined' && _module != '',
-    typ_def = typeof _type !== 'undefined' && _type != '';
-
-    
-    if (pack_def && !mod_def){
-	load_package_index(_package);
-    } else if (pack_def && mod_def) {
-	fetch_module_content(_package, _module, _class);
-    }
-
-    if (typ_def){
-	var $type_target = $('pre > span.TYPE'+_type+':visible');
-	if ($type_target.length ==  0){
-	    $type_target = $('pre > code > span.TYPE'+_type+':visible');
-	}
-	if ($type_target.length > 0){
-	    scrollTo(0, $type_target.position().top);
-	    $type_target.css('background', 'yellow');
-	}
-    } 
-    
-}
-
-
-
-var args = $.parseParams(location.search.substring(1));
-
-$(document).ready(function(){
-    main(args.package, args.module, args.type, args.class);
+$(document).ready(function () {
+    var p = new Path(location.search.substring(1));
+    var sig = new Sig(null);
+    load_path(p, function(page){
+        sig.load_content(page.body);
+        display_page(page);
+    });
 });
 "
