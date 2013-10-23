@@ -504,7 +504,7 @@ function load_page(page, pv, data, cont) {
 			load_page(page, pv, content, cont);
 		    } else {
 		        var include_path = new Path(pathAttr.substring(1));
-                        var include_pv = new PathVisitor(path);
+                        var include_pv = new PathVisitor(include_path);
 
                         var include_url = include_path.package + '/' + include_path.module +'.html'
                         
