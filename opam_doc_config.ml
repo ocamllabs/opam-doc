@@ -219,6 +219,7 @@ function Path(pathStr){
     this.subnames = [];
     this.subkinds = [];
     this.class = null;
+    this.type = null;
 
     if(typeof args.package !== 'undefined') {
         this.package = args.package;
@@ -256,6 +257,9 @@ function Path(pathStr){
             }
             if(typeof args.class !== 'undefined') {
                 this.class = args.class;
+            }
+            if(typeof args.type !== 'undefined') {
+                this.type = args.type;
             }
         } 
     }
@@ -314,7 +318,10 @@ Path.prototype.url = function () {
             } 
             if(this.class !== null){
                 url += '&class=' + this.class;
-            } 
+            }
+            if(this.type !== null){
+                url += '&type=' + this.type;
+            }
         }
     }        
     return url;
@@ -326,6 +333,7 @@ function Parent(path) {
     this.subnames = [];
     this.subkinds = [];
     this.class = null;
+    this.type = null;
 
     if(path.package !== null) {
         if(path.module !== null) {
@@ -393,6 +401,7 @@ function Page(path){
     this.summary = null;
     this.body = null;
     this.constraints = null;
+    this.jump = null;
 }
 
 Page.prototype.parent_link = function(){
@@ -440,6 +449,11 @@ function display_page(page){
         .append(rule)
         .append(body);
 
+    if(page.jump !== null) {
+        scrollTo(0, page.jump.position().top);
+        page.jump.css('background', 'yellow');
+    }
+
     $(opamdoc_contents).html(content);
 }
 
@@ -452,6 +466,16 @@ function load_page(page, pv, data, cont) {
         page.body = data;
         if(page.path !== pv.path) {
             page.alias = pv.path
+        }
+        if(page.path.type !== null)
+        {
+            var jump = $('pre > span.TYPE'+page.path.type, data);
+	    if (jump.length == 0){
+	        jump = $('pre > code > span.TYPE'+page.path.type, data);
+	    }
+	    if (jump.length > 0){
+	        page.jump = jump;
+	    }
         }
         cont(page);
     } else {
