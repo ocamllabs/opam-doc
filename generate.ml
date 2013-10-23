@@ -1467,13 +1467,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
     match type_decl.typ_manifest, type_decl.typ_kind with
       | Some typ, Ttype_record _ ->
         let cd = Html.code ~cls:"type" (generate_typ local typ) in
-        <:html<= {$cd$}>>
+        <:html<{$cd$}>>
       | Some typ, _ ->
         let cd = Html.code ~cls:"type" (generate_typ local typ) in
-        <:html<= $cd$>>
-      | None, Ttype_record _ ->  <:html<= {>>
+        <:html<$cd$>>
+      | None, Ttype_record _ ->  <:html<{>>
       | None, Ttype_abstract -> Cow.Html.nil
-      | None, _ -> <:html<= >>
+      | None, _ -> Cow.Html.nil
   in
                                         
   let h_f =
@@ -1485,7 +1485,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   let signature = generate_mark Opam_doc_config.Type name
     <:html<$keyword "type"$ $params_variances$$str:name$>> in
-  let signature = h_f <:html<$signature$ $manifest$$priv$>> in
+  let signature = h_f <:html<$signature$ = $priv$ $manifest$>> in
 
   <:html<$signature$$body$$info$>>
 
