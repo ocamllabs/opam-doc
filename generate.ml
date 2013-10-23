@@ -26,34 +26,50 @@ let generate_html_path local kind (p : Path.t) : Cow.Html.t =
 let glob_env = ref []
 
 let push_mod id = 
-  glob_env := (id.Ident.name) :: !glob_env
+  glob_env := (id.Ident.name, Uris.Module) :: !glob_env
 
 let pop_mod id =
   match !glob_env with
-    name :: rest when name = (id.Ident.name) -> glob_env := rest
+    (name, Uris.Module) :: rest when name = id.Ident.name -> glob_env := rest
+  | _ -> raise (Failure "pop_mod")
+
+let push_modtype id = 
+  glob_env := (id.Ident.name, Uris.ModType) :: !glob_env
+
+let pop_modtype id =
+  match !glob_env with
+    (name, Uris.ModType) :: rest when name = id.Ident.name -> glob_env := rest
   | _ -> raise (Failure "pop_mod")
 
 let current_class_uri name =
-  let elems = name :: !glob_env in
-  Uris.uri Uris.Class (List.rev elems)
+  let elems = (name, Uris.Class) :: !glob_env in
+  Uris.uri (List.rev elems)
 
 let current_modtype_uri () =
-  Uris.uri Uris.ModType (List.rev !glob_env)
+  Uris.uri (List.rev !glob_env)
 
 let current_module_uri () =
-  Uris.uri Uris.Module (List.rev !glob_env)
+  Uris.uri (List.rev !glob_env)
 
 let add_internal_reference id =
    Index.add_internal id (List.rev !glob_env)
 
 let rec add_include_references sig_list =
-  let rec treat_module_type id = function
+  let rec treat_module id = function
     | Mty_ident p -> () (* should really do something ? *)
     | Mty_signature msig ->
       push_mod id;
       add_include_references msig;
       pop_mod id;
-    | Mty_functor (_,_,mtyp) -> treat_module_type id mtyp (* should do more ?*)
+    | Mty_functor (_,_,mtyp) -> treat_module id mtyp (* should do more ?*)
+  in
+  let treat_modtype id = function
+    | Mty_ident p -> () (* should really do something ? *)
+    | Mty_signature msig ->
+      push_modtype id;
+      add_include_references msig;
+      pop_modtype id;
+    | Mty_functor (_,_,mtyp) -> treat_module id mtyp (* should do more ?*)
   in
   List.iter
     (function
@@ -64,13 +80,13 @@ let rec add_include_references sig_list =
         
       | Sig_module (id, mtyp,_) ->
         add_internal_reference id;
-        treat_module_type id mtyp
+        treat_module id mtyp
 
       | Sig_modtype (id, mdecl) ->
         add_internal_reference id;
         (match mdecl with
             Modtype_abstract -> ()
-          | Modtype_manifest mtyp -> treat_module_type id mtyp
+          | Modtype_manifest mtyp -> treat_modtype id mtyp
         )
 
       | Sig_class (id, _, _)
@@ -1674,7 +1690,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
     | dsig_modtype, Tsig_modtype(id, _, tmtydecl) ->
       add_internal_reference id;
 
-      push_mod id;
+      push_modtype id;
 
       let module_result =
         match tmtydecl with
@@ -1687,7 +1703,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       in
 
       let res = generate_module_type_item id.Ident.name module_result item_info in
-      pop_mod id;
+      pop_modtype id;
       res
 
     | dsig_include, Tsig_include(mty, typ_sig) ->
@@ -1810,7 +1826,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
           add_internal_reference id;
         
-          push_mod id;
+          push_modtype id;
                 
           let module_result =
             generate_module_type local
@@ -1820,7 +1836,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           in
         
           let res =  generate_module_type_item id.Ident.name module_result item_info in
-          pop_mod id;
+          pop_modtype id;
           res
         
         | dstr_include, Tstr_include(mexpr, typ_sig) ->
@@ -1894,7 +1910,7 @@ let output_toplevel_module module_name html_elements =
   close_out oc
 
 let generate_file_from_interface local module_name doctree intf =
-  glob_env := [module_name];
+  glob_env := [module_name, Uris.Module];
   let ditems_opt, info, descr = match doctree with
       | Some (Dfile_intf dintf) ->
         Some dintf.dintf_items,
@@ -1916,7 +1932,7 @@ let generate_file_from_interface local module_name doctree intf =
   module_name, descr
 
 let generate_file_from_structure local module_name doctree impl =
-  glob_env := [module_name];
+  glob_env := [module_name, Uris.Module];
   let ditems_opt, info, descr = match doctree with
     | Some (Dfile_impl dimpl) ->
       Some dimpl.dimpl_items,

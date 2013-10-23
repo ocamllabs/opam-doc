@@ -5,5 +5,5 @@ type kind =
   | Class
   | ClassType
   | Type
-val uri : kind -> ?package:string -> string list -> Uri.t
+val uri : ?package:string -> (string * kind) list -> Uri.t
 

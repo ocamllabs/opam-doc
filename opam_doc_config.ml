@@ -209,21 +209,45 @@ function Path(pathStr){
 
     this.package = null;
     this.module = null;
-    this.submodules = [];
-    this.modtype = null;
+    this.subnames = [];
+    this.subkinds = [];
     this.class = null;
 
     if(typeof args.package !== 'undefined') {
         this.package = args.package;
         if(typeof args.module !== 'undefined') {
-            var modules = args.module.split('.');
-            this.module = modules[0];
-            if(modules.length > 1) {
-                this.submodules = modules.splice(1);
+            var modstring = args.module;
+            var names = [];
+            var kinds = [];
+            var done = false;
+            var kind = 'module'
+            var i = 0;
+            while(!done) {
+                var dot_index = modstring.indexOf('.');
+                var colon_index = modstring.indexOf(':');
+                if(dot_index > 0 && (dot_index < colon_index || colon_index < 0)) {
+                    names[i] = modstring.substring(0, dot_index);
+                    kinds[i] = kind;
+                    kind = 'module';
+                    modstring = modstring.substring(dot_index + 1);
+                } else if(colon_index > -1) {
+                    names[i] = modstring.substring(0, colon_index);
+                    kinds[i] = kind;
+                    kind = 'modtype';
+                    modstring = modstring.substring(colon_index + 1);
+                } else {
+                    names[i] = modstring;
+                    kinds[i] = kind;
+                    done = true;
+                }
+                i++;
             }
-            if(typeof args.modtype !== 'undefined') {
-                this.modtype = args.modtype;
-            } else if(typeof args.class !== 'undefined') {
+            this.module = names[0];
+            if(names.length > 1) {
+                this.subnames = names.splice(1);
+                this.subkinds = kinds.splice(1);
+            }
+            if(typeof args.class !== 'undefined') {
                 this.class = args.class;
             }
         } 
@@ -236,12 +260,10 @@ Path.prototype.name = function () {
         name = this.package;
         if(this.module !== null) {
             name = this.module;
-            if(this.submodules.length > 0){
-                name += '.' + this.submodules.join('.');
+            if(this.subnames.length > 0){
+                name += '.' + this.subnames.join('.');
             } 
-            if(this.modtype !== null){
-                name += '.' + this.modtype;
-            } else if(this.class !== null){
+            if(this.class !== null){
                 name += '.' + this.class;
             } 
         }
@@ -255,15 +277,15 @@ Path.prototype.fullName = function () {
         fullName = 'Package ' + this.package;
         if(this.module !== null) {
             var module = this.module;
-            if(this.submodules.length > 0){
-                module += '.' + this.submodules.join('.');
+            if(this.subnames.length > 0){
+                module += '.' + this.subnames.join('.');
             } 
-            if(this.modtype !== null){
-                fullName = 'Module type ' + module + '.' + this.modtype;   
-            } else if(this.class !== null){
+            if(this.class !== null){
                 fullName = 'Class ' + module + '.' + this.class;
+            } else if (this.subkinds[this.subnames.length - 1] === 'modtype') {
+                fullName = 'Module type ' + module;
             } else {
-                fullName = 'Module ' + module;   
+                fullName = 'Module ' + module;
             }
         }
     }        
@@ -276,12 +298,14 @@ Path.prototype.url = function () {
         url = '?package=' + this.package;
         if(this.module !== null) {
             url += '&module=' + this.module;
-            if(this.submodules.length > 0){
-                url += '.' + this.submodules.join('.');
+            for(var i = 0; i < this.subnames.length; i++) {
+                if(this.subkinds[i] === 'modtype') {
+                    url += ':' + this.subnames[i];
+                } else {
+                    url += '.' + this.subnames[i];
+                }
             } 
-            if(this.modtype !== null){
-                url += '&modtype=' + this.modtype;
-            } else if(this.class !== null){
+            if(this.class !== null){
                 url += '&class=' + this.class;
             } 
         }
@@ -292,19 +316,21 @@ Path.prototype.url = function () {
 function Parent(path) {
     this.package = null;
     this.module = null;
-    this.submodules = [];
-    this.modtype = null;
+    this.subnames = [];
+    this.subkinds = [];
     this.class = null;
 
     if(path.package !== null) {
         if(path.module !== null) {
             this.package = path.package;
-            if(path.submodules.length > 0 || path.modtype !== null || path.class !== null) {
+            if(path.subnames.length > 0 || path.class !== null) {
                 this.module = path.module;
-                if(path.modtype !== null || path.class !== null) {
-                    this.submodules = path.submodules;
+                if(path.class !== null) {
+                    this.subnames = path.subnames;
+                    this.subkinds = path.subkinds;
                 } else {
-                    this.submodules = path.submodules.slice(0, -1);
+                    this.subnames = path.subnames.slice(0, -1);
+                    this.subkinds = path.subkinds.slice(0, -1);
                 }
             }
         } 
@@ -317,18 +343,16 @@ Parent.prototype = Path.prototype
 
 function PathVisitor(path) {
     this.path = path;
-    this.submodules = path.submodules.slice(0);
-    this.modtype = path.modtype;
+    this.subnames = path.subnames.slice(0);
+    this.subkinds = path.subkinds.slice(0);
     this.class = path.class
 }
 
 PathVisitor.prototype.current = function (){
-    if(this.submodules.length > 0) {
-        return {kind: 'module', name: this.submodules[0]};
+    if(this.subnames.length > 0) {
+        return {kind: this.subkinds[0], name: this.subnames[0]};
     } else {
-        if(this.modtype !== null) {
-            return {kind: 'modtype', name: this.modtype};
-        } else if(this.class !== null) {
+        if(this.class !== null) {
             return {kind: 'class', name: this.class};
         } else {
             return null;
@@ -337,20 +361,18 @@ PathVisitor.prototype.current = function (){
 }
 
 PathVisitor.prototype.next = function (){
-    if(this.submodules.length > 0) {
-        this.submodules.shift();
+    if(this.subnames.length > 0) {
+        this.subnames.shift();
+        this.subkinds.shift();
     } else {
-      this.modtype = null;
       this.class = null;
     }
     return this;
 }
 
 PathVisitor.prototype.concat = function(pv){
-    this.submodules = this.submodules.concat(pv.submodules);
-    if(pv.modtype !== null) {
-      this.modtype = pv.modtype;
-    }
+    this.subnames = this.subnames.concat(pv.subnames);
+    this.subkinds = this.subkinds.concat(pv.subkinds);
     if(pv.class !== null) {
       this.class = pv.class;
     }

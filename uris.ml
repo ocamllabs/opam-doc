@@ -14,22 +14,29 @@ type kind =
   | ClassType
   | Type
 
-let uri kind ?package elems = 
+let uri ?package elems = 
   let pkg = package_query package in
   let rec loop sep acc elems = 
     match elems with
       [] -> assert false
-    | [n] -> 
+    | [n, kind] -> 
         let mods = "&module=" ^ acc in
         let comp = 
           match kind with
-            Module -> sep ^ n
-          | ModType -> "&modtype=" ^ n
+            Module -> if sep then "." ^ n else n
+          | ModType -> if sep then ":" ^ n else n
           | Class -> "&class=" ^ n
           | ClassType -> "&classtype=" ^ n
           | Type -> "&type=" ^ n
         in
           pkg ^ mods ^ comp
-    | n :: rest -> loop "." (acc ^ sep ^ n) rest
+    | (n, kind) :: rest -> 
+        let acc = 
+          match kind with
+            Module -> if sep then acc ^ "." ^ n else acc ^ n
+          | ModType -> if sep then acc ^ ":" ^ n else acc ^ n
+          | _ -> assert false
+        in
+          loop true acc rest
   in
-    Uri.of_string (loop "" "" elems)
+    Uri.of_string (loop false "" elems)

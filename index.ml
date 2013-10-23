@@ -126,16 +126,17 @@ let create_local global mds =
   in
   List.fold_left (doMod None) LocalMap.empty mds
 
-let local_lookup local kind elems =
+let local_lookup local elems =
   let rec loop pack = function
-    | [] -> raise Not_found
-    | m :: r ->
+    | (m, Uris.Module) :: r -> begin
 	match LocalMap.find (pack, m) local with
-	| Direct_path (pkg, str) -> pkg, str :: r
+	| Direct_path (pkg, str) -> pkg, (str, Uris.Module) :: r
 	| Packed_module _ -> loop (Some m) r
+      end
+    | _ -> raise Not_found
   in
   let package, path = loop None elems in
-    Uris.uri kind ~package path
+    Uris.uri ~package path
 
 let get_global_packages global =
   global.package_list
@@ -163,6 +164,6 @@ let add_internal = Hashtbl.add internal_table
 
 let lookup_internal kind id elems = 
   let path = 
-    (Hashtbl.find internal_table id) @ [id.Ident.name] @ elems 
+      (Hashtbl.find internal_table id) @ [id.Ident.name, kind] @ elems 
   in
-    Uris.uri kind path    
+    Uris.uri path    
