@@ -134,6 +134,13 @@ let default_stylesheet = String.concat "\n"
     ".expander { width:1.5em; height:1.5em; border-radius:0.3em; font-weight: bold }";
     ".expanding_sig { border-spacing: 5px 1px }";
     ".expanding_sig td { vertical-align: text-top }";
+    ".expanding_include_0 td { vertical-align: text-top }"; 
+    ".expanding_include_1 td { vertical-align: text-top }"; 
+    ".expanding_include_2 td { vertical-align: text-top }"; 
+    ".expanding_include_3 td { vertical-align: text-top }"; 
+    ".expanding_include_4 td { vertical-align: text-top }"; 
+    ".expanding_include_5 td { vertical-align: text-top }"; 
+    ".expanding_include_6 td { vertical-align: text-top }"; 
     "table.expanding_include_0, table.expanding_include_1, table.expanding_include_2, table.expanding_include_3, 
      table.expanding_include_4, table.expanding_include_5, table.expanding_include_6 
      { border-top: thin dashed; border-bottom: thin dashed; border-collapse: collapse}";
@@ -212,6 +219,7 @@ function Path(pathStr){
     this.subnames = [];
     this.subkinds = [];
     this.class = null;
+    this.type = null;
 
     if(typeof args.package !== 'undefined') {
         this.package = args.package;
@@ -249,6 +257,9 @@ function Path(pathStr){
             }
             if(typeof args.class !== 'undefined') {
                 this.class = args.class;
+            }
+            if(typeof args.type !== 'undefined') {
+                this.type = args.type;
             }
         } 
     }
@@ -307,7 +318,10 @@ Path.prototype.url = function () {
             } 
             if(this.class !== null){
                 url += '&class=' + this.class;
-            } 
+            }
+            if(this.type !== null){
+                url += '&type=' + this.type;
+            }
         }
     }        
     return url;
@@ -319,6 +333,7 @@ function Parent(path) {
     this.subnames = [];
     this.subkinds = [];
     this.class = null;
+    this.type = null;
 
     if(path.package !== null) {
         if(path.module !== null) {
@@ -386,6 +401,7 @@ function Page(path){
     this.summary = null;
     this.body = null;
     this.constraints = null;
+    this.jump = null;
 }
 
 Page.prototype.parent_link = function(){
@@ -433,6 +449,11 @@ function display_page(page){
         .append(rule)
         .append(body);
 
+    if(page.jump !== null) {
+        scrollTo(0, page.jump.position().top);
+        page.jump.css('background', 'yellow');
+    }
+
     $(opamdoc_contents).html(content);
 }
 
@@ -445,6 +466,16 @@ function load_page(page, pv, data, cont) {
         page.body = data;
         if(page.path !== pv.path) {
             page.alias = pv.path
+        }
+        if(page.path.type !== null)
+        {
+            var jump = $('pre > span.TYPE'+page.path.type, data);
+	    if (jump.length == 0){
+	        jump = $('pre > code > span.TYPE'+page.path.type, data);
+	    }
+	    if (jump.length > 0){
+	        page.jump = jump;
+	    }
         }
         cont(page);
     } else {
