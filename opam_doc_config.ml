@@ -134,6 +134,13 @@ let default_stylesheet = String.concat "\n"
     ".expander { width:1.5em; height:1.5em; border-radius:0.3em; font-weight: bold }";
     ".expanding_sig { border-spacing: 5px 1px }";
     ".expanding_sig td { vertical-align: text-top }";
+    ".expanding_include_0 td { vertical-align: text-top }"; 
+    ".expanding_include_1 td { vertical-align: text-top }"; 
+    ".expanding_include_2 td { vertical-align: text-top }"; 
+    ".expanding_include_3 td { vertical-align: text-top }"; 
+    ".expanding_include_4 td { vertical-align: text-top }"; 
+    ".expanding_include_5 td { vertical-align: text-top }"; 
+    ".expanding_include_6 td { vertical-align: text-top }"; 
     "table.expanding_include_0, table.expanding_include_1, table.expanding_include_2, table.expanding_include_3, 
      table.expanding_include_4, table.expanding_include_5, table.expanding_include_6 
      { border-top: thin dashed; border-bottom: thin dashed; border-collapse: collapse}";
