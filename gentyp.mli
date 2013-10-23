@@ -6,6 +6,6 @@ type path = Unresolved of string | Resolved of Uri.t * string | Apply of path * 
 
 val html_of_path : path -> Html.t
 
-val path: Index.local -> bool -> Path.t -> path
+val path: Index.local -> Uris.kind -> Path.t -> path
 
 val type_scheme: Index.local -> Types.type_expr -> Html.t

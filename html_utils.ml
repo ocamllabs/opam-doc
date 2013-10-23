@@ -82,21 +82,25 @@ let make_record_label_cell parent_name name is_mutable label_type info =
   
   <:html<$spacing_td$$body_td$$info_td$>>
 
-let create_module_signature_content elements = 	
+let create_signature_content elements = 	
   let elems = Html.concat (Cow.Html.nil :: elements) in
-  <:html<<div class="ocaml_module_content">$elems$</div>&>>
+  <:html<<div class="ocaml_content">$elems$</div>&>>
+
+let create_signature_content elements = 	
+  let elems = Html.concat (Cow.Html.nil :: elements) in
+  <:html<<div class="ocaml_content">$elems$</div>&>>
 
 let create_class_signature_content elements = 	
   let elems = Html.concat elements in
-  <:html<<div class="ocaml_class_content">$elems$</div>&>>
+  <:html<<div class="ocaml_content">$elems$</div>&>>
 
 let create_class_container class_name signature html_content = function
   | Some (Gentyp.Unresolved _) -> 
-    <:html<<div class="ocaml_class ident" name="$str:class_name$">$signature$$html_content$</div>&>>
+    <:html<<div class="ocaml_class" name="$str:class_name$">$signature$$html_content$</div>&>>
   | Some (Gentyp.Resolved (uri, _)) ->
-    <:html<<div class="ocaml_class ident" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
+    <:html<<div class="ocaml_class" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
   | None -> 
-    <:html<<div class="ocaml_class sig" name="$str:class_name$">$signature$$html_content$</div>&>>
+    <:html<<div class="ocaml_class" name="$str:class_name$">$signature$$html_content$</div>&>>
   | Some (Gentyp.Apply _) -> assert false
 
 
@@ -200,7 +204,7 @@ let generate_package_index = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
-      let uri = Uris.module_uri m_name in
+      let uri = Uris.uri Uris.Module [m_name] in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
     let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in

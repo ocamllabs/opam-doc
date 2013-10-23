@@ -67,7 +67,7 @@ val generate_global_packages_index : Index.global -> unit
 
 (** Wrap the module signature elements into a special <div> used by the
     javascript lookup *)
-val create_module_signature_content : Html.t list -> Html.t
+val create_signature_content : Html.t list -> Html.t
 
 (** Wrap the class signature elements into a special <div> used by the
     javascript lookup *)
