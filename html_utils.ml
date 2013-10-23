@@ -204,7 +204,7 @@ let generate_package_index = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
-      let uri = Uris.uri Uris.Module [m_name] in
+      let uri = Uris.uri [m_name, Uris.Module] in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
     let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in

@@ -56,20 +56,20 @@ let index = ref None
    
 (* Added semantic tags to identifiers and special handling of pervasives *)
 let rec lookup_ident local (id, kind) = 
-  let rec loop (elems:string list) = function
+  let rec loop elems kind = function
     | Oide_external_ident name -> 
         let concrete_name =
           let elems = 
             if Opam_doc_config.filter_pervasives () && name = "Pervasives" then 
-              elems
+              List.map fst elems
 	    else 
-              name :: elems
+              name :: (List.map fst elems)
           in
             String.concat "." elems
         in begin
 	  try
 	    let path = 
-              Index.local_lookup local kind (name::elems)
+              Index.local_lookup local ((name, kind)::elems)
             in
               Resolved(path, concrete_name)
 	  with 
@@ -77,7 +77,7 @@ let rec lookup_ident local (id, kind) =
         end
     | Oide_internal_ident(name, id) -> begin
         let concrete_name = 
-          String.concat "." (name :: elems)
+          String.concat "." (name :: (List.map fst elems))
         in
 	try
 	  let path = 
@@ -88,11 +88,11 @@ let rec lookup_ident local (id, kind) =
 	  Not_found -> Unresolved concrete_name
       end	
     | Oide_dot (sub_id, name) ->
-      loop (name::elems) sub_id 
+      loop ((name, kind)::elems) Uris.Module sub_id 
     | Oide_apply (id1, id2) ->
-      Apply (lookup_ident local (id1, kind), lookup_ident local (id2, kind))
+      Apply (lookup_ident local (id1, Uris.Module), lookup_ident local (id2, Uris.Module))
   in
-  loop [] id
+  loop [] kind id
 
 let rec print_ident ppf (id, kind) =
   let local = match !index with 
