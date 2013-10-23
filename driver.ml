@@ -21,21 +21,23 @@ let process_cmd cmd =
 	_ -> None
   )
 
-let check_package_name_conflict global =
+let rec check_package_name_conflict global =
   let rec loop () =
-    Printf.printf "Package '%s' already exists. Proceed anyway? [Y/n/r] \n%!"
-      (Opam_doc_config.current_package ());
-    Scanf.scanf "%c" (function
-      | 'Y' | '\n' -> false
-      | 'n' -> Printf.printf "Conflict unresolved. Exiting now..."; exit 0
-      | 'r' ->
-	Printf.printf "New package name : ";
-	Opam_doc_config.set_current_package (read_line ());
-	false
-      | _ -> loop ())
+    begin
+      Printf.printf "Package '%s' already exists. Proceed anyway? [Y/n/r] \n%!"
+                    (Opam_doc_config.current_package ());
+      Scanf.scanf "%c" (function
+        | 'Y' | 'y' | '\n' -> ()
+        | 'N' | 'n' -> Printf.printf "Conflict unresolved. Exiting now..."; exit 0
+        | 'r' ->
+	    Printf.printf "New package name : ";
+	    Opam_doc_config.set_current_package (read_line ());
+	    check_package_name_conflict global
+        | _ -> loop ())
+    end
   in
-  while Index.package_exists global (Opam_doc_config.current_package ()) &&
-    not (Opam_doc_config.always_proceed ()) && loop () do () done
+  if Index.package_exists global (Opam_doc_config.current_package ()) 
+     && not (Opam_doc_config.always_proceed ()) then loop ()
 
 let process_file global cmd cmt =
   let module_name = String.capitalize
@@ -48,7 +50,7 @@ let process_file global cmd cmt =
     | Some cmi, Some cmt ->
       let imports = cmi.Cmi_format.cmi_crcs in
       let local = create_local global imports in
-      Index.reset_internal_reference_table ();
+      Index.reset_internal_table ();
       try
 	match cmt.Cmt_format.cmt_annots with
           | Cmt_format.Interface intf ->

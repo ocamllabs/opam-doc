@@ -126,43 +126,16 @@ let create_local global mds =
   in
   List.fold_left (doMod None) LocalMap.empty mds
 
-let is_module name =
-  name.[0] >= 'A' && name.[0] <= 'Z'
-
-(* assuming that if a type name is present, it is at the end of the list *)
-let rec assemble_path is_class (package, path) = function
-  | [] -> Uris.module_uri ~package path
-  | h::[] ->
-    if is_module h then
-      Uris.module_uri ~package (path^"."^h)
-    else
-      if is_class then
-        Uris.class_uri ~package path h
-      else
-        Uris.type_uri ~package path h
-  | h::t ->
-    if not (is_module h) then raise (Failure "Incorrect signature");
-    assemble_path is_class (package, path^"."^h) t
-
-let local_lookup local ?(is_class=false) path_elems =
+let local_lookup local kind elems =
   let rec loop pack = function
-    | m1::m2::r ->
-      begin
-	match LocalMap.find (pack, m1) local with
-	  | Direct_path (pack, str) -> (pack,str), (m2::r)
-	  | Packed_module _ ->
-	    loop (Some m1) (m2::r)
-      end
-    | m1::[] ->
-      begin
-      match LocalMap.find (pack, m1) local with
-	| Packed_module _ -> raise Not_found
-	| Direct_path (pack, str) -> (pack, str), []
-      end
     | [] -> raise Not_found
+    | m :: r ->
+	match LocalMap.find (pack, m) local with
+	| Direct_path (pkg, str) -> pkg, str :: r
+	| Packed_module _ -> loop (Some m) r
   in
-  let ((package,path), rest) = loop None path_elems in
-  assemble_path is_class (package,path) rest
+  let package, path = loop None elems in
+    Uris.uri kind ~package path
 
 let get_global_packages global =
   global.package_list
@@ -183,9 +156,13 @@ let add_global_package global package_name info =
 (* Internal references part *)
 let internal_table = Hashtbl.create 32
 
-let reset_internal_reference_table () =
+let reset_internal_table () =
   Hashtbl.reset internal_table
 
-let add_internal_reference = Hashtbl.add internal_table
+let add_internal = Hashtbl.add internal_table
 
-let lookup_internal_reference = Hashtbl.find internal_table
+let lookup_internal kind id elems = 
+  let path = 
+    (Hashtbl.find internal_table id) @ [id.Ident.name] @ elems 
+  in
+    Uris.uri kind path    

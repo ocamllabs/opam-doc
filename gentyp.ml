@@ -16,11 +16,13 @@ open Types
 open Btype
 open Ctype
 
-type out_ident =
-  | Oide_apply of out_ident * out_ident
-  | Oide_dot of out_ident * string
-  | Oide_internal_ident of string * Ident.t * bool (* is_class ? *)
-  | Oide_external_ident of string * bool (* is_class ? *)
+type out_ident_desc =
+  | Oide_apply of out_ident_desc * out_ident_desc
+  | Oide_dot of out_ident_desc * string
+  | Oide_internal_ident of string * Ident.t
+  | Oide_external_ident of string
+
+type out_ident = out_ident_desc * Uris.kind
 
 type out_type =
   | Otyp_alias of out_type * string
@@ -53,93 +55,59 @@ let index = ref None
 
    
 (* Added semantic tags to identifiers and special handling of pervasives *)
-let rec lookup_ident local id = 
-  
+let rec lookup_ident local (id, kind) = 
   let rec loop (elems:string list) = function
-    (* lib externe, index a interrogé *)
-    | Oide_external_ident (name, is_class) ->
-
-      let html_path =
-	try
-	  Some (Index.local_lookup local ~is_class:is_class (name::elems))
-	with 
-	    Not_found -> 
-	      (* Printf.eprintf "Unsolved reference : %s" 
-		 (String.concat "." (name::elems)); *)
-	      None
-      in
-      let concrete_name = String.concat "."
-	(if name = "Pervasives" && Opam_doc_config.filter_pervasives () then
-	    elems 
-	 else name::elems)
-      in
-      begin
-	match html_path with
-	  | Some path ->
-	    Resolved (path, concrete_name)
-	  | None ->
-	    Unresolved concrete_name
-      end
-	
-    | Oide_internal_ident (name, id, is_class) ->
-      begin
+    | Oide_external_ident name -> 
+        let concrete_name =
+          let elems = 
+            if Opam_doc_config.filter_pervasives () && name = "Pervasives" then 
+              elems
+	    else 
+              name :: elems
+          in
+            String.concat "." elems
+        in begin
 	  try
-	    (* Looking up in the internal reference base *)
-	    let module_list = Index.lookup_internal_reference id in
-	    if name.[0] >= 'A' && name.[0] <= 'Z' then
-	      let base_path = String.concat "." module_list in
-	      let html_path =
-		if List.length elems = 0 then Uris.module_uri (base_path^ "." ^name)
-		else
-		  let rev = List.rev elems in
-		  let res = List.rev (List.tl rev)
-                  and last_item = List.hd rev in
-                  let modpath = base_path^"."^name^
-                    (List.fold_left (fun acc s -> acc^"."^s) "" res) in
-                  if is_class then
-                    Uris.class_uri modpath last_item
-                  else
-                    Uris.type_uri modpath last_item
-	      in
-	      Resolved (html_path, String.concat "." (name::elems))
-	    else
-              let html_path =
-                if is_class then
-                  Uris.class_uri (String.concat "." (elems@module_list)) name
-                else
-                  Uris.type_uri (String.concat "." (elems@module_list)) name
-              in
-	      Resolved (html_path, String.concat "." (name::elems))
+	    let path = 
+              Index.local_lookup local kind (name::elems)
+            in
+              Resolved(path, concrete_name)
 	  with 
-	      Not_found -> 
-		(*(* debug *)
-		  Printf.eprintf "Reference to internal %s : unresolved - stamp : %d\n%!" 
-		  name id.Ident.stamp;*)
-		Unresolved (String.concat "." (name::elems))
-	end	
+	    Not_found -> Unresolved concrete_name
+        end
+    | Oide_internal_ident(name, id) -> begin
+        let concrete_name = 
+          String.concat "." (name :: elems)
+        in
+	try
+	  let path = 
+            Index.lookup_internal kind id elems
+          in
+            Resolved(path, concrete_name)
+	with 
+	  Not_found -> Unresolved concrete_name
+      end	
     | Oide_dot (sub_id, name) ->
       loop (name::elems) sub_id 
     | Oide_apply (id1, id2) ->
-      Apply (lookup_ident local id1, lookup_ident local id2)
+      Apply (lookup_ident local (id1, kind), lookup_ident local (id2, kind))
   in
-
   loop [] id
 
-let rec print_ident ppf id =
+let rec print_ident ppf (id, kind) =
   let local = match !index with 
     | Some local -> local 
     | None -> assert false 
   in
-    match lookup_ident local id with
+    match lookup_ident local (id, kind) with
       | Unresolved name -> fprintf ppf "@{<unresolved>%s@}" name
       | Resolved (uri, name) -> fprintf ppf "@{<path:%s>%s@}" (Uri.to_string uri) name
       | Apply _ -> 
         (match id with 
           | Oide_apply (id1, id2) -> 
-            fprintf ppf "%a(%a)" print_ident id1 print_ident id2
+            fprintf ppf "%a(%a)" print_ident (id1, kind) print_ident (id2, kind)
           | _ -> fprintf ppf "ident print bug")
       
-(* Types *)
 (* Types *)
 
 let rec print_list pr sep ppf =
@@ -278,22 +246,24 @@ and print_typargs ppf =
 (* Print a path *)
 
 (* Removed special handling of pervasives *)
-let rec tree_of_path ?(is_class=false) p = 
-  match p with (*function*)
-  | Path.Pident id ->
-    let pers = Ident.persistent id in
-    let name = Ident.name id in
-    if pers then
-      Oide_external_ident (name, is_class)
-    else
-      Oide_internal_ident (name, id, is_class)
-  | Path.Pdot(p, s, pos) ->
-    Oide_dot (tree_of_path ~is_class:is_class p, s)
-  | Path.Papply(p1, p2) ->
-    Oide_apply (tree_of_path ~is_class:is_class p1, tree_of_path ~is_class:is_class p2)
+let tree_of_path kind p = 
+  let rec loop = function
+    | Path.Pident id ->
+        let pers = Ident.persistent id in
+        let name = Ident.name id in
+          if pers then
+            Oide_external_ident name
+          else
+            Oide_internal_ident(name, id)
+    | Path.Pdot(p, s, pos) ->
+        Oide_dot (loop p, s)
+    | Path.Papply(p1, p2) ->
+        Oide_apply (loop p1, loop p2)
+  in
+    (loop p, kind)
       
-let path local is_class p =
-   lookup_ident local (tree_of_path ~is_class:is_class p)
+let path local kind p =
+   lookup_ident local (tree_of_path kind p)
      
 (* Print a type expression *)
 
@@ -472,7 +442,7 @@ let rec tree_of_typexp sch ty =
 	| Ttuple tyl ->
           Otyp_tuple (tree_of_typlist sch tyl)
 	| Tconstr(p, tyl, abbrev) ->
-          Otyp_constr (tree_of_path p, tree_of_typlist sch tyl)
+          Otyp_constr (tree_of_path Uris.Type p, tree_of_typlist sch tyl)
 	| Tvariant row ->
           let row = row_repr row in
           let fields =
@@ -490,7 +460,7 @@ let rec tree_of_typexp sch ty =
           let all_present = List.length present = List.length fields in
           begin match row.row_name with
             | Some(p, tyl) when namable_row row ->
-              let id = tree_of_path p in
+              let id = tree_of_path Uris.Type p in
               let args = tree_of_typlist sch tyl in
               if row.row_closed && all_present then
 		Otyp_constr (id, args)
@@ -498,7 +468,7 @@ let rec tree_of_typexp sch ty =
 		let non_gen = is_non_gen sch px in
 		let tags =
                   if all_present then None else Some (List.map fst present) in
-		Otyp_variant (non_gen, Ovar_name(tree_of_path p, args),
+		Otyp_variant (non_gen, Ovar_name(tree_of_path Uris.Type p, args),
                               row.row_closed, tags)
             | _ ->
               let non_gen =
@@ -580,7 +550,7 @@ and tree_of_typobject sch fi nm =
     | Some (p, ty :: tyl) ->
       let non_gen = is_non_gen sch (repr ty) in
       let args = tree_of_typlist sch tyl in
-      Otyp_class (non_gen, tree_of_path ~is_class:true p, args)
+      Otyp_class (non_gen, tree_of_path Uris.Class p, args)
     | _ ->
       assert false
   end

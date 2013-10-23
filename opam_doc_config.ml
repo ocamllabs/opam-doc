@@ -65,7 +65,6 @@ let default_stylesheet = String.concat "\n"
     ".code { color : #465F91 ; }" ;
     ".typetable { border-style : hidden }" ;
     ".paramstable { border-style : hidden ; padding: 5pt 5pt}" ;
-    "tr { background-color : White }" ;
     "td.typefieldcomment { background-color : #FFFFFF ; font-size: smaller ;}" ;
     "div.sig_block {margin-left: 2em}" ;
     "*:target { background: yellow; }" ;
@@ -132,23 +131,20 @@ let default_stylesheet = String.concat "\n"
     "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
 
     (* My stuff *)
-    ".expanding_content { border-left:1px solid black; padding: 5px; margin-bottom:5px }";
-    ".expanding_content button { width:25px; float:left; margin:3px; }";
     ".expander { width:1.5em; height:1.5em; border-radius:0.3em; font-weight: bold }";
-    ".expanding_module { border-spacing: 5px 1px }";
-    ".expanding_module td { vertical-align: text-top }";
-    ".expanding_class { border-spacing: 5px 1px }";
+    ".expanding_sig { border-spacing: 5px 1px }";
+    ".expanding_sig td { vertical-align: text-top }";
     "table.expanding_include_0, table.expanding_include_1, table.expanding_include_2, table.expanding_include_3, 
      table.expanding_include_4, table.expanding_include_5, table.expanding_include_6 
      { border-top: thin dashed; border-bottom: thin dashed; border-collapse: collapse}";
-    "td.expanding_include_0 { background-color: #FFF5F5; }"; 
-    "td.expanding_include_1 { background-color: #F5F5FF; }"; 
-    "td.expanding_include_2 { background-color: #F5FFF5; }"; 
-    "td.expanding_include_3 { background-color: #FFF5FF; }"; 
-    "td.expanding_include_4 { background-color: #FFFFF5; }"; 
-    "td.expanding_include_5 { background-color: #F5FFFF; }"; 
-    "td.expanding_include_6 { background-color: #FFF5EB; }"; 
-    ".edge_column { border-right: 3px solid lightgrey }";
+    "table.expanding_include_0 { background-color: #FFF5F5; }"; 
+    "table.expanding_include_1 { background-color: #F5F5FF; }"; 
+    "table.expanding_include_2 { background-color: #F5FFF5; }"; 
+    "table.expanding_include_3 { background-color: #FFF5FF; }"; 
+    "table.expanding_include_4 { background-color: #FFFFF5; }"; 
+    "table.expanding_include_5 { background-color: #F5FFFF; }"; 
+    "table.expanding_include_6 { background-color: #FFF5EB; }"; 
+    "td.edge_column { border-right: 3px solid lightgrey }";
   ]
 
 
@@ -214,6 +210,7 @@ function Path(pathStr){
     this.package = null;
     this.module = null;
     this.submodules = [];
+    this.modtype = null;
     this.class = null;
 
     if(typeof args.package !== 'undefined') {
@@ -224,7 +221,9 @@ function Path(pathStr){
             if(modules.length > 1) {
                 this.submodules = modules.splice(1);
             }
-            if(typeof args.class !== 'undefined') {
+            if(typeof args.modtype !== 'undefined') {
+                this.modtype = args.modtype;
+            } else if(typeof args.class !== 'undefined') {
                 this.class = args.class;
             }
         } 
@@ -240,7 +239,9 @@ Path.prototype.name = function () {
             if(this.submodules.length > 0){
                 name += '.' + this.submodules.join('.');
             } 
-            if(this.class !== null){
+            if(this.modtype !== null){
+                name += '.' + this.modtype;
+            } else if(this.class !== null){
                 name += '.' + this.class;
             } 
         }
@@ -257,10 +258,12 @@ Path.prototype.fullName = function () {
             if(this.submodules.length > 0){
                 module += '.' + this.submodules.join('.');
             } 
-            if(this.class === null){
-                fullName = 'Module ' + module;   
-            } else {
+            if(this.modtype !== null){
+                fullName = 'Module type ' + module + '.' + this.modtype;   
+            } else if(this.class !== null){
                 fullName = 'Class ' + module + '.' + this.class;
+            } else {
+                fullName = 'Module ' + module;   
             }
         }
     }        
@@ -276,8 +279,10 @@ Path.prototype.url = function () {
             if(this.submodules.length > 0){
                 url += '.' + this.submodules.join('.');
             } 
-            if(this.class !== null){
-                url += '.' + this.class;
+            if(this.modtype !== null){
+                url += '&modtype=' + this.modtype;
+            } else if(this.class !== null){
+                url += '&class=' + this.class;
             } 
         }
     }        
@@ -288,14 +293,15 @@ function Parent(path) {
     this.package = null;
     this.module = null;
     this.submodules = [];
+    this.modtype = null;
     this.class = null;
 
     if(path.package !== null) {
         if(path.module !== null) {
             this.package = path.package;
-            if(path.submodules.length > 0 || path.class !== null) {
+            if(path.submodules.length > 0 || path.modtype !== null || path.class !== null) {
                 this.module = path.module;
-                if(path.class !== null) {
+                if(path.modtype !== null || path.class !== null) {
                     this.submodules = path.submodules;
                 } else {
                     this.submodules = path.submodules.slice(0, -1);
@@ -312,6 +318,7 @@ Parent.prototype = Path.prototype
 function PathVisitor(path) {
     this.path = path;
     this.submodules = path.submodules.slice(0);
+    this.modtype = path.modtype;
     this.class = path.class
 }
 
@@ -319,7 +326,9 @@ PathVisitor.prototype.current = function (){
     if(this.submodules.length > 0) {
         return {kind: 'module', name: this.submodules[0]};
     } else {
-        if(this.class !== null) {
+        if(this.modtype !== null) {
+            return {kind: 'modtype', name: this.modtype};
+        } else if(this.class !== null) {
             return {kind: 'class', name: this.class};
         } else {
             return null;
@@ -331,16 +340,20 @@ PathVisitor.prototype.next = function (){
     if(this.submodules.length > 0) {
         this.submodules.shift();
     } else {
-        if(this.class !== null) {
-            this.class = null;
-        } 
+      this.modtype = null;
+      this.class = null;
     }
     return this;
 }
 
 PathVisitor.prototype.concat = function(pv){
     this.submodules = this.submodules.concat(pv.submodules);
-    this.class = pv.class;
+    if(pv.modtype !== null) {
+      this.modtype = pv.modtype;
+    }
+    if(pv.class !== null) {
+      this.class = pv.class;
+    }
     return this;
 }
 
@@ -369,15 +382,19 @@ Page.prototype.parent_link = function(){
 
 Page.prototype.title = function(){
     var alias = null;
-    var equals = '';
+    var sep = '';
     if(this.alias !== null) {
-        equals = ' = ';
+        if(this.path.modtype !== null) {
+          sep = ' = ';
+        } else {
+          sep = ' : ';
+        }
         alias = $('<a>', 
                   {href    : this.alias.url(),
                    text    : this.alias.name()});
     }
      
-    return $('<h1>').append(this.path.fullName() + equals).append(alias);
+    return $('<h1>').append(this.path.fullName() + sep).append(alias);
 }
 
 function display_page(page){
@@ -429,7 +446,7 @@ function load_page(page, pv, data, cont) {
 		    var pathAttr = $(includes[i]).attr('path');
 
 		    if (typeof pathAttr === 'undefined'){
-		        var content = $('> div.ocaml_' + kind + '_content', includes[i]);
+		        var content = $('> div.ocaml_content', includes[i]);
 
 			load_page(page, pv, content, cont);
 		    } else {
@@ -449,7 +466,7 @@ function load_page(page, pv, data, cont) {
 	    var pathAttr = subdata.attr('path');
 
 	    if (typeof pathAttr === 'undefined'){
-	        var content = $('> div.ocaml_' + kind + '_content', subdata);
+	        var content = $('> div.ocaml_content', subdata);
 	        
 	        load_page(page, pv.next(), content, cont);
 	    } else {
@@ -514,7 +531,7 @@ Expander.prototype.expand = function(expand){
     }
 }
 
-function Sig(parent) {
+function Group(parent) {
     if(typeof parent !== 'undefined'){
         this.cls = null;
         this.content = null;
@@ -531,23 +548,22 @@ function Sig(parent) {
     }
 }
 
-Sig.prototype.load_content = function(data){
+Group.prototype.load_content = function(data){
     this.load_children(data);
     this.content = data;
 }
 
-Sig.prototype.load_path = function(data){
+Group.prototype.load_path = function(data){
     var pathAttr = data.attr('path');
     if(typeof pathAttr !== 'undefined') {
         this.path = new Path(pathAttr.substring(1));
     }
 }
 
-Sig.prototype.decorate = function(node){
+Group.prototype.decorate = function(node){
     var button = $('<button>').addClass('expander');
-    var btn_cell = $('<td>').addClass('expanding_' + this.cls).append(button);
-    var node_cell = $('<td>').addClass('expanding_' + this.cls)
-        .append(node.children()).width('100%');
+    var btn_cell = $('<td>').append(button);
+    var node_cell = $('<td>').append(node.children()).width('100%');
     var node_row = $('<tr>').append(btn_cell).append(node_cell);
     var table = $('<table>')
         .addClass('expanding_' + this.cls)
@@ -577,13 +593,13 @@ Sig.prototype.decorate = function(node){
         }
     } else {
         button.html('+');
-        button.attr("disabled", true);
+        button.attr('disabled', true);
     }
     node.append(table);
 }
 
-function IncludeSig(parent, idx) {
-    Sig.call(this, parent);
+function IncludeGroup(parent, idx) {
+    Group.call(this, parent);
     this.icount = (parent.icount + idx + 2) % 7;
     this.cls = 'include_' + this.icount;
     if(this.depth > 2) {
@@ -591,81 +607,60 @@ function IncludeSig(parent, idx) {
     }
 }
 
-IncludeSig.prototype = new Sig();
+IncludeGroup.prototype = new Group();
 
-IncludeSig.label = 'include';
-
-IncludeSig.prototype.load_content = function(data) {
+IncludeGroup.prototype.load_content = function(data) {
     this.load_children(data);
     var cell = $('<td>')
         .attr('colspan', '2')
         .css('padding', 0)
-        .addClass('expanding_' + this.cls)
         .append(data);
     this.content = $('<tr>').append(cell);
 }
 
-function ModuleSig(parent, idx) {
-    Sig.call(this, parent);
+function SigGroup(parent, idx) {
+    Group.call(this, parent);
     this.icount = (parent.icount - idx - 1) % 7;
-    this.cls = 'module';
+    this.cls = 'sig';
     this.auto_expand = false;
 }
 
-ModuleSig.prototype = new Sig();
+SigGroup.prototype = new Group();
 
-ModuleSig.label = 'module';
-
-ModuleSig.prototype.load_content = function(data) {
+SigGroup.prototype.load_content = function(data) {
     this.load_children(data);
-    var edge_cell = $('<td>').addClass('edge_column expanding_' + this.cls);
-    var cnt_cell = $('<td>').addClass('expanding_' + this.cls).append(data);
-    this.content = $('<tr>').append(edge_cell).append(cnt_cell);
-}
-
-function ClassSig(parent) {
-    Sig.call(this, parent);
-    this.cls = 'class';
-    this.auto_expand = false;
-}
-
-ClassSig.prototype = new Sig();
-
-ClassSig.label = 'class'
-
-ClassSig.prototype.load_content = function(data) {
-    this.load_children(data);
-    var edge_cell = $('<td>').addClass('edge_column expanding_' + this.cls);
+    var edge_cell = $('<td>').addClass('edge_column');
     var cnt_cell = $('<td>').append(data);
     this.content = $('<tr>').append(edge_cell).append(cnt_cell);
 }
 
-Sig.prototype.load_children = function(data, Kind){
+Group.prototype.load_children = function(data, Kind, label){
     if(typeof Kind === 'undefined') {
-        this.load_children(data, IncludeSig);
-        this.load_children(data, ModuleSig);
-        this.load_children(data, ClassSig);
+        this.load_children(data, IncludeGroup, 'include');
+        this.load_children(data, SigGroup, 'module');
+        this.load_children(data, SigGroup, 'modtype');
+        this.load_children(data, SigGroup, 'class');
     } else {
-        var children = $('> div.ocaml_' + Kind.label, data);
+        var children = $('> div.ocaml_' + label, data);
         var self = this;
         children.each(function(idx) {
-            var sig = new Kind(self, idx);
-            var content = $('div.ocaml_' + Kind.label + '_content', $(this));
+            var grp = new Kind(self, idx);
+            var content = $('div.ocaml_content', $(this));
             if(content.length > 0) {
-                sig.load_content(content);
+                grp.load_content(content);
             } else {
-                sig.load_path($(this));
+                grp.load_path($(this));
             }
-            sig.decorate($(this));
+            grp.decorate($(this));
         });
     }
 }
 
 $(document).ready(function () {
     var p = new Path(location.search.substring(1));
-    var sig = new Sig(null);
+    var grp = new Group(null);
     load_path(p, function(page){
-        sig.load_content(page.body);
+        grp.load_content(page.body);
         display_page(page);
     });
 });
