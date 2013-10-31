@@ -122,11 +122,8 @@ let rec generate_text local text =
         let cp = make_paragraph current_paragraph in
         loop <:html<$accu$$cp$<pre class="code"><code>$str:s$</code></pre>&>> Cow.Html.nil false tl
     | Verbatim s :: tl ->
-        if p then
-          loop accu <:html<$current_paragraph$<span class="verbatim">$str:s$</span>&>> p tl
-        else
-          let () = assert (Cow.Html.nil = current_paragraph) in
-          loop <:html<$accu$<span class="verbatim">$str:s$</span>&>> current_paragraph p tl
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$<pre class="verbatim">$str:s$</pre>&>> Cow.Html.nil false tl
     | Style(sk, t) :: tl ->
         let s = generate_style local sk t in
         if p then
@@ -438,6 +435,11 @@ let generate_info_opt2 local info after_info =
     | Some i, None -> Some i
     | None, Some i -> Some i
     | Some i1, Some i2 -> Some <:html<$i1$$i2$>> (* todo fix the inclusion of comments *)
+
+let generate_summary local info =
+  match info with
+    | Some i -> Html_utils.make_summary (generate_info local i)
+    | None -> Html_utils.make_summary Cow.Html.nil
 
 let generate_typ local typ =
   Gentyp.type_scheme local typ.ctyp_type
@@ -1540,7 +1542,8 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pretrack 23 <:html<$keyword "module"$ $reference$ : $cd$>> in
-              <:html<<div class="ocaml_module" name="$str:name$">$signature$$item_info$$content$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_module" name="$str:name$">$signature$$summary$$content$</div>&>>
 
   and generate_module_type_item name module_result item_info =
       let open Html_utils in
@@ -1558,7 +1561,8 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pretrack 26 <:html<$keyword "module type"$ $reference$ = $cd$>> in
-              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$item_info$$content$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$summary$$content$</div>&>>
         
   and generate_include_item module_result typ_sig item_info =
       let open Html_utils in
@@ -1605,7 +1609,8 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
              end
           | Sig (s, content) ->
             let signature = Html.pretrack 31 <:html<$id signature$ : $s$>> in
-            <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$$content$</div>&>>
+            let summary = Html_utils.make_summary item_info in
+            <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$$content$</div>&>>
                         
 
  and generate_class_type_item name params variance virt class_result item_info =
@@ -1631,7 +1636,8 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
              end
           | Sig (s, content) ->
             let signature = Html.pretrack 33 <:html<$id signature$ : $s$>> in
-            <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$$content$</div>&>>
+            let summary = Html_utils.make_summary item_info in
+            <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$$content$</div>&>>
                         
                         
   and generate_signature_item local (ditem : Doctree.signature_item option) item : Cow.Html.t=
@@ -1899,13 +1905,16 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           Printf.eprintf "[Warning] Mismatching items\n%!"; Cow.Html.nil
 
 
-let output_toplevel_module module_name html_elements =
+let output_toplevel_module module_name html_elements summary =
   let filename = Opam_doc_config.current_package () ^ "/" ^  module_name ^ ".html" in
   let oc = open_out filename in
-  output_string oc "<div class=\"ocaml_toplevel_module\">";
+  output_string oc "<div class=\"ocaml_top\">";
+  output_string oc ((Html.string_of_html summary) ^ "\n");
+  output_string oc "<div class=\"ocaml_content\">";
   List.iter
     (fun e -> output_string oc ((Html.string_of_html e) ^ "\n"))
     html_elements;
+  output_string oc "</div>";
   output_string oc "</div>";
   close_out oc
 
@@ -1914,7 +1923,7 @@ let generate_file_from_interface local module_name doctree intf =
   let ditems_opt, info, descr = match doctree with
       | Some (Dfile_intf dintf) ->
         Some dintf.dintf_items,
-        generate_info_opt local dintf.dintf_info,
+        dintf.dintf_info,
         begin
           match dintf.dintf_info with
             | Some info -> 
@@ -1926,9 +1935,7 @@ let generate_file_from_interface local module_name doctree intf =
       | None | _ -> None, None, Cow.Html.nil in
   
   let items = generate_signature_item_list local ditems_opt intf.sig_items in
-  let items = match info with None -> items | Some i -> i :: items in
-
-  output_toplevel_module module_name items;
+  output_toplevel_module module_name items (generate_summary local info);
   module_name, descr
 
 let generate_file_from_structure local module_name doctree impl =
@@ -1936,7 +1943,7 @@ let generate_file_from_structure local module_name doctree impl =
   let ditems_opt, info, descr = match doctree with
     | Some (Dfile_impl dimpl) ->
       Some dimpl.dimpl_items,
-      generate_info_opt local dimpl.dimpl_info,
+      dimpl.dimpl_info,
       begin
         match dimpl.dimpl_info with
           | Some info -> 
@@ -1948,8 +1955,6 @@ let generate_file_from_structure local module_name doctree impl =
     | None | _ -> None, None, Cow.Html.nil in
 
   let items = generate_structure_item_list local ditems_opt impl.str_items in
-  let items = match info with None -> items | Some i -> i :: items in
-
-  output_toplevel_module module_name items;
+  output_toplevel_module module_name items (generate_summary local info);
   module_name, descr
 

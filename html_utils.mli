@@ -8,6 +8,9 @@ open Cow
 (** Generate a <div class="info">xxx</div> tag or Html.nil if None*)
 val make_info : Html.t option -> Html.t
 
+(** Generate a <div class="ocaml_summary">xxx</div> tag *)
+val make_summary : Html.t -> Html.t
+
 (** Wrap the content into a <span class="keyword"> html tag *)
 val keyword : string -> Html.t
 
