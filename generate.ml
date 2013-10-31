@@ -122,11 +122,8 @@ let rec generate_text local text =
         let cp = make_paragraph current_paragraph in
         loop <:html<$accu$$cp$<pre class="code"><code>$str:s$</code></pre>&>> Cow.Html.nil false tl
     | Verbatim s :: tl ->
-        if p then
-          loop accu <:html<$current_paragraph$<span class="verbatim">$str:s$</span>&>> p tl
-        else
-          let () = assert (Cow.Html.nil = current_paragraph) in
-          loop <:html<$accu$<span class="verbatim">$str:s$</span>&>> current_paragraph p tl
+        let cp = make_paragraph current_paragraph in
+        loop <:html<$accu$$cp$<pre class="verbatim">$str:s$</pre>&>> Cow.Html.nil false tl
     | Style(sk, t) :: tl ->
         let s = generate_style local sk t in
         if p then
