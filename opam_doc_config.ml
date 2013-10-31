@@ -457,12 +457,13 @@ function display_page(page){
     $(opamdoc_contents).html(content);
 }
 
-function load_page(page, pv, data, cont) {
+function load_page(page, pv, input, cont) {
 
     var current = pv.current();
+    var data = $('> div.ocaml_content', input);
 
     if(current === null) {
-        page.summary = $('> div.info', data).first();
+        page.summary = $('> div.ocaml_summary', input);
         page.body = data;
         if(page.path !== pv.path) {
             page.alias = pv.path
@@ -499,9 +500,7 @@ function load_page(page, pv, data, cont) {
 		    var pathAttr = $(includes[i]).attr('path');
 
 		    if (typeof pathAttr === 'undefined'){
-		        var content = $('> div.ocaml_content', includes[i]);
-
-			load_page(page, pv, content, cont);
+			load_page(page, pv, includes[i], cont);
 		    } else {
 		        var include_path = new Path(pathAttr.substring(1));
                         var include_pv = new PathVisitor(include_path);
@@ -519,9 +518,7 @@ function load_page(page, pv, data, cont) {
 	    var pathAttr = subdata.attr('path');
 
 	    if (typeof pathAttr === 'undefined'){
-	        var content = $('> div.ocaml_content', subdata);
-	        
-	        load_page(page, pv.next(), content, cont);
+	        load_page(page, pv.next(), subdata, cont);
 	    } else {
 	       
 		var alias_path = new Path(pathAttr.substring(1));

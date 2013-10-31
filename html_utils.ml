@@ -11,6 +11,8 @@ let make_span ?css_class data =
     | Some clazz -> <:html<<span class="$str:clazz$">$data$</span>&>>
     | None -> <:html<<span>$data$</span>&>>
 
+let make_summary i = <:html<<div class="ocaml_summary">$i$</div>&>>
+
 let keyword str =
   make_span ~css_class:"keyword" (Html.html_of_string str)
 
