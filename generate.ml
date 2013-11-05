@@ -1462,22 +1462,22 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
   *)
   let priv =
     match type_decl.typ_private with
-        Private -> <:html<$keyword "private"$>>
+        Private -> <:html<$keyword "private"$ >>
       | Public -> Cow.Html.nil
   in
   let manifest =
-    match type_decl.typ_manifest, type_decl.typ_kind with
-      | Some typ, Ttype_record _ ->
+    match type_decl.typ_manifest with
+      | Some typ ->
         let cd = Html.code ~cls:"type" (generate_typ local typ) in
-        <:html<{$cd$}>>
-      | Some typ, _ ->
-        let cd = Html.code ~cls:"type" (generate_typ local typ) in
-        <:html<$cd$>>
-      | None, Ttype_record _ ->  <:html<{>>
-      | None, Ttype_abstract -> Cow.Html.nil
-      | None, _ -> Cow.Html.nil
+        <:html< = $priv$$cd$>>
+      | None -> Cow.Html.nil
   in
-                                        
+  let kind = 
+    match type_decl.typ_kind with
+      | Ttype_abstract -> Cow.Html.nil
+      | Ttype_variant _ -> <:html< = $priv$>>
+      | Ttype_record _ -> <:html< = $priv${>>
+  in
   let h_f =
     match type_decl.typ_manifest, type_decl.typ_kind with
       | None, Ttype_variant _ -> fun x -> Html.pretrack 16 (Html.code x)
@@ -1487,7 +1487,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   let signature = generate_mark Opam_doc_config.Type name
     <:html<$keyword "type"$ $params_variances$$str:name$>> in
-  let signature = h_f <:html<$signature$ = $priv$ $manifest$>> in
+  let signature = h_f <:html<$signature$$manifest$$kind$>> in
 
   <:html<$signature$$body$$info$>>
 
