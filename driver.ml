@@ -21,6 +21,39 @@ let process_cmd cmd =
 	_ -> None
   )
 
+let copy_file input_name output_name = 
+  let open Unix in
+  let buffer_size = 8192 in
+  let buffer = String.create buffer_size in
+  let fd_in = openfile input_name [O_RDONLY] 0 in 
+  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in 
+  let rec copy_loop () = 
+    match read fd_in buffer 0 buffer_size with 
+    | 0 -> () 
+    | r -> ignore (write fd_out buffer 0 r); 
+           copy_loop () 
+  in 
+    copy_loop (); 
+    close fd_in; 
+    close fd_out
+
+let create_summary files =
+  let filename = 
+    Opam_doc_config.current_package () ^ "/summary.html"
+  in
+    match Opam_doc_config.summary () with
+      None -> Html_utils.generate_package_summary filename files
+    | Some s -> 
+        if Sys.file_exists s then
+          Unix.handle_unix_error (fun () -> copy_file s filename) ()
+        else raise (Failure (s ^ " does not exist"))
+
+let create_index () = 
+  let filename = 
+    Opam_doc_config.current_package () ^ "/index.html"
+  in
+    Html_utils.generate_package_index filename
+
 let rec check_package_name_conflict global =
   let rec loop () =
     begin
@@ -63,6 +96,7 @@ let process_file global cmd cmt =
 	  Printf.eprintf "Error \"%s\" while processing module %s. File skipped\n%!" 
 	    s module_name;
 	  None
+
 
 let _ =
   let files = ref [] in
@@ -132,7 +166,8 @@ let _ =
       let open Html_utils in
 	  output_style_file ();
 	  output_script_file ();
-	  generate_package_index processed_files;
+          create_summary processed_files;
+          create_index ();
 	  generate_global_packages_index global
     end;
 

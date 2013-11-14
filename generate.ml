@@ -194,7 +194,7 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
         | Some t -> <:html< <a href="$str:href$">$generate_text local t$</a>&>>
         | None -> <:html< <a href="$str:href$">$str:s$</a>&>>
       end
-  | RK_module -> let x = "javascript:document.location.href += &module='" ^ s ^ "'" in
+  | RK_module -> let x = "javascript:document.location.href += '." ^ s ^"." in
       begin match t with
         | Some t -> <:html< <a href="$str:x$">$generate_text local t$</a>&>>
         | None -> <:html< <a href="$str:x$">$str:s$</a>&>>
@@ -210,7 +210,7 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
           let ri = String.rindex s '.' in
           let m = String.sub s 0 ri
           and c = String.sub s (ri+1) (String.length s - ri - 1) in
-          let onclick = Printf.sprintf "document.location.href += '&module=%s#%s'" m c in
+          let onclick = Printf.sprintf "document.location.href += '.%s.%s'" m c in
           match t with
           | Some t -> <:html< <a onclick="$str:onclick$">$generate_text local t$</a>&>>
           | None -> <:html< <a onclick="$str:onclick$">$str:s$</a>&>>

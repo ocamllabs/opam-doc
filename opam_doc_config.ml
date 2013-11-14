@@ -10,6 +10,8 @@ let _clear_index = ref false
 let _always_proceed = ref false
 let _package_descr = ref ""
 let _current_package = ref "test"
+let _base_uri = ref "/"
+let _summary = ref None
 
 let index_file_path () = !_index_file_path
 let default_index_name () = !_default_index_name
@@ -18,27 +20,23 @@ let clear_index () = !_clear_index
 let always_proceed () = !_always_proceed
 let package_descr () = !_package_descr
 let current_package () = !_current_package
+let base_uri () = !_base_uri
+let summary () = !_summary
 
 let set_current_package p = _current_package := p
+let set_summary s = _summary := Some s
 
 let options  = 
   [ ("--package", Set_string _current_package, "Specify the package")
   ; ("-p", Set_string _current_package, "Specify the package")
   ; ("--package-description", Set_string _package_descr, "Add a description to the package")
   ; ("-descr", Set_string _package_descr, "Add a description to the package")
-      
+  ; ("--base", Set_string _base_uri, "Specify the base url")
+  ; ("--summary", String set_summary, "Specify the summary page")
   ; ("-index", Set_string _index_file_path, "Use a specific index file to use rather than the default one")
-    
   ; ("--filter-pervasives", Set _filter_pervasives, "Remove the 'Pervasives' label to Pervasives' references")
-    
   ; ("--clear-index", Set _clear_index, "Clear the global index before processing")
-
   ; ("-y", Set _always_proceed, "Answer yes to all questions prompted")
-
-(*    ("-online-url", Set_string online_url, "Give the path to an online documentation, references to this library using the -online-links option will use this url");
-*)
-(*    ("-online-links", Set use_online_links, "Generate online references instead of locals one");
-*)
   ]
 
 let usage = "Usage: opam-doc [--package 'package_name'] <cm[dt] files>"
@@ -162,38 +160,31 @@ let jquery_online_url = "http://ajax.googleapis.com/ajax/libs/jquery/1.10.1/jque
 
 let style_filename = "style.css"
 
-let style_tag =
-  <:html<<link rel="stylesheet" href="$str:style_filename$" type="text/css" />&>>
+let style_url () = base_uri () ^ "/" ^ style_filename
 
+let style_tag () =
+  <:html<<link rel="stylesheet" href="$str:style_url ()$" type="text/css" />&>>
+
+(* Config script *)
+
+let config_tag () = 
+  <:html<<script type="text/javascript">
+var ocaml_package = '$str:current_package ()$'
+var ocaml_base = '$str:base_uri ()$'
+</script>&>>
 
 (* Ajax loading *)
 
 let script_filename = "doc_loader.js"
 
-let script_tag =
+let script_url () = base_uri () ^ "/" ^ script_filename
+
+let script_tag () =
   <:html<<script type="text/javascript" src="$str:jquery_online_url$"> </script>
-<script type="text/javascript" src="$str:script_filename$"> </script>&>>
+<script type="text/javascript" src="$str:script_url ()$"> </script>&>>
 
 let default_script = 
 "var opamdoc_contents = 'body'
-
-// utility - Parse query string
-function parseParams(query) {
-    var re = /([^&=]+)=?([^&]*)/g;
-    var decodeRE = /\+/g; // Regex for replacing addition symbol with a space
-    var decode = function (str) {return decodeURIComponent( str.replace(decodeRE, ' ') );};
-    query = query.replace(/&amp;/g, '&'); // <= THIS FIXES THE COW HTTP ESCAPING THE &s WHEN IT SHOULDN'T
-    var params = {}, e;
-    while ( e = re.exec(query) ) {
-        var k = decode( e[1] ), v = decode( e[2] );
-        if (k.substring(k.length - 2) === '[]') {
-            k = k.substring(0, k.length - 2);
-            (params[k] || (params[k] = [])).push(v);
-        }
-        else params[k] = v;
-    }
-    return params;
-}
 
 // utility - Fetch HTML from URL using ajax
 function ajax(url, cont){
@@ -210,59 +201,83 @@ function ajax(url, cont){
     });
 }
 
-function Path(pathStr){
+function isLIdent(ident) {
+    var chr = ident.charAt(0);
+    return (chr !== chr.toUpperCase()
+            && chr === chr.toLowerCase())
+}
 
-    var args = parseParams(pathStr);
+var url_regexp = /^(.*)\/([^/]*)\/(?:#(.*))?$/
+
+function Path(url){
 
     this.package = null;
     this.module = null;
     this.subnames = [];
     this.subkinds = [];
-    this.class = null;
-    this.type = null;
 
-    if(typeof args.package !== 'undefined') {
-        this.package = args.package;
-        if(typeof args.module !== 'undefined') {
-            var modstring = args.module;
-            var names = [];
-            var kinds = [];
-            var done = false;
-            var kind = 'module'
-            var i = 0;
-            while(!done) {
-                var dot_index = modstring.indexOf('.');
-                var colon_index = modstring.indexOf(':');
-                if(dot_index > 0 && (dot_index < colon_index || colon_index < 0)) {
-                    names[i] = modstring.substring(0, dot_index);
-                    kinds[i] = kind;
-                    kind = 'module';
-                    modstring = modstring.substring(dot_index + 1);
-                } else if(colon_index > -1) {
-                    names[i] = modstring.substring(0, colon_index);
-                    kinds[i] = kind;
-                    kind = 'modtype';
-                    modstring = modstring.substring(colon_index + 1);
-                } else {
-                    names[i] = modstring;
-                    kinds[i] = kind;
-                    done = true;
-                }
-                i++;
-            }
-            this.module = names[0];
-            if(names.length > 1) {
-                this.subnames = names.splice(1);
-                this.subkinds = kinds.splice(1);
-            }
-            if(typeof args.class !== 'undefined') {
-                this.class = args.class;
-            }
-            if(typeof args.type !== 'undefined') {
-                this.type = args.type;
-            }
-        } 
-    }
+    var match = url_regexp.exec(url);
+
+    var base = match[1];
+    var package = match[2];
+    var hash = match[3];
+
+    if(base === ocaml_base) {
+
+      this.package = package;
+
+      if(typeof hash !== 'undefined' && hash !== '') {
+          var modstring = hash;
+          var names = [];
+          var kinds = [];
+          var done = false;
+          var sep = '.'
+          var i = 0;
+          while(!done) {
+              var dot_index = modstring.indexOf('.');
+              var colon_index = modstring.indexOf(':');
+              if(dot_index > 0 && (dot_index < colon_index || colon_index < 0)) {
+                  names[i] = modstring.substring(0, dot_index);
+                  if(sep === ':') {
+                    kinds[i] = 'modtype';
+                  } else if(isLIdent(names[i])) {
+                    kinds[i] = 'class';
+                  } else {
+                    kinds[i] = 'module';
+                  }
+                  sep = '.';
+                  modstring = modstring.substring(dot_index + 1);
+              } else if(colon_index > -1) {
+                  names[i] = modstring.substring(0, colon_index);
+                  if(sep === ':') {
+                    kinds[i] = 'modtype';
+                  } else if(isLIdent(names[i])) {
+                    kinds[i] = 'class';
+                  } else {
+                    kinds[i] = 'module';
+                  }
+                  sep = ':';
+                  modstring = modstring.substring(colon_index + 1);
+              } else {
+                  names[i] = modstring;
+                  if(sep === ':') {
+                    kinds[i] = 'modtype';
+                  } else if(isLIdent(names[i])) {
+                    kinds[i] = 'class';
+                  } else {
+                    kinds[i] = 'module';
+                  }
+                  done = true;
+              }
+              i++;
+          }
+          this.module = names[0];
+          if(names.length > 1) {
+              this.subnames = names.splice(1);
+              this.subkinds = kinds.splice(1);
+          }
+      }
+  }
 }
 
 Path.prototype.name = function () {
@@ -274,41 +289,17 @@ Path.prototype.name = function () {
             if(this.subnames.length > 0){
                 name += '.' + this.subnames.join('.');
             } 
-            if(this.class !== null){
-                name += '.' + this.class;
-            } 
         }
     }        
     return name;
 }
 
-Path.prototype.fullName = function () {
-    var fullName = null;
-    if(this.package !== null) {
-        fullName = 'Package ' + this.package;
-        if(this.module !== null) {
-            var module = this.module;
-            if(this.subnames.length > 0){
-                module += '.' + this.subnames.join('.');
-            } 
-            if(this.class !== null){
-                fullName = 'Class ' + module + '.' + this.class;
-            } else if (this.subkinds[this.subnames.length - 1] === 'modtype') {
-                fullName = 'Module type ' + module;
-            } else {
-                fullName = 'Module ' + module;
-            }
-        }
-    }        
-    return fullName;
-}
-
 Path.prototype.url = function () { 
     var url = null;
     if(this.package !== null) {
-        url = '?package=' + this.package;
+        url = ocaml_base + '/' + this.package;
         if(this.module !== null) {
-            url += '&module=' + this.module;
+            url += '/#' + this.module;
             for(var i = 0; i < this.subnames.length; i++) {
                 if(this.subkinds[i] === 'modtype') {
                     url += ':' + this.subnames[i];
@@ -316,12 +307,6 @@ Path.prototype.url = function () {
                     url += '.' + this.subnames[i];
                 }
             } 
-            if(this.class !== null){
-                url += '&class=' + this.class;
-            }
-            if(this.type !== null){
-                url += '&type=' + this.type;
-            }
         }
     }        
     return url;
@@ -332,46 +317,34 @@ function Parent(path) {
     this.module = null;
     this.subnames = [];
     this.subkinds = [];
-    this.class = null;
-    this.type = null;
 
     if(path.package !== null) {
         if(path.module !== null) {
             this.package = path.package;
-            if(path.subnames.length > 0 || path.class !== null) {
+            if(path.subnames.length > 0) {
                 this.module = path.module;
-                if(path.class !== null) {
-                    this.subnames = path.subnames;
-                    this.subkinds = path.subkinds;
-                } else {
-                    this.subnames = path.subnames.slice(0, -1);
-                    this.subkinds = path.subkinds.slice(0, -1);
-                }
+                this.subnames = path.subnames.slice(0, -1);
+                this.subkinds = path.subkinds.slice(0, -1);
             }
         } 
     }
 }
 
-Path.prototype.parent = function () { return new Parent(this) }
-
 Parent.prototype = Path.prototype
+
+Path.prototype.parent = function () { return new Parent(this) }
 
 function PathVisitor(path) {
     this.path = path;
     this.subnames = path.subnames.slice(0);
     this.subkinds = path.subkinds.slice(0);
-    this.class = path.class
 }
 
 PathVisitor.prototype.current = function (){
     if(this.subnames.length > 0) {
         return {kind: this.subkinds[0], name: this.subnames[0]};
     } else {
-        if(this.class !== null) {
-            return {kind: 'class', name: this.class};
-        } else {
-            return null;
-        }
+        return null;
     }
 }
 
@@ -379,8 +352,6 @@ PathVisitor.prototype.next = function (){
     if(this.subnames.length > 0) {
         this.subnames.shift();
         this.subkinds.shift();
-    } else {
-      this.class = null;
     }
     return this;
 }
@@ -388,15 +359,16 @@ PathVisitor.prototype.next = function (){
 PathVisitor.prototype.concat = function(pv){
     this.subnames = this.subnames.concat(pv.subnames);
     this.subkinds = this.subkinds.concat(pv.subkinds);
-    if(pv.class !== null) {
-      this.class = pv.class;
-    }
+    this.path.subnames = this.path.subnames.concat(pv.subnames);
+    this.path.subkinds = this.path.subkinds.concat(pv.subkinds);
+
     return this;
 }
 
 
-function Page(path){
+function Page(path, kind){
     this.path = path;
+    this.kind = kind;
     this.alias = null;
     this.summary = null;
     this.body = null;
@@ -419,6 +391,17 @@ Page.prototype.parent_link = function(){
 }
 
 Page.prototype.title = function(){
+    var name = this.path.name();
+    if(this.kind === 'module') {
+        fullName = 'Module ' + name;
+    } else if(this.kind === 'modtype') {
+        fullName = 'Module type ' + name;
+    } else if(this.kind === 'class') {
+        fullName = 'Class ' + name;
+    } else {
+        fullName = 'Package ' + name;
+    }
+
     var alias = null;
     var sep = '';
     if(this.alias !== null) {
@@ -432,7 +415,7 @@ Page.prototype.title = function(){
                    text    : this.alias.name()});
     }
      
-    return $('<h1>').append(this.path.fullName() + sep).append(alias);
+    return $('<h1>').append(fullName + sep).append(alias);
 }
 
 function display_page(page){
@@ -468,16 +451,6 @@ function load_page(page, pv, input, cont) {
         if(page.path !== pv.path) {
             page.alias = pv.path
         }
-        if(page.path.type !== null)
-        {
-            var jump = $('pre > span.TYPE'+page.path.type, data);
-	    if (jump.length == 0){
-	        jump = $('pre > code > span.TYPE'+page.path.type, data);
-	    }
-	    if (jump.length > 0){
-	        page.jump = jump;
-	    }
-        }
         cont(page);
     } else {
 
@@ -489,6 +462,8 @@ function load_page(page, pv, input, cont) {
 
         if(subdata.length === 0) {
 
+            var try_type = (kind === 'class');
+
 	    var includes = $('> div.ocaml_include', data);
 
 	    for (var i = 0; i < includes.length; i++){
@@ -496,16 +471,17 @@ function load_page(page, pv, input, cont) {
 	        var items = JSON.parse($(includes[i]).attr('items'));
 
 	        if (items.indexOf(name) !== -1){
-		    
+                    try_type = false;
+
 		    var pathAttr = $(includes[i]).attr('path');
 
 		    if (typeof pathAttr === 'undefined'){
 			load_page(page, pv, includes[i], cont);
 		    } else {
-		        var include_path = new Path(pathAttr.substring(1));
+		        var include_path = new Path(pathAttr);
                         var include_pv = new PathVisitor(include_path);
 
-                        var include_url = include_path.package + '/' + include_path.module +'.html'
+                        var include_url = ocaml_base + '/' + include_path.package + '/' + include_path.module +'.html'
                         
 		        ajax(include_url, function(data){
                             load_page(page, include_pv.concat(pv), data, cont);
@@ -513,7 +489,20 @@ function load_page(page, pv, input, cont) {
 		    }
 	        }
 	    }
+
+            if(try_type) {
+                var jump = $('pre > span.TYPE'+page.path.type, data);
+	        if (jump.length == 0){
+	            jump = $('pre > code > span.TYPE'+page.path.type, data);
+	        }
+	        if (jump.length > 0){
+	            page.jump = jump;
+                    load_page(page, pv.next(), input, cont);
+	        }
+            }
+
         } else {
+            page.kind = kind;
 
 	    var pathAttr = subdata.attr('path');
 
@@ -521,10 +510,10 @@ function load_page(page, pv, input, cont) {
 	        load_page(page, pv.next(), subdata, cont);
 	    } else {
 	       
-		var alias_path = new Path(pathAttr.substring(1));
+		var alias_path = new Path(pathAttr);
                 var alias_pv = new PathVisitor(alias_path);
 
-                var alias_url = alias_path.package + '/' + alias_path.module +'.html'
+                var alias_url = ocaml_base + '/' + alias_path.package + '/' + alias_path.module +'.html'
 
 		ajax(alias_url, function(data){
                     load_page(page, alias_pv.concat(pv.next()), data, cont);
@@ -536,17 +525,17 @@ function load_page(page, pv, input, cont) {
 
 function load_path(path, cont) {
     if(path.module !== null) {
-        var url = path.package + '/' + path.module + '.html';
+        var url = ocaml_base + '/' + path.package + '/' + path.module + '.html';
         ajax(url, function(data){
-            var pg = new Page(path);
+            var pg = new Page(path, 'module');
             var pv = new PathVisitor(path);
             
             load_page(pg, pv, data, cont);
         });
     } else {
-        var url = path.package + '/index.html';
+        var url = ocaml_base + '/' + path.package + '/summary.html';
         ajax(url, function(data){
-            var pg = new Page(path);
+            var pg = new Page(path, 'package');
             pg.body = data;
             cont(pg);
         });
@@ -606,7 +595,7 @@ Group.prototype.load_content = function(data){
 Group.prototype.load_path = function(data){
     var pathAttr = data.attr('path');
     if(typeof pathAttr !== 'undefined') {
-        this.path = new Path(pathAttr.substring(1));
+        this.path = new Path(pathAttr);
     }
 }
 
@@ -707,7 +696,18 @@ Group.prototype.load_children = function(data, Kind, label){
 }
 
 $(document).ready(function () {
-    var p = new Path(location.search.substring(1));
+    var url = ocaml_base + '/' + ocaml_package + '/' + location.hash;
+    var p = new Path(url);
+    var grp = new Group(null);
+    load_path(p, function(page){
+        grp.load_content(page.body);
+        display_page(page);
+    });
+});
+
+$(window).on('hashchange', function () {
+    var url = ocaml_base + '/' + ocaml_package + '/' + location.hash;
+    var p = new Path(url);
     var grp = new Group(null);
     load_path(p, function(page){
         grp.load_content(page.body);

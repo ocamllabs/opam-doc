@@ -149,39 +149,6 @@ let js_array_of_include_items =
       "[" ^ String.concat "," included_items ^ "]"
     | _ -> "[]"
 
-(** {3 Html pages generators} *)
-
-let create_html_skeleton filename (headers : Cow.Html.t list) (body : Cow.Html.t list) =
-  let oc = open_out filename in
-  let header_elements = Html.concat headers in
-  let body_elements = Html.concat body in
-  output_string oc Opam_doc_config.doctype;
-  let page =
-    <:html<<html>
-<head>
-$header_elements$
-</head>
-<body>
-$body_elements$
-</body>
-</html>&>> in
-  begin
-    output_string oc (Html.string_of_html page);
-    close_out oc
-  end
-    
-
-let create_html_default_skeleton filename title body_list =
-  let headers = 
-    let open Opam_doc_config in 
-	[ <:html<<title>$str:title$</title>&>>
-	; character_encoding
-	; style_tag
-	; script_tag 
-	] 
-    in
-    create_html_skeleton filename headers body_list
-      
 (** Hacks functions *)
 
 let write_unless_exists ~filename ~contents =
@@ -202,14 +169,14 @@ let output_script_file () =
     ~filename:Opam_doc_config.script_filename
     ~contents:Opam_doc_config.default_script
 
-let generate_package_index = function
+let generate_package_summary filename = function
   | [] -> ()
   | l ->
     let make_content (m_name, info) = 
       let uri = Uris.uri [m_name, Uris.Module] in
       <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
     in
-    let oc = open_out (Opam_doc_config.current_package () ^ "/index.html") in
+    let oc = open_out filename in
     let content = Html.concat (List.map make_content l) in
     let html_content =
       <:html<<h2>Modules</h2>
@@ -220,20 +187,51 @@ let generate_package_index = function
     output_string oc (Html.string_of_html html_content);
     close_out oc
 
+let generate_package_index filename =
+  let open Opam_doc_config in
+  let page =
+    <:html<<html>
+<head>
+<title>$str:current_package ()$</title>
+$character_encoding$
+$style_tag ()$
+$config_tag ()$
+$script_tag ()$
+</head>
+<body>
+</body>
+</html>&>> in
+  let oc = open_out filename in
+    output_string oc doctype;
+    output_string oc (Html.string_of_html page);
+    close_out oc
+
+
 let generate_global_packages_index global = 
   let packages = Index.get_global_packages global in
   let generate_package_entry (package_name, info) = 
     let uri = Uris.package_uri package_name in
     <:html<<tr><td class="module"><a href="$uri:uri$">$str:String.capitalize package_name$</a></td><td>$opt:info$</td></tr>&>>
   in
-  let h = Html.concat (List.map generate_package_entry packages) in
-  let html_body = 
-    <:html<<h1>Packages list</h1>
+  let oc = open_out (Opam_doc_config.default_index_name ()) in
+  let content = Html.concat (List.map generate_package_entry packages) in
+  let open Opam_doc_config in
+  let html_content = 
+    <:html<<html>
+<head>
+<title>Packages</title>
+$character_encoding$
+$style_tag ()$
+</head>
+<body>
+<h1>Packages list</h1>
 <table class="indextable">
-$h$
-</table>&>> in
-  create_html_default_skeleton (Opam_doc_config.default_index_name ()) "Opam-Doc" [html_body]
-
+$content$
+</table>
+</body>
+</html>&>> in
+  output_string oc (Html.string_of_html html_content);
+  close_out oc
 
 (* Module description shortener *)
 
