@@ -1720,7 +1720,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         (match dsig_include with | Some (Dsig_include dmty) -> Some dmty | None | _ -> None)
         mty in
 
-      generate_include_item module_result mty.mty_type item_info
+      generate_include_item module_result typ_sig item_info
 
     | dsig_class, Tsig_class [cl_desc] ->
       (match cl_desc with
@@ -1854,7 +1854,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
               | Some (Dstr_include dmexpr) -> Some dmexpr | None | _ -> None)
             mexpr in
         
-          generate_include_item module_result mexpr.mod_type item_info
+          generate_include_item module_result typ_sig item_info
 
         | dstr_class, Tstr_class [cl_desc, _, _] ->     
 

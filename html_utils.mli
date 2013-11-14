@@ -50,7 +50,7 @@ val html_of_type_class_param_list :
 
 (** Parse the include's module_type to retrieve the contained elements and
     return it as a json array *)
-val js_array_of_include_items : Types.module_type -> string
+val js_array_of_include_items : Types.signature -> string
 
 (** {3 Html page generation} *)
 

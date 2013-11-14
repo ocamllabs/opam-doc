@@ -135,19 +135,17 @@ let html_of_type_class_param_list params variances =
            Html.code ~cls:"type" <:html<[$h$] >>
 
   
-let js_array_of_include_items = 
-  let open Types in function
-    | Mty_signature msig -> 
-      let included_items = List.fold_left
-	(fun acc -> function 
-	  | Sig_module (id, _, _) | Sig_modtype (id, _) 
-	  | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
-	    -> ("\"" ^ id.Ident.name ^ "\"") ::acc
-	  | _ ->acc)	   
-	[] msig 
-      in
-      "[" ^ String.concat "," included_items ^ "]"
-    | _ -> "[]"
+let js_array_of_include_items msig = 
+  let open Types in
+  let included_items = List.fold_left
+    (fun acc -> function 
+      | Sig_module (id, _, _) | Sig_modtype (id, _) 
+      | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
+        -> ("\"" ^ id.Ident.name ^ "\"") ::acc
+      | _ ->acc)	   
+    [] msig 
+  in
+    "[" ^ String.concat "," included_items ^ "]"
 
 (** Hacks functions *)
 
