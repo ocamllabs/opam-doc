@@ -3,7 +3,7 @@ J?=4
 
 .PHONY: all clean
 
-all: opam-doc bin-doc
+all: opam-doc bin-doc opam
 
 opam-doc: src/opam-doc/*.mli src/opam-doc/*.ml
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/opam-doc/driver.native
@@ -14,6 +14,7 @@ bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
 	mv driver.native bin-doc
 
 opam:
+	mkdir opam
 	opam init -n --root=opam
 
 clean:
