@@ -1,20 +1,17 @@
-BINDIR=./bin
-TARGET=driver
-BINNAME=opamdoc
 OCAMLBUILD?=ocamlbuild
 J?=4
 
-.PHONY: all clean install
+.PHONY: all clean
 
-all: _build/$(TARGET).byte _build/$(TARGET).native
+all: opam-doc bin-doc
 
-_build/$(TARGET).byte _build/$(TARGET).native: *.mli *.ml
-	$(OCAMLBUILD) -j $(J) -use-ocamlfind $(TARGET).byte $(TARGET).native
+opam-doc: src/opam-doc/*.mli src/opam-doc/*.ml
+	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/opam-doc/driver.native
+	mv driver.native opam-doc
+
+bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
+	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/bin-doc/driver.native
+	mv driver.native bin-doc
 
 clean:
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind -clean
-
-install:all
-	mkdir -p $(BINDIR)
-	cp $(TARGET).byte $(BINDIR)/$(BINNAME)
-	cp $(TARGET).native $(BINDIR)/$(BINNAME).opt
