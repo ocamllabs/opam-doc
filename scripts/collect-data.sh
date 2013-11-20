@@ -1,16 +1,12 @@
 #!/usr/bin/env bash
-# Rebuild the cmd/cmt archive in ~/.opam/<switch>/opamdoc
-# Copies all the cmt/cmti/cmd files found in the OPAM build
+# Rebuild the cmd/cmt archive. Installs the package list and
+# copies all the cmt/cmti/cmd files found in the OPAM build
 # dir into a single directory structure, separated by MD5
 # to keep files distinct.
 
-set -e
-#dry=echo
-SWITCH=$(opam switch show)
-if [ "${SWITCH}" = "system" ]; then
-  echo Must be using a custom OPAM switch for this to work.
-  exit 1
-fi
+OPAM_DIR=opam
+DATA_DIR=data
+PACKAGES_FILE=packages
 
 function calc_md5_for_file()
 {
@@ -24,34 +20,56 @@ function calc_md5_for_file()
   fi
 }
 
-BASE="$(dirname $(dirname $(ocamlc -where)))"
-BUILD=${BASE}/build
-DOC=${BASE}/opamdoc
-rm -rf ${DOC}
-mkdir -p ${DOC}
+IMPORTS=`awk -e '{print $1}' ${PACKAGES_FILE}`
 
-PKGS=$(find ${BUILD}/ -mindepth 1 -maxdepth 1 -type d)
-echo ${PKGS}
+for imp in ${IMPORTS}; do 
+  echo "Building $imp .."
+  opam install -y -b --root=${OPAM_DIR} $imp
+done
+
+rm -rf ${DATA_DIR}
+mkdir ${DATA_DIR}
+
+PKGS=$(find ${OPAM_DIR}/system/build -mindepth 1 -maxdepth 1 -type d)
+
 for pkg in ${PKGS}; do
   pkgname=$(basename $pkg)
   echo $pkgname
-  mkdir -p ${DOC}/$pkgname
+  mkdir ${DATA_DIR}/$pkgname
   CMDS=$(find ${pkg} -type f -name \*.cmd)
   for cmd in ${CMDS}; do
     d=$(dirname $cmd)
     calc_md5_for_file "$cmd";
     f=$(basename $cmd .cmd)
-    mkdir -p ${DOC}/$pkgname/$md5
-    r=${DOC}/$pkgname/$md5/$f
-    $dry cp $d/$f.cmd $r.cmd
-    if [ -e $d/$f.cmdi ]; then
-      $dry cp $d/$f.cmdi $r.cmdi
-    fi
-    if [ -e $d/$f.cmt ]; then
-      $dry cp $d/$f.cmt $r.cmt
-    fi
-    if [ -e $d/$f.cmti ]; then
-      $dry cp $d/$f.cmti $r.cmti
-    fi
+    mkdir ${DATA_DIR}/$pkgname/$md5
+    r=${DATA_DIR}/$pkgname/$md5/$f
+    cp $d/$f.cmd $r.cmd
+  done
+  CMDIS=$(find ${pkg} -type f -name \*.cmdi)
+  for cmdi in ${CMDIS}; do
+    d=$(dirname $cmdi)
+    calc_md5_for_file "$cmdi";
+    f=$(basename $cmdi .cmdi)
+    mkdir ${DATA_DIR}/$pkgname/$md5
+    r=${DATA_DIR}/$pkgname/$md5/$f
+    cp $d/$f.cmdi $r.cmdi
+  done
+  CMTS=$(find ${pkg} -type f -name \*.cmt)
+  for cmt in ${CMTS}; do
+    d=$(dirname $cmt)
+    calc_md5_for_file "$cmt";
+    f=$(basename $cmt .cmt)
+    mkdir ${DATA_DIR}/$pkgname/$md5
+    r=${DATA_DIR}/$pkgname/$md5/$f
+    cp $d/$f.cmt $r.cmt
+  done
+  CMTIS=$(find ${pkg} -type f -name \*.cmti)
+  for cmti in ${CMTIS}; do
+    d=$(dirname $cmti)
+    calc_md5_for_file "$cmti";
+    f=$(basename $cmti .cmti)
+    mkdir ${DATA_DIR}/$pkgname/$md5
+    r=${DATA_DIR}/$pkgname/$md5/$f
+    cp $d/$f.cmti $r.cmti
   done
 done

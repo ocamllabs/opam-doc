@@ -6,11 +6,14 @@ let create_package_directory () =
   if not Sys.(file_exists package_name && is_directory package_name) then
     Unix.mkdir package_name 0o755
 
+let pSameBase a = 
+  let open Filename in
+  let base = chop_extension (basename a) in
+    (fun b -> (chop_extension (basename b)) = base)
+
 let get_cmt cmd cmt_list =
-  let base = Filename.chop_extension cmd in
-  let pSameBase cmt = (Filename.chop_extension cmt) = base in
   try
-    Some (List.find pSameBase cmt_list)
+    Some (List.find (pSameBase cmd) cmt_list)
   with Not_found -> None
 
 let process_cmd cmd =
@@ -124,15 +127,15 @@ let _ =
 
   (* Remove the [ext] file when a [ext]i is found *)
   let filter_impl_files ext files =
-    let should_be_kept file =
-      if Filename.check_suffix file ext then
-	try
-	  ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files);
-	  false
-	with Not_found -> true
-      else true
-	in
-    List.filter should_be_kept files
+    let exti = ext ^ "i" in
+    let discard file =
+      (Filename.check_suffix file ext)
+      && (List.exists (fun filei -> 
+                       (Filename.check_suffix filei exti) 
+                       && (pSameBase file filei)) 
+                      files)
+    in
+      List.filter (fun file -> not (discard file)) files
   in
 
   let cmt_files = filter_impl_files ".cmt" cmt_files in
