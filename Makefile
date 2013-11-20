@@ -31,7 +31,7 @@ serve-doc: data opam-doc scripts/create-docs.sh
 	scripts/create-docs.sh "serve-doc" "http://127.0.0.1:8000"
 
 serve: serve-doc
-	cd serve-doc; python -m SimpleHTTPServer
+	-cd serve-doc; python -m SimpleHTTPServer
 
 clean:
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind -clean

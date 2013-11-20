@@ -1,5 +1,4 @@
 #!/bin/sh -e
-unset OPAMROOT
-eval `opam config env`
-ocamlc.opt -bin-annot $@
+OCAML=`(unset OPAMROOT; opam config exec "which ocamlc.opt")`
+${OCAML} -bin-annot "$@"
 bin-doc "$@" >/dev/null 2>&1
