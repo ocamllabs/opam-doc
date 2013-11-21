@@ -30,7 +30,7 @@ let uri ?package elems =
           | ModType -> if sep then ":" ^ n else n
           | Class -> "." ^ n
           | ClassType -> "." ^ n
-          | Type -> ". " ^ n
+          | Type -> "." ^ n
         in
           pkg ^ mods ^ comp
     | (n, kind) :: rest -> 

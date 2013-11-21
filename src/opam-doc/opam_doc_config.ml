@@ -373,7 +373,7 @@ function Page(path, kind){
     this.summary = null;
     this.body = null;
     this.constraints = null;
-    this.jump = null;
+    this.typ = null;
 }
 
 Page.prototype.parent_link = function(){
@@ -432,12 +432,24 @@ function display_page(page){
         .append(rule)
         .append(body);
 
-    if(page.jump !== null) {
-        scrollTo(0, page.jump.position().top);
-        page.jump.css('background', 'yellow');
-    }
-
     $(opamdoc_contents).html(content);
+}
+
+function show_type(typ) {
+    if(typ !== null) {
+        var types = $('pre > span.TYPE'+typ).filter(':visible');
+        if (types.length == 0){
+            types = $('pre > code > span.TYPE'+typ).filter(':visible');;
+        }
+        if (types.length > 0) {
+            var pos = types.position().top - (window.innerHeight / 5);
+            if(pos < 0) {
+                pos = 0;
+            }
+            window.scrollTo(0, pos);
+            types.css('background', 'yellow');
+        }
+    }
 }
 
 function load_page(page, pv, input, cont) {
@@ -464,61 +476,81 @@ function load_page(page, pv, input, cont) {
 
             var try_type = (kind === 'class');
 
-	    var includes = $('> div.ocaml_include', data);
+            var includes = $('> div.ocaml_include', data);
 
-	    for (var i = 0; i < includes.length; i++){
+            for (var i = 0; i < includes.length; i++){
 
-	        var items = JSON.parse($(includes[i]).attr('items'));
+                var items = JSON.parse($(includes[i]).attr('items'));
 
-	        if (items.indexOf(name) !== -1){
+                if (items.indexOf(name) !== -1){
                     try_type = false;
 
-		    var pathAttr = $(includes[i]).attr('path');
+                    var pathAttr = $(includes[i]).attr('path');
 
-		    if (typeof pathAttr === 'undefined'){
-			load_page(page, pv, includes[i], cont);
-		    } else {
-		        var include_path = new Path(pathAttr);
+                    if (typeof pathAttr === 'undefined'){
+                        load_page(page, pv, includes[i], cont);
+                    } else {
+                        var include_path = new Path(pathAttr);
                         var include_pv = new PathVisitor(include_path);
 
                         var include_url = ocaml_base + '/' + include_path.package + '/' + include_path.module +'.html'
                         
-		        ajax(include_url, function(data){
+                        ajax(include_url, function(data){
                             load_page(page, include_pv.concat(pv), data, cont);
                         });
-		    }
-	        }
-	    }
+                    }
+                }
+            }
 
             if(try_type) {
-                var jump = $('pre > span.TYPE'+page.path.type, data);
-	        if (jump.length == 0){
-	            jump = $('pre > code > span.TYPE'+page.path.type, data);
-	        }
-	        if (jump.length > 0){
-	            page.jump = jump;
-                    load_page(page, pv.next(), input, cont);
-	        }
+                var types = $('pre > span.TYPE'+name, data);
+                if (types.length == 0){
+                    types = $('pre > code > span.TYPE'+name, data);
+                }
+                if (types.length > 0){
+                    page.summary = $('> div.ocaml_summary', input);
+                    page.body = data;
+                    page.typ = name;
+                    if(page.path !== pv.path) {
+                        page.alias = pv.path.parent();
+                    }
+                    page.path = page.path.parent();
+                    cont(page);
+                } else {
+                    for (var i = 0; i < includes.length; i++){
+                        var items = JSON.parse($(includes[i]).attr('types'));
+                        if (items.indexOf(name) !== -1){
+                            page.summary = $('> div.ocaml_summary', input);
+                            page.body = data;
+                            page.typ = name;
+                            if(page.path !== pv.path) {
+                                page.alias = pv.path.parent();
+                            }
+                            page.path = page.path.parent();
+                            cont(page);
+                        }
+                    }
+                }
             }
 
         } else {
             page.kind = kind;
 
-	    var pathAttr = subdata.attr('path');
+            var pathAttr = subdata.attr('path');
 
-	    if (typeof pathAttr === 'undefined'){
-	        load_page(page, pv.next(), subdata, cont);
-	    } else {
-	       
-		var alias_path = new Path(pathAttr);
+            if (typeof pathAttr === 'undefined'){
+                load_page(page, pv.next(), subdata, cont);
+            } else {
+               
+                var alias_path = new Path(pathAttr);
                 var alias_pv = new PathVisitor(alias_path);
 
                 var alias_url = ocaml_base + '/' + alias_path.package + '/' + alias_path.module +'.html'
 
-		ajax(alias_url, function(data){
+                ajax(alias_url, function(data){
                     load_page(page, alias_pv.concat(pv.next()), data, cont);
                 });
-	    }
+            }
         }
     }
 }
@@ -575,6 +607,7 @@ function Group(parent) {
         this.cls = null;
         this.content = null;
         this.path = null;
+        this.typ = null;
         if(parent !== null) {
             this.depth = parent.depth + 1;
             this.icount = parent.icount;
@@ -599,6 +632,12 @@ Group.prototype.load_path = function(data){
     }
 }
 
+Group.prototype.set_type = function(typ){
+    this.typ = typ;
+}
+
+Group.prototype.check_types = function(){ }
+
 Group.prototype.decorate = function(node){
     var button = $('<button>').addClass('expander');
     var btn_cell = $('<td>').append(button);
@@ -621,6 +660,9 @@ Group.prototype.decorate = function(node){
             var expander = new Expander(self.auto_expand, button, self.content);
             button.click(function () { expander.expand() });
             expander.expand(true);
+            if(self.auto_expand) {
+                show_type(self.typ)
+            }
         };
         if(this.auto_expand) {
             load_path(self.path, expand);
@@ -644,6 +686,7 @@ function IncludeGroup(parent, idx) {
     if(this.depth > 2) {
         this.auto_expand = false;
     }
+    this.typ = parent.typ;
 }
 
 IncludeGroup.prototype = new Group();
@@ -655,6 +698,13 @@ IncludeGroup.prototype.load_content = function(data) {
         .css('padding', 0)
         .append(data);
     this.content = $('<tr>').append(cell);
+}
+
+IncludeGroup.prototype.check_types = function(node){ 
+    var types = JSON.parse(node.attr('types'));
+    if (types.indexOf(this.typ) !== -1){
+        this.auto_expand = true;
+    }
 }
 
 function SigGroup(parent, idx) {
@@ -684,6 +734,7 @@ Group.prototype.load_children = function(data, Kind, label){
         var self = this;
         children.each(function(idx) {
             var grp = new Kind(self, idx);
+            grp.check_types($(this));
             var content = $('div.ocaml_content', $(this));
             if(content.length > 0) {
                 grp.load_content(content);
@@ -700,8 +751,10 @@ $(document).ready(function () {
     var p = new Path(url);
     var grp = new Group(null);
     load_path(p, function(page){
+        grp.set_type(page.typ);
         grp.load_content(page.body);
         display_page(page);
+        show_type(page.typ);
     });
 });
 
@@ -710,8 +763,11 @@ $(window).on('hashchange', function () {
     var p = new Path(url);
     var grp = new Group(null);
     load_path(p, function(page){
+        grp.set_type(page.typ);
         grp.load_content(page.body);
         display_page(page);
+        scrollTo(0,0);
+        show_type(page.typ);
     });
 });
 "

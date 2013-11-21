@@ -1567,24 +1567,25 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
   and generate_include_item module_result typ_sig item_info =
       let open Html_utils in
           let included_items = js_array_of_include_items typ_sig in
+          let included_types = js_array_of_include_types typ_sig in
         
           match module_result with
             | Ident (body, Gentyp.Resolved (uri, _)) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
                 Html.pretrack 27 <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$">$signature$$item_info$</div>&>>
+              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>
                         
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
                 Html.pretrack 28 <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$">$signature$$item_info$</div>&>>    
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>    
             | Sig (body, content) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
                 Html.pretrack 29 <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$">$signature$$item_info$$content$</div>&>>
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$$content$</div>&>>
                         
  and generate_class_item name params variance virt class_result item_info =
     let open Html_utils in

@@ -52,6 +52,10 @@ val html_of_type_class_param_list :
     return it as a json array *)
 val js_array_of_include_items : Types.signature -> string
 
+(** Parse the include's module_type to retrieve the contained types and
+    return it as a json array *)
+val js_array_of_include_types : Types.signature -> string
+
 (** {3 Html page generation} *)
 
 (** Writes the style file if non-existent *)

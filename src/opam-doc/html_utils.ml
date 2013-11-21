@@ -141,11 +141,21 @@ let js_array_of_include_items msig =
     (fun acc -> function 
       | Sig_module (id, _, _) | Sig_modtype (id, _) 
       | Sig_class (id, _, _) | Sig_class_type (id, _, _) 
-        -> ("\"" ^ id.Ident.name ^ "\"") ::acc
-      | _ ->acc)	   
+        -> ("\"" ^ id.Ident.name ^ "\"") :: acc
+      | _ -> acc)	   
     [] msig 
   in
     "[" ^ String.concat "," included_items ^ "]"
+
+let js_array_of_include_types msig = 
+  let open Types in
+  let included_types = List.fold_left
+    (fun acc -> function 
+      | Sig_type (id, _, _) -> ("\"" ^ id.Ident.name ^ "\"") ::acc
+      | _ -> acc)	   
+    [] msig 
+  in
+    "[" ^ String.concat "," included_types ^ "]"
 
 (** Hacks functions *)
 
