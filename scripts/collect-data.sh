@@ -20,7 +20,7 @@ function calc_md5_for_file()
   fi
 }
 
-IMPORTS=`awk -e '{print $1}' ${PACKAGES_FILE}`
+IMPORTS=`awk '{print $1}' ${PACKAGES_FILE}`
 
 for imp in ${IMPORTS}; do 
   echo "Building $imp .."
