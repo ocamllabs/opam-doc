@@ -119,7 +119,7 @@ let default_stylesheet = String.concat "\n"
     ".indextable {border: 1px #ddd solid; border-collapse: collapse}";
     ".indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px}";
     ".indextable td.module {background-color: #eee ;  padding-left: 2px; padding-right: 2px}";
-    ".indextable td.module a {color: 4E6272; text-decoration: none; display: block; width: 100%}";
+    ".indextable td.module a {text-decoration: none; display: block; width: 100%}";
     ".indextable td.module a:hover {text-decoration: underline; background-color: transparent}";
     ".deprecated {color: #888; font-style: italic}" ;
 
@@ -380,14 +380,15 @@ Page.prototype.parent_link = function(){
     var parent = this.path.parent();
     var title = parent.name();
     var url = parent.url();
-    if(title !== null && url !== null) {
-        return $('<a>', 
-                 {'class' : 'up', 
-                  title   : title,
-                  href    : url,
-                  text    : 'Up' });
+    if(title === null || url === null) {
+        title = 'Packages List';
+        url = ocaml_base + '/';
     }
-    return null;
+    return $('<a>', 
+             {'class' : 'up', 
+              title   : title,
+              href    : url,
+              text    : 'Up' });
 }
 
 Page.prototype.title = function(){
