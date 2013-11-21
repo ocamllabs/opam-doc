@@ -1,0 +1,8 @@
+*~
+_build
+bin-doc
+data
+doc
+opam-doc
+opam
+serve-doc
