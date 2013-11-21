@@ -22,6 +22,6 @@ for pkg in ${PKGS}; do
   if [ "$fs" != "" ]; then
     name=$(echo $pkg | awk -F. '{print $1}')
     echo "Generating documentation for $name"
-    ${OPAMDOC} -p $name --base "$2" $fs
+    ${OPAMDOC} --filter-pervasives -p $name --base "$2" $fs
   fi
 done
