@@ -1775,26 +1775,25 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       in
 
       match ditem_desc, item.str_desc with
-        | (None | Some (Dstr_value _)) , Tstr_value (rec_flag, [(patt,_)])  ->
-          let rec get_pattern_name = function
-            | {pat_desc=Tpat_var (id, _); _} -> id.Ident.name
-            | {pat_desc=Tpat_tuple patl; _}->
-              "(" ^ String.concat ", " (List.map get_pattern_name patl) ^")"
-            | {pat_desc=Tpat_construct _; _} -> "()"
-            | _ -> "Unknown name"
+        | (None | Some (Dstr_value _)) , Tstr_value (rec_flag, patts)  ->
+          let rec bound_idents acc pat = 
+            match pat.pat_desc with
+            | Tpat_var (id, _) -> 
+                (id, pat.pat_type) :: acc
+            | Tpat_alias(p, id, _) -> 
+                bound_idents ((id, pat.pat_type) :: acc) p
+            | Tpat_or(p, _, _) | Tpat_lazy p | Tpat_variant(_, Some p, _) -> bound_idents acc p
+            | Tpat_tuple pats | Tpat_construct(_, _, pats, _) | Tpat_array pats ->
+                List.fold_left bound_idents acc pats
+            | Tpat_record (lpats, _) ->
+                List.fold_left (fun acc (_, _, p) -> bound_idents acc p) acc lpats
+            | Tpat_constant _ | Tpat_any | Tpat_variant (_,None,_) -> acc
           in
-          begin
-          match patt.pat_desc with
-            | Tpat_construct _ -> Cow.Html.nil (* skipping the 'let () = ...' elements *)
-            | _ ->
-              let name = get_pattern_name patt in
-              let typ = Gentyp.type_scheme local patt.pat_type in
-              generate_value_item name typ item_info
-          end   
-
-        | _, Tstr_value _ ->
-          Printf.eprintf "Unsupported value representation\n%!";
-          Cow.Html.nil
+          let idents = List.fold_left bound_idents [] (List.map fst patts) in
+          List.fold_left (fun acc (id, typ) -> 
+                            let typ = Gentyp.type_scheme local typ in
+                            let value = generate_value_item id.Ident.name typ item_info in
+                              <:html<$acc$$value$>>) Cow.Html.nil idents
 
         | dstr_type, Tstr_type [id, _, tdecl] ->
         
