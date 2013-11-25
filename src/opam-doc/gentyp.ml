@@ -44,11 +44,15 @@ and out_variant =
 
 
 (* Path resolution *)
-type path = Unresolved of string | Resolved of Uri.t * string | Apply of path * path
+type path = Unresolved of string | Resolved of Uri.t * string * bool | Apply of path * path
 
 let rec html_of_path = function
   | Unresolved name -> <:html<$str:name$>>
-  | Resolved (uri, name) -> <:html<<a href="$uri:uri$">$str:name$</a>&>>
+  | Resolved (uri, name, internal) -> 
+      if internal then 
+        <:html<<a href="$uri:uri$" class="ocaml_internal">$str:name$</a>&>>
+      else
+        <:html<<a href="$uri:uri$">$str:name$</a>&>>
   | Apply (p1, p2) -> <:html<$html_of_path p1$($html_of_path p2$)>>
 
 let index = ref None
@@ -71,7 +75,7 @@ let rec lookup_ident local (id, kind) =
 	    let path = 
               Index.local_lookup local ((name, kind)::elems)
             in
-              Resolved(path, concrete_name)
+              Resolved(path, concrete_name, false)
 	  with 
 	    Not_found -> Unresolved concrete_name
         end
@@ -83,7 +87,7 @@ let rec lookup_ident local (id, kind) =
 	  let path = 
             Index.lookup_internal kind id elems
           in
-            Resolved(path, concrete_name)
+            Resolved(path, concrete_name, true)
 	with 
 	  Not_found -> Unresolved concrete_name
       end	
@@ -101,7 +105,8 @@ let rec print_ident ppf (id, kind) =
   in
     match lookup_ident local (id, kind) with
       | Unresolved name -> fprintf ppf "@{<unresolved>%s@}" name
-      | Resolved (uri, name) -> fprintf ppf "@{<path:%s>%s@}" (Uri.to_string uri) name
+      | Resolved (uri, name, true) -> fprintf ppf "@{<internal:%s>%s@}" (Uri.to_string uri) name
+      | Resolved (uri, name, false) -> fprintf ppf "@{<external:%s>%s@}" (Uri.to_string uri) name
       | Apply _ -> 
         (match id with 
           | Oide_apply (id1, id2) -> 
@@ -663,7 +668,9 @@ let process_tags tag =
       let pref = String.sub tag 0 idx in 
       let arg = String.sub tag (idx + 1) (len - 1) in
       match pref with
-        | "path" ->
+        | "internal" ->
+	  (fun body -> <:html<<a href="$uri:Uri.of_string arg$" class="ocaml_internal">$body$</a>&>>)
+        | "external" ->
 	  (fun body -> <:html<<a href="$uri:Uri.of_string arg$">$body$</a>&>>)
 	| _ -> raise Not_found
 	           

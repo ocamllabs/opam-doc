@@ -99,7 +99,7 @@ let create_class_signature_content elements =
 let create_class_container class_name signature html_content = function
   | Some (Gentyp.Unresolved _) -> 
     <:html<<div class="ocaml_class" name="$str:class_name$">$signature$$html_content$</div>&>>
-  | Some (Gentyp.Resolved (uri, _)) ->
+  | Some (Gentyp.Resolved (uri, _, _)) ->
     <:html<<div class="ocaml_class" name="$str:class_name$" path="$uri:uri$"> $signature$$html_content$</div>&>>
   | None -> 
     <:html<<div class="ocaml_class" name="$str:class_name$">$signature$$html_content$</div>&>>

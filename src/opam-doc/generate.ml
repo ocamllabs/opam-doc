@@ -1526,12 +1526,12 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_module_item name module_result item_info =
       let open Html_utils in
-          let reference = <:html<<a href="$uri:current_module_uri ()$">$str:name$</a>&>> in
+          let reference = <:html<<a href="$uri:current_module_uri ()$" class="ocaml_internal">$str:name$</a>&>> in
 
           (* TODO constraints *)
 
           match module_result with
-            | Ident (body, Gentyp.Resolved (uri, _)) ->
+            | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pretrack 21 <:html<$keyword "module"$ $reference$ : $cd$>> in
               <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                       
@@ -1547,10 +1547,10 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
 
   and generate_module_type_item name module_result item_info =
       let open Html_utils in
-          let reference = <:html<<a href="$uri:current_modtype_uri ()$">$str:name$</a>&>> in
+          let reference = <:html<<a href="$uri:current_modtype_uri ()$" class="ocaml_internal">$str:name$</a>&>> in
 
           match module_result with
-            | Ident (body, Gentyp.Resolved (uri, _)) ->
+            | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pretrack 24 <:html<$keyword "module type"$ $reference$ = $cd$>> in
               <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                      
@@ -1570,7 +1570,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           let included_types = js_array_of_include_types typ_sig in
         
           match module_result with
-            | Ident (body, Gentyp.Resolved (uri, _)) ->
+            | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
                 Html.pretrack 27 <:html<$keyword "include"$ $cd$>> in
@@ -1593,7 +1593,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         let params_html = html_of_type_class_param_list params variance in
         
         let reference =
-            <:html<<a href="$uri:current_class_uri name$">$str:name$</a>&>> in
+            <:html<<a href="$uri:current_class_uri name$" class="ocaml_internal">$str:name$</a>&>> in
 
         let signature = <:html<$keyword "class"$>> in
         let signature =
@@ -1605,7 +1605,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             let signature = Html.pretrack 30 <:html<$id signature$ : $s$>> in
             begin
               match p with
-                | Gentyp.Resolved (uri, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
                 | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$</div>&>>       
              end
           | Sig (s, content) ->
@@ -1620,7 +1620,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         let params_html = html_of_type_class_param_list params variance in
                 
         let reference =
-            <:html<<a href="$uri:current_class_uri name$">$str:name$</a>&>> in
+            <:html<<a href="$uri:current_class_uri name$" class="ocaml_internal">$str:name$</a>&>> in
 
         let signature = <:html<$keyword "class type"$ >> in
         let signature =
@@ -1632,7 +1632,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             let signature = Html.pretrack 32 <:html<$id signature$ : $s$>> in
             begin
               match p with
-                | Gentyp.Resolved (uri, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
                 | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$</div>&>>    
              end
           | Sig (s, content) ->
