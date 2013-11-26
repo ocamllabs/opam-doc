@@ -673,6 +673,7 @@ function Group(parent) {
 }
 
 Group.prototype.load_content = function(data){
+    this.update_links(data);
     this.load_children(data);
     this.content = data;
 }
@@ -685,6 +686,7 @@ Group.prototype.load_path = function(data){
 }
 
 Group.prototype.add_filter = function(from, to){
+    this.filters = this.filters.slice(0);
     this.filters[this.filters.length] = { from: from, to: to };
 }
 
@@ -709,6 +711,11 @@ Group.prototype.decorate = function(node){
         button.html('+');
         var self = this;
         var expand = function(page){
+            if(page.alias !== null) {
+                self.add_filter(page.alias, self.current);
+            } else {
+                self.add_filter(page.path, self.current);
+            }
             self.load_content(page.body);
             table.append(self.content);
             var expander = new Expander(self.auto_expand, button, self.content);
@@ -733,6 +740,25 @@ Group.prototype.decorate = function(node){
     node.append(table);
 }
 
+Group.prototype.update_links = function(data) {
+    var links = $('a.ocaml_internal', data);
+    var filters = this.filters;
+    links.each(function(){
+        var url = $(this).attr('href');
+        var path = new Path(url);
+        var changed = false;
+        for(var i = 0; i < filters.length; i++) {
+            if(path.substitute(filters[i].from, filters[i].to)) {
+                changed = true;
+                break;
+            }
+        }
+        if(changed) {
+            $(this).attr('href', path.url())
+        }
+    });
+}
+
 function IncludeGroup(parent, idx) {
     Group.call(this, parent);
     this.icount = (parent.icount + idx + 2) % 7;
@@ -746,6 +772,7 @@ function IncludeGroup(parent, idx) {
 IncludeGroup.prototype = new Group();
 
 IncludeGroup.prototype.load_content = function(data) {
+    this.update_links(data);
     this.load_children(data);
     var cell = $('<td>')
         .attr('colspan', '2')
@@ -771,6 +798,7 @@ function SigGroup(parent, idx) {
 SigGroup.prototype = new Group();
 
 SigGroup.prototype.load_content = function(data) {
+    this.update_links(data);
     this.load_children(data);
     var edge_cell = $('<td>').addClass('edge_column');
     var cnt_cell = $('<td>').append(data);
@@ -779,6 +807,7 @@ SigGroup.prototype.load_content = function(data) {
 
 SigGroup.prototype.extend_current = function(node, kind){ 
     var name = node.attr('name');
+    this.current = this.current.copy();
     this.current.extend(name, kind);
 }
 
@@ -812,7 +841,10 @@ $(document).ready(function () {
     var grp = new Group(null);
     load_path(p, function(page){
         grp.typ = page.typ;
-        grp.current = page.path.copy();
+        grp.current = page.path;
+        if(page.alias !== null) {
+          grp.add_filter(page.alias, page.path);
+        }
         grp.load_content(page.body);
         display_page(page);
         show_type(page.typ);
@@ -825,7 +857,10 @@ $(window).on('hashchange', function () {
     var grp = new Group(null);
     load_path(p, function(page){
         grp.typ = page.typ;
-        grp.current = page.path.copy();
+        grp.current = page.path;
+        if(page.alias !== null) {
+          grp.add_filter(page.alias, page.path);
+        }
         grp.load_content(page.body);
         display_page(page);
         scrollTo(0,0);
