@@ -312,6 +312,53 @@ Path.prototype.url = function () {
     return url;
 }
 
+function Copy(path) {
+    this.package = path.package;
+    this.module = path.module;
+    this.subnames = path.subnames.slice(0);
+    this.subkinds = path.subkinds.slice(0);
+}
+
+Copy.prototype = Path.prototype
+
+Path.prototype.copy = function () { return new Copy(this) }
+
+Path.prototype.extend = function (name, kind) { 
+    this.subnames[this.subnames.length] = name;
+    this.subkinds[this.subkinds.length] = kind;
+}
+
+Path.prototype.substitute = function (from, to) {
+    if(this.package === from.package) {
+        if(this.module === from.module) {
+            if(this.subnames.length > from.subnames.length) {
+                var equal = true;
+                for(var i = 0; i < from.subnames.length; i++) {
+                    if(from.subnames[i] !== this.subnames[i]) {
+                        equal = false;
+                    } else if(from.subkinds[i] !== this.subkinds[i]) {
+                        equal = false;
+                    }
+                }
+                if(equal) {
+                    this.package = to.package;
+                    this.module = to.module;
+                    var subnames = to.subnames.slice(0);
+                    var subkinds = to.subkinds.slice(0);
+                    for(var i = from.subnames.length; i < this.subnames.length; i++) {
+                        subnames[subnames.length] = this.subnames[i];
+                        subkinds[subkinds.length] = this.subkinds[i];
+                    }
+                    this.subnames = subnames;
+                    this.subkinds = subkinds;
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
 function Parent(path) {
     this.package = null;
     this.module = null;
@@ -613,10 +660,14 @@ function Group(parent) {
             this.depth = parent.depth + 1;
             this.icount = parent.icount;
             this.auto_expand = parent.auto_expand;
+            this.filters = parent.filters;
+            this.current = parent.current;
         } else {
             this.depth = 0;
             this.icount = 6;
             this.auto_expand = true;
+            this.filters = [];
+            this.current = null;
         }
     }
 }
@@ -633,11 +684,13 @@ Group.prototype.load_path = function(data){
     }
 }
 
-Group.prototype.set_type = function(typ){
-    this.typ = typ;
+Group.prototype.add_filter = function(from, to){
+    this.filters[this.filters.length] = { from: from, to: to };
 }
 
 Group.prototype.check_types = function(){ }
+
+Group.prototype.extend_current = function(){ }
 
 Group.prototype.decorate = function(node){
     var button = $('<button>').addClass('expander');
@@ -724,6 +777,11 @@ SigGroup.prototype.load_content = function(data) {
     this.content = $('<tr>').append(edge_cell).append(cnt_cell);
 }
 
+SigGroup.prototype.extend_current = function(node, kind){ 
+    var name = node.attr('name');
+    this.current.extend(name, kind);
+}
+
 Group.prototype.load_children = function(data, Kind, label){
     if(typeof Kind === 'undefined') {
         this.load_children(data, IncludeGroup, 'include');
@@ -736,6 +794,7 @@ Group.prototype.load_children = function(data, Kind, label){
         children.each(function(idx) {
             var grp = new Kind(self, idx);
             grp.check_types($(this));
+            grp.extend_current($(this), label);
             var content = $('div.ocaml_content', $(this));
             if(content.length > 0) {
                 grp.load_content(content);
@@ -752,7 +811,8 @@ $(document).ready(function () {
     var p = new Path(url);
     var grp = new Group(null);
     load_path(p, function(page){
-        grp.set_type(page.typ);
+        grp.typ = page.typ;
+        grp.current = page.path.copy();
         grp.load_content(page.body);
         display_page(page);
         show_type(page.typ);
@@ -764,7 +824,8 @@ $(window).on('hashchange', function () {
     var p = new Path(url);
     var grp = new Group(null);
     load_path(p, function(page){
-        grp.set_type(page.typ);
+        grp.typ = page.typ;
+        grp.current = page.path.copy();
         grp.load_content(page.body);
         display_page(page);
         scrollTo(0,0);
