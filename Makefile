@@ -20,6 +20,7 @@ opam: scripts/ocamlc scripts/ocamlc.opt bin-doc
 	cp scripts/ocamlc opam/system/bin/
 	cp scripts/ocamlc.opt opam/system/bin/
 	cp bin-doc opam/system/bin/
+	scripts/add-repos.sh
 
 data: opam scripts/collect-data.sh packages
 	scripts/collect-data.sh
