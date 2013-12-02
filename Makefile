@@ -26,7 +26,7 @@ data: opam scripts/collect-data.sh packages
 	scripts/collect-data.sh
 
 doc: data opam-doc scripts/create-docs.sh url
-	scripts/create-docs.sh "doc" `cat url`
+	scripts/create-docs.sh "doc" `cat url | grep -v '^#'`
 
 serve-doc: data opam-doc scripts/create-docs.sh
 	scripts/create-docs.sh "serve-doc" "http://127.0.0.1:8000"

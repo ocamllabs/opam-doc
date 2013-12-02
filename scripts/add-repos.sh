@@ -3,7 +3,7 @@
 OPAM_DIR=opam
 REPOS_FILE=repositories
 
-REPOS=`awk '{print $1}' ${REPOS_FILE}`
+REPOS=`cat ${REPOS_FILE} | grep -v '^#' | awk '{print $1}'`
 
 count=0
 for repo in ${REPOS}; do 

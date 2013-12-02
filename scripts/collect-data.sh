@@ -20,7 +20,7 @@ function calc_md5_for_file()
   fi
 }
 
-IMPORTS=`awk '{print $1}' ${PACKAGES_FILE}`
+IMPORTS=`cat ${PACKAGES_FILE} | grep -v '^#' | awk '{print $1}'`
 
 for imp in ${IMPORTS}; do 
   echo "Building $imp .."
