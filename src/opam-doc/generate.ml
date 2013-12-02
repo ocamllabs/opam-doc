@@ -177,6 +177,18 @@ let rec generate_text local text =
   loop Cow.Html.nil Cow.Html.nil false text
 
 and reference local (rk:ref_kind) (s:string) (t:text option) =
+  let split s = 
+    let rec loop acc idx =
+      try
+        let idx' = String.index_from s idx '.' in
+        let str = String.sub s idx (idx' - idx) in
+          loop (str :: acc) (idx + 1)
+      with Not_found -> 
+        let str = String.sub s idx ((String.length s) - idx) in
+          List.rev (str :: acc)
+    in
+      loop [] 0
+  in
   (* TODO: fixme *)
   match rk with
   | RK_link ->
@@ -186,86 +198,115 @@ and reference local (rk:ref_kind) (s:string) (t:text option) =
       end
   | RK_custom c ->
       begin match t with
-        | Some t -> <:html< <a title="$str:c$" href="$str:s$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:c$" href="$str:s$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_element -> let href = "#" ^ s in
+  | RK_element ->
       begin match t with
-        | Some t -> <:html< <a href="$str:href$">$generate_text local t$</a>&>>
-        | None -> <:html< <a href="$str:href$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_module -> let x = "javascript:document.location.href += '." ^ s ^"." in
+  | RK_module -> 
+      let elems = List.map (fun s -> s, Uris.Module) (split s) in
+      let uri = Uri.to_string (Uris.uri elems) in
       begin match t with
-        | Some t -> <:html< <a href="$str:x$">$generate_text local t$</a>&>>
-        | None -> <:html< <a href="$str:x$">$str:s$</a>&>>
+        | Some t -> <:html< <a href="$str:uri$">$generate_text local t$</a>&>>
+        | None -> <:html< <a href="$str:uri$">$str:s$</a>&>>
       end
-  | RK_module_type -> let title = "RK_module_type " ^ s in
+  | RK_module_type ->
+      let elems = split s in
+      let modtype = List.hd (List.rev elems) in
+      let mods = List.tl (List.rev elems) in
+      let elems = 
+        List.rev 
+          ((modtype, Uris.ModType) 
+           :: (List.map (fun s -> s, Uris.Module) mods)) 
+      in
+      let uri = Uri.to_string (Uris.uri elems) in
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html< <a title="$str:uri$">$generate_text local t$</a>&>>
+        | None -> <:html< <a title="$str:uri$">$str:s$</a>&>>
       end
   | RK_class ->
+      let elems = split s in
+      let modtype = List.hd (List.rev elems) in
+      let mods = List.tl (List.rev elems) in
+      let elems = 
+        List.rev 
+          ((modtype, Uris.Class) 
+           :: (List.map (fun s -> s, Uris.Module) mods)) 
+      in
+      let uri = Uri.to_string (Uris.uri elems) in
       begin
-        if String.contains s '.' then
-          let ri = String.rindex s '.' in
-          let m = String.sub s 0 ri
-          and c = String.sub s (ri+1) (String.length s - ri - 1) in
-          let onclick = Printf.sprintf "document.location.href += '.%s.%s'" m c in
-          match t with
-          | Some t -> <:html< <a onclick="$str:onclick$">$generate_text local t$</a>&>>
-          | None -> <:html< <a onclick="$str:onclick$">$str:s$</a>&>>
-        else
-          let href = Printf.sprintf "#%s" s in
-          match t with
-          | Some t -> <:html< <a href="$str:href$">$generate_text local t$</a>&>>
-          | None -> <:html< <a href="$str:href$">$str:s$</a>&>>
+        match t with
+          | Some t -> <:html< <a href="$str:uri$">$generate_text local t$</a>&>>
+          | None -> <:html< <a href="$str:uri$">$str:s$</a>&>>
       end
-  | RK_class_type -> let title = "RK_class_type " ^ s in
+  | RK_class_type -> 
+      let elems = split s in
+      let modtype = List.hd (List.rev elems) in
+      let mods = List.tl (List.rev elems) in
+      let elems = 
+        List.rev 
+          ((modtype, Uris.ClassType) 
+           :: (List.map (fun s -> s, Uris.Module) mods)) 
+      in
+      let uri = Uri.to_string (Uris.uri elems) in
+      begin
+        match t with
+          | Some t -> <:html< <a href="$str:uri$">$generate_text local t$</a>&>>
+          | None -> <:html< <a href="$str:uri$">$str:s$</a>&>>
+      end
+  | RK_value -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_value -> let title = "RK_value " ^ s in
+  | RK_type -> 
+      let elems = split s in
+      let modtype = List.hd (List.rev elems) in
+      let mods = List.tl (List.rev elems) in
+      let elems = 
+        List.rev 
+          ((modtype, Uris.Type) 
+           :: (List.map (fun s -> s, Uris.Module) mods)) 
+      in
+      let uri = Uri.to_string (Uris.uri elems) in
+      begin
+        match t with
+          | Some t -> <:html< <a href="$str:uri$">$generate_text local t$</a>&>>
+          | None -> <:html< <a href="$str:uri$">$str:s$</a>&>>
+      end
+  | RK_exception ->
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_type -> let title = "RK_type " ^ s in
+  | RK_attribute -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_exception -> let title = "RK_exception " ^ s in
+  | RK_method -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_attribute -> let title = "RK_attribute " ^ s in
+  | RK_section -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_method -> let title = "RK_method " ^ s in
+  | RK_recfield -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_section -> let title = "RK_section " ^ s in
+  | RK_const -> 
       begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
+        | Some t -> <:html<$generate_text local t$>>
+        | None -> <:html<$str:s$>>
       end
-  | RK_recfield -> let title = "RK_recfield " ^ s in
-      begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
-      end
-  | RK_const -> let title = "RK_const " ^ s in
-      begin match t with
-        | Some t -> <:html< <a title="$str:title$">$generate_text local t$</a>&>>
-        | None -> <:html< <a title="$str:title$">$str:s$</a>&>>
-      end
-
 
 and generate_list_items local items =
   List.fold_left
