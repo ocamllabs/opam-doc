@@ -5,6 +5,8 @@ val clear_index : unit -> bool
 val always_proceed : unit -> bool
 val package_descr : unit -> string
 val current_package : unit -> string
+val base_uri : unit -> string
+val summary : unit -> string option
 val set_current_package : string -> unit 
 val options : (string * Arg.spec * string) list
 val usage : string
@@ -21,7 +23,8 @@ type mark =
   | Method
   | Title
 val style_filename : string
-val style_tag : Cow.Xml.t
+val style_tag : unit -> Cow.Xml.t
+val config_tag : unit -> Cow.Xml.t
 val script_filename : string
-val script_tag : Cow.Xml.t
+val script_tag : unit -> Cow.Xml.t
 val default_script : string

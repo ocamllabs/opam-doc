@@ -1,20 +1,42 @@
-BINDIR=./bin
-TARGET=driver
-BINNAME=opamdoc
 OCAMLBUILD?=ocamlbuild
 J?=4
 
-.PHONY: all clean install
+.PHONY: all serve clean
 
-all: _build/$(TARGET).byte _build/$(TARGET).native
+all: doc
 
-_build/$(TARGET).byte _build/$(TARGET).native: *.mli *.ml
-	$(OCAMLBUILD) -j $(J) -use-ocamlfind $(TARGET).byte $(TARGET).native
+opam-doc: src/opam-doc/*.mli src/opam-doc/*.ml
+	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/opam-doc/driver.native
+	mv driver.native opam-doc
+
+bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
+	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/bin-doc/driver.native
+	mv driver.native bin-doc
+
+opam: scripts/ocamlc scripts/ocamlc.opt bin-doc
+	rm -fr opam
+	mkdir opam
+	opam init -n --root=opam
+	cp scripts/ocamlc opam/system/bin/
+	cp scripts/ocamlc.opt opam/system/bin/
+	cp bin-doc opam/system/bin/
+	scripts/add-repos.sh
+
+data: opam scripts/collect-data.sh packages
+	scripts/collect-data.sh
+
+doc: data opam-doc scripts/create-docs.sh url
+	scripts/create-docs.sh "doc" `cat url | grep -v '^#'`
+
+serve-doc: data opam-doc scripts/create-docs.sh
+	scripts/create-docs.sh "serve-doc" "http://127.0.0.1:8000"
+
+serve: serve-doc
+	-cd serve-doc; python -m SimpleHTTPServer
 
 clean:
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind -clean
-
-install:all
-	mkdir -p $(BINDIR)
-	cp $(TARGET).byte $(BINDIR)/$(BINNAME)
-	cp $(TARGET).native $(BINDIR)/$(BINNAME).opt
+	-rm -fr opam
+	-rm -fr data
+	-rm -fr doc
+	-rm -fr serve-doc

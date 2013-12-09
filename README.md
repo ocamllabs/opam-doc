@@ -1,16 +1,22 @@
 opam-doc
 =========
 
-Produce documentation for libraries installed with OPAM.
+Produce documentation for OPAM packages.
 
-Depending on : cow, compiler-libs.common, unix
+Depending on : opam, cow, compiler-libs.common, unix, ocamlfind
 
 Requires compiler version >= 4.01
 
 ====
 
 Usage :
-- run bin-doc on your package's ml/mli files to get the cmd[i]s
-- compile your package source files adding the '-bin-annot' option in order to generate the typed tree files (cmt[i])
-- cd to a directory that will contain all the opam-doc generated documentation (e.g ~/.opam/4.X.X/doc)
-- run : opam-doc --package 'package_name' \*.cmts \*cmds
+
+1. Write the names of the packages for which you want to generate documentation into the `packages` file.
+
+2. Write the URL from which you intend to serve the documentation into the `url` file.
+
+3. Write any additional OPAM repositories you need into the `repositories` file.
+
+4. Run `make`.
+
+5. The documentation should now be in the `doc` folder.

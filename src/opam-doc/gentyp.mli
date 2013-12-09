@@ -2,7 +2,7 @@
 
 open Cow
 
-type path = Unresolved of string | Resolved of Uri.t * string | Apply of path * path
+type path = Unresolved of string | Resolved of Uri.t * string * bool | Apply of path * path
 
 val html_of_path : path -> Html.t
 

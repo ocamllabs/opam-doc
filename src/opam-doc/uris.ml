@@ -1,8 +1,11 @@
 
 let package_query package = 
-  "?package="^ match package with
-    | None -> Opam_doc_config.current_package ()
-    | Some p -> p
+  Opam_doc_config.base_uri ()
+  ^ "/"
+  ^ (match package with
+     | None -> Opam_doc_config.current_package ()
+     | Some p -> p)
+  ^ "/"
   
 let package_uri name =
   Uri.of_string (package_query (Some name))
@@ -20,14 +23,14 @@ let uri ?package elems =
     match elems with
       [] -> assert false
     | [n, kind] -> 
-        let mods = "&module=" ^ acc in
+        let mods = "#" ^ acc in
         let comp = 
           match kind with
             Module -> if sep then "." ^ n else n
           | ModType -> if sep then ":" ^ n else n
-          | Class -> "&class=" ^ n
-          | ClassType -> "&classtype=" ^ n
-          | Type -> "&type=" ^ n
+          | Class -> "." ^ n
+          | ClassType -> "." ^ n
+          | Type -> "." ^ n
         in
           pkg ^ mods ^ comp
     | (n, kind) :: rest -> 

@@ -6,11 +6,14 @@ let create_package_directory () =
   if not Sys.(file_exists package_name && is_directory package_name) then
     Unix.mkdir package_name 0o755
 
+let pSameBase a = 
+  let open Filename in
+  let base = chop_extension (basename a) in
+    (fun b -> (chop_extension (basename b)) = base)
+
 let get_cmt cmd cmt_list =
-  let base = Filename.chop_extension cmd in
-  let pSameBase cmt = (Filename.chop_extension cmt) = base in
   try
-    Some (List.find pSameBase cmt_list)
+    Some (List.find (pSameBase cmd) cmt_list)
   with Not_found -> None
 
 let process_cmd cmd =
@@ -20,6 +23,39 @@ let process_cmd cmd =
     with
 	_ -> None
   )
+
+let copy_file input_name output_name = 
+  let open Unix in
+  let buffer_size = 8192 in
+  let buffer = String.create buffer_size in
+  let fd_in = openfile input_name [O_RDONLY] 0 in 
+  let fd_out = openfile output_name [O_WRONLY; O_CREAT; O_TRUNC] 0o666 in 
+  let rec copy_loop () = 
+    match read fd_in buffer 0 buffer_size with 
+    | 0 -> () 
+    | r -> ignore (write fd_out buffer 0 r); 
+           copy_loop () 
+  in 
+    copy_loop (); 
+    close fd_in; 
+    close fd_out
+
+let create_summary files =
+  let filename = 
+    Opam_doc_config.current_package () ^ "/summary.html"
+  in
+    match Opam_doc_config.summary () with
+      None -> Html_utils.generate_package_summary filename files
+    | Some s -> 
+        if Sys.file_exists s then
+          Unix.handle_unix_error (fun () -> copy_file s filename) ()
+        else raise (Failure (s ^ " does not exist"))
+
+let create_index () = 
+  let filename = 
+    Opam_doc_config.current_package () ^ "/index.html"
+  in
+    Html_utils.generate_package_index filename
 
 let rec check_package_name_conflict global =
   let rec loop () =
@@ -64,6 +100,7 @@ let process_file global cmd cmt =
 	    s module_name;
 	  None
 
+
 let _ =
   let files = ref [] in
 
@@ -90,15 +127,15 @@ let _ =
 
   (* Remove the [ext] file when a [ext]i is found *)
   let filter_impl_files ext files =
-    let should_be_kept file =
-      if Filename.check_suffix file ext then
-	try
-	  ignore (List.find ((=) ((Filename.chop_extension file)^ext^"i")) files);
-	  false
-	with Not_found -> true
-      else true
-	in
-    List.filter should_be_kept files
+    let exti = ext ^ "i" in
+    let discard file =
+      (Filename.check_suffix file ext)
+      && (List.exists (fun filei -> 
+                       (Filename.check_suffix filei exti) 
+                       && (pSameBase file filei)) 
+                      files)
+    in
+      List.filter (fun file -> not (discard file)) files
   in
 
   let cmt_files = filter_impl_files ".cmt" cmt_files in
@@ -132,7 +169,8 @@ let _ =
       let open Html_utils in
 	  output_style_file ();
 	  output_script_file ();
-	  generate_package_index processed_files;
+          create_summary processed_files;
+          create_index ();
 	  generate_global_packages_index global
     end;
 

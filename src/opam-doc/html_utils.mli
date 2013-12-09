@@ -50,7 +50,11 @@ val html_of_type_class_param_list :
 
 (** Parse the include's module_type to retrieve the contained elements and
     return it as a json array *)
-val js_array_of_include_items : Types.module_type -> string
+val js_array_of_include_items : Types.signature -> string
+
+(** Parse the include's module_type to retrieve the contained types and
+    return it as a json array *)
+val js_array_of_include_types : Types.signature -> string
 
 (** {3 Html page generation} *)
 
@@ -60,9 +64,12 @@ val output_style_file : unit -> unit
 (** Writes the script file if non-existent *)
 val output_script_file : unit -> unit
 
-(** Generate the current package module index. Elements should be of the form:
+(** Generate the current package summary. Elements should be of the form:
     name * description *)
-val generate_package_index : (string * Html.t) list -> unit
+val generate_package_summary : string -> (string * Html.t) list -> unit
+  
+(** Generate the current package index  *)
+val generate_package_index : string -> unit
   
 (** Generate the main page that displays every package contained in the global
     index file *)

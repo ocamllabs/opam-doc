@@ -1,5 +1,8 @@
 *~
 _build
-*.byte
-*.native
-bin/
+bin-doc
+data
+doc
+opam-doc
+opam
+serve-doc
