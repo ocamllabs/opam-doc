@@ -63,53 +63,28 @@ let default_stylesheet = String.concat "\n"
     ".code { color : #465F91 ; }" ;
     ".typetable { border-style : hidden }" ;
     ".paramstable { border-style : hidden ; padding: 5pt 5pt}" ;
-    "td.typefieldcomment { background-color : #FFFFFF ; font-size: smaller ;}" ;
+    "td.typefieldcomment { font-size: smaller ;}" ;
     "div.sig_block {margin-left: 2em}" ;
     "*:target { background: yellow; }" ;
+    "pre {
+        white-space: pre-wrap; /* css-3 */
+        white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
+        white-space: -pre-wrap; /* Opera 4-6 */
+        white-space: -o-pre-wrap; /* Opera 7 */
+        word-wrap: break-word; /* Internet Explorer 5.5+ */
+        }";
 
     "body {font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0}";
 
-    "h1 { font-size : 20pt ; text-align: center; }" ;
-
-    "h2 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90BDFF ;"^
-      "padding: 2px; }" ;
-
-    "h3 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90DDFF ;"^
-      "padding: 2px; }" ;
-
-    "h4 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90EDFF ;"^
-      "padding: 2px; }" ;
-
-    "h5 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90FDFF ;"^
-      "padding: 2px; }" ;
-
-    "h6 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #90BDFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h7 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #E0FFFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h8 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #F0FFFF ; "^
-      "padding: 2px; }" ;
-
-    "div.h9 { font-size : 20pt ; border: 1px solid #000000; "^
-      "margin-top: 5px; margin-bottom: 2px;"^
-      "text-align: center; background-color: #FFFFFF ; "^
-      "padding: 2px; }" ;
+    ".info h1 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h2 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h3 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h4 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h5 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h6 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h7 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h8 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h9 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
 
     "a {color: #416DFF; text-decoration: none}";
     "a:hover {background-color: #ddd; text-decoration: underline}";
@@ -129,27 +104,101 @@ let default_stylesheet = String.concat "\n"
     "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
 
     (* My stuff *)
-    ".expander { width:1.5em; height:1.5em; border-radius:0.3em; font-weight: bold }";
-    ".expanding_sig { border-spacing: 5px 1px }";
-    ".expanding_sig td { vertical-align: text-top }";
-    ".expanding_include_0 td { vertical-align: text-top }"; 
-    ".expanding_include_1 td { vertical-align: text-top }"; 
-    ".expanding_include_2 td { vertical-align: text-top }"; 
-    ".expanding_include_3 td { vertical-align: text-top }"; 
-    ".expanding_include_4 td { vertical-align: text-top }"; 
-    ".expanding_include_5 td { vertical-align: text-top }"; 
-    ".expanding_include_6 td { vertical-align: text-top }"; 
-    "table.expanding_include_0, table.expanding_include_1, table.expanding_include_2, table.expanding_include_3, 
-     table.expanding_include_4, table.expanding_include_5, table.expanding_include_6 
-     { border-top: thin dashed; border-bottom: thin dashed; border-collapse: collapse}";
-    "table.expanding_include_0 { background-color: #FFF5F5; }"; 
-    "table.expanding_include_1 { background-color: #F5F5FF; }"; 
-    "table.expanding_include_2 { background-color: #F5FFF5; }"; 
-    "table.expanding_include_3 { background-color: #FFF5FF; }"; 
-    "table.expanding_include_4 { background-color: #FFFFF5; }"; 
-    "table.expanding_include_5 { background-color: #F5FFFF; }"; 
-    "table.expanding_include_6 { background-color: #FFF5EB; }"; 
-    "td.edge_column { border-right: 3px solid lightgrey }";
+    ".ocaml_page { width: 1200px }";
+    ".ocaml_head .ocaml_summary { margin-left: 350px; width: 800px }";
+    ".ocaml_title { margin-left: 350px; font-size : 20px; text-align: left; }";
+    ".ocaml_body { margin-left: 350px; width: 800px }";
+    ".ocaml_expanded_include_0 { background-color: #FFFAFA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    ".ocaml_expanded_include_1 { background-color: #FAFAFF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
+    ".ocaml_expanded_include_2 { background-color: #FAFFFA; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
+    ".ocaml_expanded_include_3 { background-color: #FFFAFF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
+    ".ocaml_expanded_include_4 { background-color: #FFFFFA; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
+    ".ocaml_expanded_include_5 { background-color: #FAFFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
+    ".ocaml_expanded_include_6 { background-color: #FAF5FA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    "pre.ocaml_include_handle { display: inline; }";
+
+    ".ocaml_expander_plus {
+        position: relative;
+        float: left;
+        width: 7px;
+        height: 7px;
+        background: silver;
+        border-style: solid;
+        border-width: 1px;
+        margin: 3px;
+    }";
+    ".ocaml_expander_plus:hover {
+        background: grey;
+    }";
+    ".ocaml_expander_plus::before {
+        content: '';
+        position: absolute;
+        left: 3px;
+        top: 1px;
+        width: 1px;
+        height: 5px;
+        background: black;
+    }";
+    ".ocaml_expander_plus::after {
+        content: '';
+        position: absolute;
+        left: 1px;
+        top: 3px;
+        width: 5px;
+        height: 1px;
+        background: black;
+    }";
+    ".ocaml_expander_minus {
+        position: relative;
+        float: left;
+        width: 7px;
+        height: 7px;
+        background: silver;
+        border-style: solid;
+        border-width: 1px;
+        margin: 3px;
+    }";
+    ".ocaml_expander_minus:hover {
+        background: grey;
+    }";
+    ".ocaml_expander_minus::after {
+        content: '';
+        position: absolute;
+        left: 1px;
+        top: 3px;
+        width: 5px;
+        height: 1px;
+        background: black;
+    }";
+    ".ocaml_expander_disabled {
+        position: relative;
+        float: left;
+        width: 7px;
+        height: 7px;
+        background: silver;
+        border-style: solid;
+        border-color: grey;
+        border-width: 1px;
+        margin: 3px;
+    }";
+    ".ocaml_expander_disabled::before {
+        content: '';
+        position: absolute;
+        left: 3px;
+        top: 1px;
+        width: 1px;
+        height: 5px;
+        background: grey;
+    }";
+    ".ocaml_expander_disabled::after {
+        content: '';
+        position: absolute;
+        left: 1px;
+        top: 3px;
+        width: 5px;
+        height: 1px;
+        background: grey;
+    }";
   ]
 
 
@@ -463,20 +512,29 @@ Page.prototype.title = function(){
                    text    : this.alias.name()});
     }
      
-    return $('<h1>').append(fullName + sep).append(alias);
+    return $('<h1>')
+        .addClass('ocaml_title')
+        .append(fullName + sep)
+        .append(alias);
 }
 
 function display_page(page){
     var plink = page.parent_link();
     var title = page.title();
     var summary = page.summary;
-    var rule = $('<hr/>').attr('width','100%');
-    var body = page.body;
-
-    var content = $('<div>')
+    var head = $('<div>')
+        .addClass('ocaml_head')
         .append(plink)
         .append(title)
-        .append(summary)
+        .append(summary);
+    var rule = $('<hr/>').attr('width','100%');
+    var body = $('<div>')
+        .addClass('ocaml_body')
+        .append(page.body);
+
+    var content = $('<div>')
+        .addClass('ocaml_page')
+        .append(head)
         .append(rule)
         .append(body);
 
@@ -622,39 +680,8 @@ function load_path(path, cont) {
     }
 }
 
-function Expander(expanded, button, expansion) {
-    if(expanded) { 
-        button.html('-');
-        expansion.show();
-    } else { 
-        button.html('+');
-        expansion.hide();
-    }
-    this.expanded = expanded;
-    this.button = button;
-    this.expansion = expansion;
-}
-
-Expander.prototype.expand = function(expand){
-    if(typeof expand === 'undefined') {
-        expand = ! this.expanded;
-    }
-    if(expand !== this.expanded) {
-        this.button.html(expand ? '-' : '+');
-        if(expand) {
-            this.expansion.show('fast');
-        } else {
-            this.expansion.hide('fast');
-        }
-        this.expanded = expand;
-    }
-}
-
-function Group(parent) {
-    if(typeof parent !== 'undefined'){
-        this.cls = null;
-        this.content = null;
-        this.path = null;
+function Group(parent, node) {
+    if(typeof parent !== 'undefined' && typeof node !== 'undefined'){
         this.typ = null;
         if(parent !== null) {
             this.depth = parent.depth + 1;
@@ -662,12 +689,34 @@ function Group(parent) {
             this.auto_expand = parent.auto_expand;
             this.filters = parent.filters;
             this.current = parent.current;
+            this.decorate = parent.decorate_children;
+            this.decorate_children = parent.decorate_children;
         } else {
             this.depth = 0;
             this.icount = 6;
             this.auto_expand = true;
             this.filters = [];
             this.current = null;
+            this.decorate = true;
+            this.decorate_children = true;
+        }
+        this.expanded = this.auto_expand;
+        this.loading = false;
+        if(node !== null) {
+            this.node = node;
+            this.content = null;
+            var pathAttr = this.node.attr('path');
+            if(typeof pathAttr !== 'undefined') {
+                this.path = new Path(pathAttr);
+            } else {
+                this.path = null;
+            }
+            this.handle = this.node.children();
+        } else {
+            this.node = null;
+            this.content = null;
+            this.path = null;
+            this.handle = null;
         }
     }
 }
@@ -678,66 +727,72 @@ Group.prototype.load_content = function(data){
     this.content = data;
 }
 
-Group.prototype.load_path = function(data){
-    var pathAttr = data.attr('path');
-    if(typeof pathAttr !== 'undefined') {
-        this.path = new Path(pathAttr);
-    }
-}
-
 Group.prototype.add_filter = function(from, to){
     this.filters = this.filters.slice(0);
     this.filters[this.filters.length] = { from: from, to: to };
 }
 
-Group.prototype.check_types = function(){ }
+Group.prototype.show_unexpanded = function(){ }
 
-Group.prototype.extend_current = function(){ }
+Group.prototype.show_expanded = function(){ }
 
-Group.prototype.decorate = function(node){
-    var button = $('<button>').addClass('expander');
-    var btn_cell = $('<td>').append(button);
-    var node_cell = $('<td>').append(node.children()).width('100%');
-    var node_row = $('<tr>').append(btn_cell).append(node_cell);
-    var table = $('<table>')
-        .addClass('expanding_' + this.cls)
-        .width('100%')
-        .append(node_row);
-    if(this.content !== null) {
-        table.append(this.content);
-        var expander = new Expander(this.auto_expand, button, this.content);
-        button.click(function () { expander.expand() });
-    } else if(this.path !== null) {
-        button.html('+');
-        var self = this;
-        var expand = function(page){
-            if(page.alias !== null) {
-                self.add_filter(page.alias, self.current);
-            } else {
-                self.add_filter(page.path, self.current);
+Group.prototype.show_disabled = function(){ }
+
+Group.prototype.expand = function(expand){
+    if(typeof expand === 'undefined') {
+        expand = ! this.expanded;
+    }
+    if(expand) {
+        if(this.content === null) {
+            if(! this.loading) {
+                this.loading = true;
+                var self = this;
+                var load = function(page){
+                    if(page.alias !== null) {
+                        self.add_filter(page.alias, self.current);
+                    } else {
+                        self.add_filter(page.path, self.current);
+                    }
+                    self.load_content(page.body);
+                    self.show_expanded(true);
+                };
+                load_path(this.path, load);
             }
-            self.load_content(page.body);
-            table.append(self.content);
-            var expander = new Expander(self.auto_expand, button, self.content);
-            button.click(function () { expander.expand() });
-            expander.expand(true);
-            if(self.auto_expand) {
-                show_type(self.typ)
-            }
-        };
-        if(this.auto_expand) {
-            load_path(self.path, expand);
         } else {
-            button.click(function () {
-                button.off('click');
-                load_path(self.path, expand);
-            });
+            this.show_expanded(true);
         }
     } else {
-        button.html('+');
-        button.attr('disabled', true);
+        this.show_unexpanded(true);
     }
-    node.append(table);
+}
+
+Group.prototype.show = function(){
+    if(this.content === null && this.path === null) {
+        this.show_disabled();
+    } else {
+        if(this.auto_expand) {
+            if(this.content === null) {
+                this.loading = true;
+                this.show_unexpanded(false);
+                var self = this;
+                var load = function(page){
+                    if(page.alias !== null) {
+                        self.add_filter(page.alias, self.current);
+                    } else {
+                        self.add_filter(page.path, self.current);
+                    }
+                    self.load_content(page.body);
+                    show_type(self.typ)
+                    self.show_expanded(false);
+                };
+                load_path(this.path, load);
+            } else {
+                this.show_expanded(false);
+            }
+        } else {
+            this.show_unexpanded(false);
+        }
+    }
 }
 
 Group.prototype.update_links = function(data) {
@@ -759,56 +814,224 @@ Group.prototype.update_links = function(data) {
     });
 }
 
-function IncludeGroup(parent, idx) {
-    Group.call(this, parent);
+function IncludeGroup(parent, node, label, idx) {
+    Group.call(this, parent, node);
     this.icount = (parent.icount + idx + 2) % 7;
-    this.cls = 'include_' + this.icount;
-    if(this.depth > 2) {
+    if(this.icount === parent.icount) {
+        this.icount = (this.icount + 4) % 7;
+    }
+    if(this.depth > 4) {
         this.auto_expand = false;
     }
     this.typ = parent.typ;
+    var typesAttr = JSON.parse(this.node.attr('types'));
+    if (typesAttr.indexOf(this.typ) !== -1){
+        this.auto_expand = true;
+    }
+    this.button = null;
+    this.block = null;
+    this.inner_block = null;
+    this.summary = null;
+    this.content_added = false;
+    var indent = 250 - (10 * this.depth);
+    this.pindent = '+=' + indent.toString() + 'px';
+    this.nindent = '-=' + indent.toString() + 'px';
+    var exdent = 40 - (2 * this.depth);
+    this.pexdent = '+=' + exdent.toString() + 'px';
+    this.nexdent = '-=' + exdent.toString() + 'px';
 }
 
 IncludeGroup.prototype = new Group();
 
-IncludeGroup.prototype.load_content = function(data) {
-    this.update_links(data);
-    this.load_children(data);
-    var cell = $('<td>')
-        .attr('colspan', '2')
-        .css('padding', 0)
-        .append(data);
-    this.content = $('<tr>').append(cell);
-}
-
-IncludeGroup.prototype.check_types = function(node){ 
-    var types = JSON.parse(node.attr('types'));
-    if (types.indexOf(this.typ) !== -1){
-        this.auto_expand = true;
+IncludeGroup.prototype.prepare = function(){
+    if(this.decorate) {
+        if(this.button === null) {
+            this.button = $('<div>').addClass('ocaml_expander_plus');
+            var self = this;
+            this.button.click(function () { self.expand() });
+        }
+        if(this.block === null) {
+            this.summary = $('ocaml_summary', this.handle);
+            this.handle = $('<div>')
+                             .append(this.button)
+                             .append(this.handle);
+            this.inner_block = $('<div>')
+                             .addClass('ocaml_expanded_include_' + this.icount)
+                             .css('display', 'inline-block')
+                             .append(this.handle);
+            this.block = $('<div>').append(this.inner_block);
+            this.node.append(this.block);
+        }
+        if(!this.content_added && this.content !== null) {
+            this.inner_block.append(this.content);
+            this.inner_block.css('padding', '3px');
+            this.content_added = true;
+        }
     }
 }
 
-function SigGroup(parent, idx) {
-    Group.call(this, parent);
+IncludeGroup.prototype.show_unexpanded = function(animate){
+    this.prepare();
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_minus');
+        this.button.addClass('ocaml_expander_plus');
+    }
+    if(animate) {
+        if(this.content !== null) {
+            this.content.hide({duration: 'fast', queue: false});
+            if(this.decorate) {
+                this.summary.show({duration: 'fast', queue: false});
+                this.block.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
+                this.inner_block.animate({minWidth: '0'}, {duration: 'fast', queue: false});
+                this.content.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
+                this.handle.animate({fontSize : '13px'}, {duration: 'fast', queue: false});
+            }
+        }
+    } else {
+        if(this.content !== null) {
+            this.content.hide();
+            if(this.decorate) {
+                this.summary.show();
+                this.block.css('margin-left', '');
+                this.block.css('margin-right', '');
+                this.inner_block.css('min-width', '');
+                this.content.css('margin-left', '');
+                this.content.css('margin-right', '');
+                this.handle.css('font-size', '13px');
+            }
+        }
+    }
+    this.expanded = false;
+}
+
+IncludeGroup.prototype.show_expanded = function(animate){
+    this.prepare();
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_plus');
+        this.button.addClass('ocaml_expander_minus');
+    }
+    if(animate) {
+        if(this.content !== null) {
+            this.content.show({duration: 'fast', queue: false});
+            this.summary.hide({duration: 'fast', queue: false});
+            this.block.animate({marginLeft: this.nindent, marginRight: this.nexdent}, {duration: 'fast', queue: false});
+            this.inner_block.animate({minWidth: '100%'}, {duration: 'fast', queue: false});
+            this.content.animate({marginLeft: this.pindent, marginRight: this.pexdent}, {duration: 'fast', queue: false});
+            this.handle.animate({fontSize : '11px'}, {duration: 'fast', queue: false});
+        }
+    } else {
+        if(this.content !== null) {
+            this.content.show();
+            this.summary.hide();
+            this.block.css('margin-left', this.nindent);
+            this.block.css('margin-right', this.nexdent);
+            this.inner_block.css('min-width', '100%');
+            this.content.css('margin-left', this.pindent);
+            this.content.css('margin-right', this.pexdent);
+            this.handle.css('font-size', '11px');
+        }
+    }
+    this.expanded = true;
+}
+
+IncludeGroup.prototype.show_disabled = function(){
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_plus');
+        this.button.removeClass('ocaml_expander_minus');
+        this.button.addClass('ocaml_expander_disabled');
+        this.button.off('click');
+    }
+    if(this.content !== null) {
+        this.content.hide();
+    }
+    this.expanded = false;
+}
+
+function SigGroup(parent, node, label, idx) {
+    Group.call(this, parent, node);
     this.icount = (parent.icount - idx - 1) % 7;
-    this.cls = 'sig';
     this.auto_expand = false;
+    this.decorate_children = false;
+    var nameAttr = this.node.attr('name');
+    this.current = this.current.copy();
+    this.current.extend(nameAttr, label);
+    this.button = null;
+    this.block = null;
+    this.content_added = false;
 }
 
 SigGroup.prototype = new Group();
 
-SigGroup.prototype.load_content = function(data) {
-    this.update_links(data);
-    this.load_children(data);
-    var edge_cell = $('<td>').addClass('edge_column');
-    var cnt_cell = $('<td>').append(data);
-    this.content = $('<tr>').append(edge_cell).append(cnt_cell);
+SigGroup.prototype.prepare = function(){
+    if(this.decorate && this.button === null) {
+        this.button = $('<div>').addClass('ocaml_expander_plus');
+        var self = this;
+        this.button.click(function () { self.expand() });
+    }
+    if(this.block === null) {
+        this.block = $('<div>')
+                         .addClass('expanding_sig')
+                         .append(this.button)
+                         .append(this.handle);
+        this.node.append(this.block);
+    }
+    if(!this.content_added && this.content !== null) {
+        this.content.css('margin-left', '2em');
+        this.content.css('padding-left', '2em');
+        this.content.css('border-left', '3px solid lightgrey');
+        this.block.append(this.content);
+        this.content_added = true;
+    }
 }
 
-SigGroup.prototype.extend_current = function(node, kind){ 
-    var name = node.attr('name');
-    this.current = this.current.copy();
-    this.current.extend(name, kind);
+SigGroup.prototype.show_unexpanded = function(animate){
+    this.prepare();
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_minus');
+        this.button.addClass('ocaml_expander_plus');
+    }
+    if(animate) {
+        if(this.content !== null) {
+            this.content.hide('fast');
+        }
+    } else {
+        if(this.content !== null) {
+            this.content.hide();
+        }
+    }
+    this.expanded = false;
+}
+
+SigGroup.prototype.show_expanded = function(animate){
+    this.prepare();
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_plus');
+        this.button.addClass('ocaml_expander_minus');
+    }
+    if(animate) {
+        if(this.content !== null) {
+            this.content.show('fast');
+        }
+    } else {
+        if(this.content !== null) {
+            this.content.show();
+        }
+    }
+    this.expanded = true;
+}
+
+SigGroup.prototype.show_disabled = function(){
+    this.prepare();
+    if(this.button !== null) {
+        this.button.removeClass('ocaml_expander_plus');
+        this.button.removeClass('ocaml_expander_minus');
+        this.button.addClass('ocaml_expander_disabled');
+        this.button.off('click');
+    }
+    if(this.content !== null) {
+        this.content.hide();
+    }
+    this.expanded = false;
 }
 
 Group.prototype.load_children = function(data, Kind, label){
@@ -821,16 +1044,12 @@ Group.prototype.load_children = function(data, Kind, label){
         var children = $('> div.ocaml_' + label, data);
         var self = this;
         children.each(function(idx) {
-            var grp = new Kind(self, idx);
-            grp.check_types($(this));
-            grp.extend_current($(this), label);
-            var content = $('div.ocaml_content', $(this));
+            var grp = new Kind(self, $(this), label, idx);
+            var content = $('> div.ocaml_content', $(this));
             if(content.length > 0) {
                 grp.load_content(content);
-            } else {
-                grp.load_path($(this));
             }
-            grp.decorate($(this));
+            grp.show();
         });
     }
 }
@@ -838,7 +1057,7 @@ Group.prototype.load_children = function(data, Kind, label){
 $(document).ready(function () {
     var url = ocaml_base + '/' + ocaml_package + '/' + location.hash;
     var p = new Path(url);
-    var grp = new Group(null);
+    var grp = new Group(null, null);
     load_path(p, function(page){
         grp.typ = page.typ;
         grp.current = page.path;
@@ -854,7 +1073,7 @@ $(document).ready(function () {
 $(window).on('hashchange', function () {
     var url = ocaml_base + '/' + ocaml_package + '/' + location.hash;
     var p = new Path(url);
-    var grp = new Group(null);
+    var grp = new Group(null, null);
     load_path(p, function(page){
         grp.typ = page.typ;
         grp.current = page.path;

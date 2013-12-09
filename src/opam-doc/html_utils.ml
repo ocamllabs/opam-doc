@@ -232,10 +232,15 @@ $character_encoding$
 $style_tag ()$
 </head>
 <body>
-<h1>Packages list</h1>
+<div class="ocaml_head">
+<h1 class="ocaml_title">Packages list</h1>
+</div>
+<hr/>
+<div class="ocaml_body">
 <table class="indextable">
 $content$
 </table>
+</div>
 </body>
 </html>&>> in
   output_string oc (Html.string_of_html html_content);

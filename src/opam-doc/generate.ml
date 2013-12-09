@@ -666,10 +666,10 @@ and generate_class_type_fields local dclsigl tclsigl =
           begin
             match class_result with
               | Ident (s, p) ->
-                let signature = Html.pretrack 1 <:html<$keyword "inherit"$ $s$>> in
+                let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                 create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
               | Sig (s,c) ->
-                let signature = Html.pretrack 2 <:html<$keyword "inherit"$ $s$>> in
+                let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                 create_class_container "_inherit_field" signature c None
           end
 
@@ -685,7 +685,7 @@ and generate_class_type_fields local dclsigl tclsigl =
           let label = generate_mark Opam_doc_config.Value name
             <:html<$label$ $str:name$>> in
           let cd = Html.code ~cls:"code" typ in
-          Html.pretrack 3 <:html<$label$ : $cd$>>
+          Html.pre <:html<$label$ : $cd$>>
         | Tctf_meth (name, priv_f, co_typ) ->
           let typ = generate_typ local co_typ in
           let priv = match priv_f with Private -> true | Public -> false in
@@ -696,7 +696,7 @@ and generate_class_type_fields local dclsigl tclsigl =
           let label = generate_mark Opam_doc_config.Method
             name <:html<$label$ $str:name$>> in
           let cd = Html.code ~cls:"code" typ in
-          Html.pretrack 4 <:html<$label$ : $cd$>>
+          Html.pre <:html<$label$ : $cd$>>
         | Tctf_virt (name, priv_f, co_typ) ->
           let typ = generate_typ local co_typ in
           let priv = match priv_f with Private -> true | Public -> false in
@@ -708,14 +708,14 @@ and generate_class_type_fields local dclsigl tclsigl =
           let label = generate_mark Opam_doc_config.Method
             name <:html<$label$ $str:name$>> in
           let cd = Html.code ~cls:"code" typ in
-          Html.pretrack 5 <:html<$label$ : $cd$>>
+          Html.pre <:html<$label$ : $cd$>>
         | Tctf_cstr (co_typ1, co_typ2) ->
           let jtyp1 = generate_typ local co_typ1 in
           let jtyp2 = generate_typ local co_typ2 in
           let label = <:html<$jtyp1$ = $jtyp2$>> in
           let cd = Html.code ~cls:"type" label in
           let label = <:html<$cd$>> in
-          Html.pretrack 6 <:html<$keyword "constraint"$ $label$>>       
+          Html.pre <:html<$keyword "constraint"$ $label$>>       
     in
 
     let generate_class_type_fields_with_doctree local dclsigl tclsigl =
@@ -743,10 +743,10 @@ and generate_class_type_fields local dclsigl tclsigl =
                     begin
                       match class_result with
                         | Ident (s, p) ->
-                          let signature = Html.pretrack 7 <:html<$keyword "inherit"$ $s$>> in
+                          let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                           create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
                         | Sig (s,c) ->
-                          let signature = Html.pretrack 8 <:html<$keyword "inherit"$ $s$>> in
+                          let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                           create_class_container "_inherit_field" signature c None
                     end
                 
@@ -902,10 +902,10 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
               begin
                 match class_result with
                   | Ident (s, p) ->
-                    let signature = Html.pretrack 9 <:html<$keyword "inherit"$ $s$>> in
+                    let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                     create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
                   | Sig (s,c) ->
-                    let signature = Html.pretrack 10 <:html<$keyword "inherit"$ $s$>> in
+                    let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                     create_class_container "_inherit_field" signature c None
               end
 
@@ -922,7 +922,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
               let label = generate_mark Opam_doc_config.Attribute name
                 <:html<$label$ $str:name$>> in
               let cd = Html.code ~cls:"code" typ in
-              Html.pretrack 11 <:html<$label$ : $cd$>>          
+              Html.pre <:html<$label$ : $cd$>>          
         
             | Tcf_meth (name, _, priv_f, cl_f_kind, ovr_b) ->
               let typ, virt = extract_type_and_virtual_from_kind cl_f_kind in
@@ -936,14 +936,14 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
               let label = generate_mark Opam_doc_config.Method
                 name <:html<$label$ $str:name$>> in
               let cd = Html.code ~cls:"code" typ in
-              Html.pretrack 12 <:html<$label$ : $cd$>>
+              Html.pre <:html<$label$ : $cd$>>
             | Tcf_constr (co_typ1, co_typ2) ->
               let jtyp1 = generate_typ local co_typ1 in
               let jtyp2 = generate_typ local co_typ2 in
               let label = <:html<$jtyp1$ = $jtyp2$>> in
               let cd = Html.code ~cls:"type" label in
               let label = <:html<$cd$>> in
-              Html.pretrack 13 <:html<$keyword "constraint"$ $label$>>  
+              Html.pre <:html<$keyword "constraint"$ $label$>>  
             | Tcf_init _ -> Cow.Html.nil
       in
 
@@ -971,10 +971,10 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
                           begin
                             match class_result with
                               | Ident (s, p) ->
-                                let signature = Html.pretrack 14 <:html<$keyword "inherit"$ $s$>> in
+                                let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                                 create_class_container "_inherit_field" signature Cow.Html.nil (Some p)
                               | Sig (s,c) ->
-                                let signature = Html.pretrack 15 <:html<$keyword "inherit"$ $s$>> in
+                                let signature = Html.pre <:html<$keyword "inherit"$ $s$>> in
                                 create_class_container "_inherit_field" signature c None
                           end
                       in
@@ -1521,9 +1521,9 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
   in
   let h_f =
     match type_decl.typ_manifest, type_decl.typ_kind with
-      | None, Ttype_variant _ -> fun x -> Html.pretrack 16 (Html.code x)
-      | None, Ttype_record _ -> fun x -> Html.pretrack 17 (Html.code x)
-      | _ -> Html.pretrack 18 (* ?? fun x -> <:html<<div>$x$</div>&>> *)
+      | None, Ttype_variant _ -> fun x -> Html.pre (Html.code x)
+      | None, Ttype_record _ -> fun x -> Html.pre (Html.code x)
+      | _ -> Html.pre ?cls:None(* ?? fun x -> <:html<<div>$x$</div>&>> *)
   in
 
   let signature = generate_mark Opam_doc_config.Type name
@@ -1550,7 +1550,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       let signature = generate_mark Opam_doc_config.Value
         name <:html<$keyword "val"$ $str:name$>> in
       let cd = Html.code ~cls:"type" typ in
-      let signature = Html.pretrack 19 <:html<$signature$ : $cd$>> in
+      let signature = Html.pre <:html<$signature$ : $cd$>> in
       <:html<$signature$$info$>>
 
   and generate_exception_item name args info =
@@ -1562,7 +1562,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | _ ->
               let cd = Html.code ~cls:"type" (Html.concat ~sep:" * " args) in
               <:html< $keyword "of"$ $cd$>> in
-          let signature = Html.pretrack 20 <:html<$id$$args$>> in
+          let signature = Html.pre <:html<$id$$args$>> in
           <:html<$signature$$info$>>
 
   and generate_module_item name module_result item_info =
@@ -1574,15 +1574,15 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           match module_result with
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 21 <:html<$keyword "module"$ $reference$ : $cd$>> in
+              let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
               <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                       
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 22 <:html<$keyword "module"$ $reference$ : $cd$>> in
+              let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
               <:html<<div class="ocaml_module" name="$str:name$">$signature$$item_info$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 23 <:html<$keyword "module"$ $reference$ : $cd$>> in
+              let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
               let summary = Html_utils.make_summary item_info in
               <:html<<div class="ocaml_module" name="$str:name$">$signature$$summary$$content$</div>&>>
 
@@ -1593,15 +1593,15 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           match module_result with
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 24 <:html<$keyword "module type"$ $reference$ = $cd$>> in
+              let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
               <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                      
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 25 <:html<$keyword "module type"$ $reference$ = $cd$>> in
+              let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
               <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$item_info$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
-              let signature = Html.pretrack 26 <:html<$keyword "module type"$ $reference$ = $cd$>> in
+              let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
               let summary = Html_utils.make_summary item_info in
               <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$summary$$content$</div>&>>
         
@@ -1614,18 +1614,18 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pretrack 27 <:html<$keyword "include"$ $cd$>> in
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
               <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>
                         
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pretrack 28 <:html<$keyword "include"$ $cd$>> in
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
               <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>    
             | Sig (body, content) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pretrack 29 <:html<$keyword "include"$ $cd$>> in
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
               <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$$content$</div>&>>
                         
  and generate_class_item name params variance virt class_result item_info =
@@ -1643,14 +1643,14 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         
         match class_result with
           | Ident (s, p) ->
-            let signature = Html.pretrack 30 <:html<$id signature$ : $s$>> in
+            let signature = Html.pre <:html<$id signature$ : $s$>> in
             begin
               match p with
                 | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
                 | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$</div>&>>       
              end
           | Sig (s, content) ->
-            let signature = Html.pretrack 31 <:html<$id signature$ : $s$>> in
+            let signature = Html.pre <:html<$id signature$ : $s$>> in
             let summary = Html_utils.make_summary item_info in
             <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$$content$</div>&>>
                         
@@ -1670,14 +1670,14 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         
         match class_result with
           | Ident (s, p) ->
-            let signature = Html.pretrack 32 <:html<$id signature$ : $s$>> in
+            let signature = Html.pre <:html<$id signature$ : $s$>> in
             begin
               match p with
                 | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
                 | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$</div>&>>    
              end
           | Sig (s, content) ->
-            let signature = Html.pretrack 33 <:html<$id signature$ : $s$>> in
+            let signature = Html.pre <:html<$id signature$ : $s$>> in
             let summary = Html_utils.make_summary item_info in
             <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$$content$</div>&>>
                         
