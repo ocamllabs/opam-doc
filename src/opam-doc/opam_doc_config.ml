@@ -58,7 +58,6 @@ let default_stylesheet = String.concat "\n"
     ".type { color: #c746cc }";
     ".string { color: #09a7e2 }";
     ".warning { color : Red ; font-weight : bold }" ;
-    ".info { margin-left : 3em; margin-right: 3em }" ;
     ".param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }" ;
     ".code { color : #465F91 ; }" ;
     ".typetable { border-style : hidden }" ;
@@ -105,17 +104,18 @@ let default_stylesheet = String.concat "\n"
 
     (* My stuff *)
     ".ocaml_page { width: 1200px }";
-    ".ocaml_head .ocaml_summary { margin-left: 350px; width: 800px }";
-    ".ocaml_title { margin-left: 350px; font-size : 20px; text-align: left; }";
+    ".ocaml_head .ocaml_summary { margin-left: 300px; width: 800px }";
+    ".ocaml_title { margin-left: 300px; font-size : 20px; text-align: left; }";
     ".ocaml_body { margin-left: 350px; width: 800px }";
-    ".ocaml_expanded_include_0 { background-color: #FFFAFA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    ".ocaml_expanded_include_1 { background-color: #FAFAFF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
-    ".ocaml_expanded_include_2 { background-color: #FAFFFA; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
-    ".ocaml_expanded_include_3 { background-color: #FFFAFF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
-    ".ocaml_expanded_include_4 { background-color: #FFFFFA; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
-    ".ocaml_expanded_include_5 { background-color: #FAFFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
-    ".ocaml_expanded_include_6 { background-color: #FAF5FA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    ".ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    ".ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
+    ".ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
+    ".ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
+    ".ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
+    ".ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
+    ".ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
     "pre.ocaml_include_handle { display: inline; }";
+    ".ocaml_body .info { margin-left : 3em; margin-right: 3em }" ;
 
     ".ocaml_expander_plus {
         position: relative;
@@ -782,8 +782,8 @@ Group.prototype.show = function(){
                         self.add_filter(page.path, self.current);
                     }
                     self.load_content(page.body);
-                    show_type(self.typ)
                     self.show_expanded(false);
+                    show_type(self.typ)
                 };
                 load_path(this.path, load);
             } else {
@@ -851,20 +851,22 @@ IncludeGroup.prototype.prepare = function(){
             this.button.click(function () { self.expand() });
         }
         if(this.block === null) {
-            this.summary = $('ocaml_summary', this.handle);
+            this.summary = this.handle.filter('div.ocaml_summary');
             this.handle = $('<div>')
                              .append(this.button)
                              .append(this.handle);
             this.inner_block = $('<div>')
                              .addClass('ocaml_expanded_include_' + this.icount)
                              .css('display', 'inline-block')
+                             .css('padding-top', '3px')
+                             .css('padding-right', '3px')
+                             .css('padding-bottom', '3px')
                              .append(this.handle);
             this.block = $('<div>').append(this.inner_block);
             this.node.append(this.block);
         }
         if(!this.content_added && this.content !== null) {
             this.inner_block.append(this.content);
-            this.inner_block.css('padding', '3px');
             this.content_added = true;
         }
     }

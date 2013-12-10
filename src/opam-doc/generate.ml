@@ -731,7 +731,7 @@ and generate_class_type_fields local dclsigl tclsigl =
             if is_stopped then
               loop acc local r r2 is_stopped
             else
-              let info = Html_utils.make_info (generate_info_opt2 local i1 i2) in
+              let info = Html_utils.opt_to_nil (generate_info_opt2 local i1 i2) in
               loop (info::acc) local r r2 is_stopped
           | { dctf_desc=Dctf_stop; _}::r, r2 -> loop acc local r r2 (not is_stopped)
           | d::r, t::r2 ->
@@ -754,8 +754,7 @@ and generate_class_type_fields local dclsigl tclsigl =
                   if is_stopped then
                     loop (item::acc) local r r2 is_stopped
                   else
-                    let info = Html_utils.make_info
-                      (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
+                    let info = Html_utils.opt_to_nil (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
                     loop (info::item::acc) local r r2 is_stopped
                 | Dctf_val _, Tctf_val _
                 | Dctf_meth _, Tctf_meth _
@@ -765,8 +764,7 @@ and generate_class_type_fields local dclsigl tclsigl =
                   if is_stopped then
                     loop (item::acc) local r r2 is_stopped
                   else
-                    let info =  Html_utils.make_info
-                      (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
+                    let info =  Html_utils.opt_to_nil (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
                     loop (info::item::acc) local r r2 is_stopped
                 | _,_ ->
                   Printf.eprintf
@@ -958,7 +956,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
               if is_stopped then
                 loop acc local r r2 is_stopped
               else
-                let info = Html_utils.make_info (generate_info_opt local i1) in
+                let info = Html_utils.opt_to_nil (generate_info_opt local i1) in
                 loop (info::acc) local r r2 is_stopped
             | { dcf_desc=Dcf_stop; _}::r, r2 -> loop acc local r r2 (not is_stopped)
             | d::r, t::r2 ->
@@ -981,8 +979,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
                       if is_stopped then
                         loop (item::acc) local r r2 is_stopped
                       else
-                        let info = Html_utils.make_info
-                          (generate_info_opt local d.dcf_info) in
+                        let info = Html_utils.opt_to_nil (generate_info_opt local d.dcf_info) in
                         loop (info::item::acc) local r r2 is_stopped
                   | Dcf_val _, Tcf_val _
                   | Dcf_meth _, Tcf_meth _
@@ -991,8 +988,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
                     if is_stopped then
                       loop (item::acc) local r r2 is_stopped
                     else
-                      let info =  Html_utils.make_info
-                        (generate_info_opt local d.dcf_info) in
+                      let info =  Html_utils.opt_to_nil (generate_info_opt local d.dcf_info) in
                       loop (info::item::acc) local r r2 is_stopped
                   | _,_ ->
                     Printf.eprintf "generate_class_expr_fields mismatch -- processing without doc\n%!";
@@ -1254,7 +1250,7 @@ and generate_signature_item_list local dsig_items tsig_items =
           if is_stopped then
             loop_with_doctree drest items acc is_stopped
           else
-            let comment = Html_utils.make_info (generate_info_opt local info) in
+            let comment = Html_utils.opt_to_nil (generate_info_opt local info) in
             loop_with_doctree drest items (comment :: acc) is_stopped
         | {dsig_desc = Dsig_stop; _} :: drest, _ ->
           loop_with_doctree drest items acc (not is_stopped)
@@ -1370,7 +1366,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           if is_stopped then
             loop_with_doctree drest items acc is_stopped
           else
-            let comment = Html_utils.make_info (generate_info_opt local info) in
+            let comment = Html_utils.opt_to_nil (generate_info_opt local info) in
             loop_with_doctree drest items (comment :: acc) is_stopped
         | {dstr_desc = Dstr_stop; _} :: drest, _ ->
           loop_with_doctree drest items acc (not is_stopped)
@@ -1575,11 +1571,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
-              <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                       
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>                       
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
-              <:html<<div class="ocaml_module" name="$str:name$">$signature$$item_info$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_module" name="$str:name$">$signature$$summary$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
@@ -1594,11 +1592,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
-              <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                      
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>                      
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
-              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$item_info$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$summary$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
@@ -1614,19 +1614,25 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$summary$</div>&>>
                         
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>    
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$summary$</div>&>>    
             | Sig (body, content) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$$content$</div>&>>
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$summary$$content$</div>&>>
                         
  and generate_class_item name params variance virt class_result item_info =
     let open Html_utils in
@@ -1644,10 +1650,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         match class_result with
           | Ident (s, p) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
+            let summary = Html_utils.make_summary item_info in
             begin
               match p with
-                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
-                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$</div>&>>       
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>
+                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$</div>&>>       
              end
           | Sig (s, content) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
@@ -1671,10 +1678,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         match class_result with
           | Ident (s, p) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
+            let summary = Html_utils.make_summary item_info in
             begin
               match p with
-                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
-                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$</div>&>>    
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>
+                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$</div>&>>    
              end
           | Sig (s, content) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
@@ -1687,7 +1695,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
     let ditem_desc, item_info = match ditem with
       | Some {dsig_desc=desc; dsig_info=i1; dsig_after_info=i2} ->
         Some desc,
-        make_info (generate_info_opt2 local i1 i2)
+        opt_to_nil (generate_info_opt2 local i1 i2)
       | None -> None, Cow.Html.nil
     in
 
@@ -1811,7 +1819,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       let ditem_desc, item_info = match ditem with
       | Some {dstr_desc=desc; dstr_info=i1} ->
         Some desc,
-        make_info (generate_info_opt local i1)
+        opt_to_nil (generate_info_opt local i1)
       | None -> None, Cow.Html.nil
       in
 
