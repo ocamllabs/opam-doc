@@ -108,13 +108,13 @@ let default_stylesheet = String.concat "\n"
     ".ocaml_head .ocaml_summary { margin-left: 350px; width: 800px }";
     ".ocaml_title { margin-left: 350px; font-size : 20px; text-align: left; }";
     ".ocaml_body { margin-left: 350px; width: 800px }";
-    ".ocaml_expanded_include_0 { background-color: #FFFAFA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    ".ocaml_expanded_include_1 { background-color: #FAFAFF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
-    ".ocaml_expanded_include_2 { background-color: #FAFFFA; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
-    ".ocaml_expanded_include_3 { background-color: #FFFAFF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
-    ".ocaml_expanded_include_4 { background-color: #FFFFFA; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
-    ".ocaml_expanded_include_5 { background-color: #FAFFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
-    ".ocaml_expanded_include_6 { background-color: #FAF5FA; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    ".ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
+    ".ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
+    ".ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
+    ".ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
+    ".ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
+    ".ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
+    ".ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
     "pre.ocaml_include_handle { display: inline; }";
 
     ".ocaml_expander_plus {
