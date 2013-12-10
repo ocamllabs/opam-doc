@@ -782,8 +782,8 @@ Group.prototype.show = function(){
                         self.add_filter(page.path, self.current);
                     }
                     self.load_content(page.body);
-                    show_type(self.typ)
                     self.show_expanded(false);
+                    show_type(self.typ)
                 };
                 load_path(this.path, load);
             } else {
