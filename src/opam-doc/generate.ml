@@ -1571,11 +1571,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
-              <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                       
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_module" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>                       
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
-              <:html<<div class="ocaml_module" name="$str:name$">$signature$$item_info$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_module" name="$str:name$">$signature$$summary$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module"$ $reference$ : $cd$>> in
@@ -1590,11 +1592,13 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
-              <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>                      
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_modtype" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>                      
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
-              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$item_info$</div>&>>
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_modtype" name="$str:name$">$signature$$summary$</div>&>>
             | Sig (body, content) ->
               let cd = Html.code ~cls:"type" body in
               let signature = Html.pre <:html<$keyword "module type"$ $reference$ = $cd$>> in
@@ -1610,19 +1614,25 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
             | Ident (body, Gentyp.Resolved (uri, _, _)) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" path=$uri:uri$ items="$str:included_items$" types="$str:included_types$">$signature$$summary$</div>&>>
                         
             | Ident (body, Gentyp.Unresolved _) | Ident (body, _) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$</div>&>>    
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$summary$</div>&>>    
             | Sig (body, content) ->
               let signature =
                 let cd = Html.code ~cls:"type" body in
-                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> in
-              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$item_info$$content$</div>&>>
+                Html.pre ~cls:"ocaml_include_handle" <:html<$keyword "include"$ $cd$>> 
+              in
+              let summary = Html_utils.make_summary item_info in
+              <:html<<div class="ocaml_include" items="$str:included_items$" types="$str:included_types$">$signature$$summary$$content$</div>&>>
                         
  and generate_class_item name params variance virt class_result item_info =
     let open Html_utils in
@@ -1640,10 +1650,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         match class_result with
           | Ident (s, p) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
+            let summary = Html_utils.make_summary item_info in
             begin
               match p with
-                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
-                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$</div>&>>       
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>
+                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$</div>&>>       
              end
           | Sig (s, content) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
@@ -1667,10 +1678,11 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
         match class_result with
           | Ident (s, p) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in
+            let summary = Html_utils.make_summary item_info in
             begin
               match p with
-                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$item_info$</div>&>>
-                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$item_info$</div>&>>    
+                | Gentyp.Resolved (uri, _, _) -> <:html<<div class="ocaml_class" name="$str:name$" path="$uri:uri$">$signature$$summary$</div>&>>
+                | Gentyp.Unresolved _ | _ -> <:html<<div class="ocaml_class" name="$str:name$">$signature$$summary$</div>&>>    
              end
           | Sig (s, content) ->
             let signature = Html.pre <:html<$id signature$ : $s$>> in

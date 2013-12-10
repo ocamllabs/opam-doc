@@ -851,7 +851,7 @@ IncludeGroup.prototype.prepare = function(){
             this.button.click(function () { self.expand() });
         }
         if(this.block === null) {
-            this.summary = $('ocaml_summary', this.handle);
+            this.summary = this.handle.filter('div.ocaml_summary');
             this.handle = $('<div>')
                              .append(this.button)
                              .append(this.handle);
