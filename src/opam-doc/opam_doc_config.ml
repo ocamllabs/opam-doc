@@ -858,15 +858,15 @@ IncludeGroup.prototype.prepare = function(){
             this.inner_block = $('<div>')
                              .addClass('ocaml_expanded_include_' + this.icount)
                              .css('display', 'inline-block')
+                             .css('padding-top', '3px')
+                             .css('padding-right', '3px')
+                             .css('padding-bottom', '3px')
                              .append(this.handle);
             this.block = $('<div>').append(this.inner_block);
             this.node.append(this.block);
         }
         if(!this.content_added && this.content !== null) {
             this.inner_block.append(this.content);
-            this.inner_block.css('padding-top', '3px');
-            this.inner_block.css('padding-right', '3px');
-            this.inner_block.css('padding-bottom', '3px');
             this.content_added = true;
         }
     }
