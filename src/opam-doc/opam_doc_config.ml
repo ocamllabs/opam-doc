@@ -75,15 +75,15 @@ let default_stylesheet = String.concat "\n"
 
     "body {font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0}";
 
-    ".info h1 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h2 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h3 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h4 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h5 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h6 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h7 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h8 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
-    ".info h9 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -5em}" ;
+    ".info h1 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h2 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h3 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h4 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h5 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h6 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h7 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h8 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+    ".info h9 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
 
     "a {color: #416DFF; text-decoration: none}";
     "a:hover {background-color: #ddd; text-decoration: underline}";
