@@ -58,7 +58,6 @@ let default_stylesheet = String.concat "\n"
     ".type { color: #c746cc }";
     ".string { color: #09a7e2 }";
     ".warning { color : Red ; font-weight : bold }" ;
-    ".info { margin-left : 3em; margin-right: 3em }" ;
     ".param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }" ;
     ".code { color : #465F91 ; }" ;
     ".typetable { border-style : hidden }" ;
@@ -105,8 +104,8 @@ let default_stylesheet = String.concat "\n"
 
     (* My stuff *)
     ".ocaml_page { width: 1200px }";
-    ".ocaml_head .ocaml_summary { margin-left: 350px; width: 800px }";
-    ".ocaml_title { margin-left: 350px; font-size : 20px; text-align: left; }";
+    ".ocaml_head .ocaml_summary { margin-left: 300px; width: 800px }";
+    ".ocaml_title { margin-left: 300px; font-size : 20px; text-align: left; }";
     ".ocaml_body { margin-left: 350px; width: 800px }";
     ".ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
     ".ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
@@ -116,6 +115,7 @@ let default_stylesheet = String.concat "\n"
     ".ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
     ".ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
     "pre.ocaml_include_handle { display: inline; }";
+    ".ocaml_body .info { margin-left : 3em; margin-right: 3em }" ;
 
     ".ocaml_expander_plus {
         position: relative;
@@ -864,7 +864,9 @@ IncludeGroup.prototype.prepare = function(){
         }
         if(!this.content_added && this.content !== null) {
             this.inner_block.append(this.content);
-            this.inner_block.css('padding', '3px');
+            this.inner_block.css('padding-top', '3px');
+            this.inner_block.css('padding-right', '3px');
+            this.inner_block.css('padding-bottom', '3px');
             this.content_added = true;
         }
     }

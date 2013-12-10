@@ -731,7 +731,7 @@ and generate_class_type_fields local dclsigl tclsigl =
             if is_stopped then
               loop acc local r r2 is_stopped
             else
-              let info = Html_utils.make_info (generate_info_opt2 local i1 i2) in
+              let info = Html_utils.opt_to_nil (generate_info_opt2 local i1 i2) in
               loop (info::acc) local r r2 is_stopped
           | { dctf_desc=Dctf_stop; _}::r, r2 -> loop acc local r r2 (not is_stopped)
           | d::r, t::r2 ->
@@ -754,8 +754,7 @@ and generate_class_type_fields local dclsigl tclsigl =
                   if is_stopped then
                     loop (item::acc) local r r2 is_stopped
                   else
-                    let info = Html_utils.make_info
-                      (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
+                    let info = Html_utils.opt_to_nil (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
                     loop (info::item::acc) local r r2 is_stopped
                 | Dctf_val _, Tctf_val _
                 | Dctf_meth _, Tctf_meth _
@@ -765,8 +764,7 @@ and generate_class_type_fields local dclsigl tclsigl =
                   if is_stopped then
                     loop (item::acc) local r r2 is_stopped
                   else
-                    let info =  Html_utils.make_info
-                      (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
+                    let info =  Html_utils.opt_to_nil (generate_info_opt2 local d.dctf_info d.dctf_after_info) in
                     loop (info::item::acc) local r r2 is_stopped
                 | _,_ ->
                   Printf.eprintf
@@ -958,7 +956,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
               if is_stopped then
                 loop acc local r r2 is_stopped
               else
-                let info = Html_utils.make_info (generate_info_opt local i1) in
+                let info = Html_utils.opt_to_nil (generate_info_opt local i1) in
                 loop (info::acc) local r r2 is_stopped
             | { dcf_desc=Dcf_stop; _}::r, r2 -> loop acc local r r2 (not is_stopped)
             | d::r, t::r2 ->
@@ -981,8 +979,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
                       if is_stopped then
                         loop (item::acc) local r r2 is_stopped
                       else
-                        let info = Html_utils.make_info
-                          (generate_info_opt local d.dcf_info) in
+                        let info = Html_utils.opt_to_nil (generate_info_opt local d.dcf_info) in
                         loop (info::item::acc) local r r2 is_stopped
                   | Dcf_val _, Tcf_val _
                   | Dcf_meth _, Tcf_meth _
@@ -991,8 +988,7 @@ and generate_class_fields local (dclexpr : Doctree.class_field list option) tcle
                     if is_stopped then
                       loop (item::acc) local r r2 is_stopped
                     else
-                      let info =  Html_utils.make_info
-                        (generate_info_opt local d.dcf_info) in
+                      let info =  Html_utils.opt_to_nil (generate_info_opt local d.dcf_info) in
                       loop (info::item::acc) local r r2 is_stopped
                   | _,_ ->
                     Printf.eprintf "generate_class_expr_fields mismatch -- processing without doc\n%!";
@@ -1254,7 +1250,7 @@ and generate_signature_item_list local dsig_items tsig_items =
           if is_stopped then
             loop_with_doctree drest items acc is_stopped
           else
-            let comment = Html_utils.make_info (generate_info_opt local info) in
+            let comment = Html_utils.opt_to_nil (generate_info_opt local info) in
             loop_with_doctree drest items (comment :: acc) is_stopped
         | {dsig_desc = Dsig_stop; _} :: drest, _ ->
           loop_with_doctree drest items acc (not is_stopped)
@@ -1370,7 +1366,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
           if is_stopped then
             loop_with_doctree drest items acc is_stopped
           else
-            let comment = Html_utils.make_info (generate_info_opt local info) in
+            let comment = Html_utils.opt_to_nil (generate_info_opt local info) in
             loop_with_doctree drest items (comment :: acc) is_stopped
         | {dstr_desc = Dstr_stop; _} :: drest, _ ->
           loop_with_doctree drest items acc (not is_stopped)
@@ -1687,7 +1683,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
     let ditem_desc, item_info = match ditem with
       | Some {dsig_desc=desc; dsig_info=i1; dsig_after_info=i2} ->
         Some desc,
-        make_info (generate_info_opt2 local i1 i2)
+        opt_to_nil (generate_info_opt2 local i1 i2)
       | None -> None, Cow.Html.nil
     in
 
@@ -1811,7 +1807,7 @@ and generate_structure_item_list local (dstr_items : Doctree.structure_item list
       let ditem_desc, item_info = match ditem with
       | Some {dstr_desc=desc; dstr_info=i1} ->
         Some desc,
-        make_info (generate_info_opt local i1)
+        opt_to_nil (generate_info_opt local i1)
       | None -> None, Cow.Html.nil
       in
 

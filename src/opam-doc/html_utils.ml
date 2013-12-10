@@ -2,9 +2,13 @@
 
 let make_info = 
   function 
-    | Some i when i != Cow.Html.nil -> 
+    | Some i when i <> Cow.Html.nil -> 
       <:html<<div class="info">$i$</div>&>>
     | _ -> Cow.Html.nil
+
+let opt_to_nil = function
+    Some h -> h
+  | None -> Cow.Html.nil
 
 let make_span ?css_class data = 
   match css_class with
