@@ -1,4 +1,6 @@
-OCAMLBUILD?=ocamlbuild
+OCAMLBUILD ?= ocamlbuild
+OCAMLC      = $(shell which ocamlc)
+
 J?=4
 
 .PHONY: all serve clean
@@ -17,8 +19,10 @@ opam: scripts/ocamlc scripts/ocamlc.opt bin-doc
 	rm -fr opam
 	mkdir opam
 	opam init -n --root=opam
-	cp scripts/ocamlc opam/system/bin/
-	cp scripts/ocamlc.opt opam/system/bin/
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc > opam/system/bin/ocamlc
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc.opt > opam/system/bin/ocamlc.opt
+	chmod +x opam/system/bin/ocamlc
+	chmod +x opam/system/bin/ocamlc.opt
 	cp bin-doc opam/system/bin/
 	scripts/add-repos.sh
 
