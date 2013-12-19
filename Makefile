@@ -31,7 +31,6 @@ install: scripts/ocamlc scripts/ocamlc.opt bin-doc opam-doc-index
 	cp scripts/opam-doc.sh $(BIN)/opam-doc
 
 uninstall:
-	opam switch remove doc
 	rm -f $(BIN)/opam-doc-collect \
 	  $(BIN)/opam-doc-create \
 	  $(BIN)/opam-doc-serve \
