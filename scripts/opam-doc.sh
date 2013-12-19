@@ -1,5 +1,6 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
 # Create the documentation.
+set -e
 
 # Dirty work-around to not start the documention server
 SERVE=opam-doc-serve

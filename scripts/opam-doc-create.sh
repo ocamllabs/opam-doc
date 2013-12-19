@@ -1,5 +1,6 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
 # Create the documentation.
+set -e
 
 OPAMDOC_INDEX=opam-doc-index
 BUILD_DIR=$(opam config var root)/doc/build
