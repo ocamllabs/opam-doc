@@ -4,10 +4,14 @@
 # Dirty work-around to not start the documention server
 SERVE=opam-doc-serve
 case "$1" in
+    --version)
+	echo "0.9.0"
+	exit 0
+	;;
     --no-server)
 	SERVE="echo To run the server, use: opam-doc-serve"
 	shift
-    ;;
+	;;
 esac
 
 PACKAGES=$*
