@@ -1,42 +1,43 @@
-OCAMLBUILD?=ocamlbuild
+OCAMLBUILD     ?= ocamlbuild
+OCAMLC         = $(shell which ocamlc)
+COMPILER      ?= system
+DOCBIN         = $(shell opam config var root)/doc/bin
+BIN            = $(shell opam config var bin)
+
 J?=4
 
 .PHONY: all serve clean
 
-all: doc
+all: opam-doc-index bin-doc
+	@
 
-opam-doc: src/opam-doc/*.mli src/opam-doc/*.ml
-	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/opam-doc/driver.native
-	mv driver.native opam-doc
+opam-doc-index: src/opam-doc-index/*.mli src/opam-doc-index/*.ml
+	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/opam-doc-index/driver.native
+	mv driver.native opam-doc-index
 
 bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind src/bin-doc/driver.native
 	mv driver.native bin-doc
 
-opam: scripts/ocamlc scripts/ocamlc.opt bin-doc
-	rm -fr opam
-	mkdir opam
-	opam init -n --root=opam
-	cp scripts/ocamlc opam/system/bin/
-	cp scripts/ocamlc.opt opam/system/bin/
-	cp bin-doc opam/system/bin/
-	scripts/add-repos.sh
+install: scripts/ocamlc scripts/ocamlc.opt bin-doc opam-doc-index
+	opam switch doc -A $(COMPILER) --no-switch
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc > $(DOCBIN)/ocamlc
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc.opt > $(DOCBIN)/ocamlc.opt
+	chmod +x $(DOCBIN)/ocamlc
+	chmod +x $(DOCBIN)/ocamlc.opt
+	cp bin-doc $(DOCBIN)
+	cp scripts/opam-doc-collect.sh $(BIN)/opam-doc-collect
+	cp scripts/opam-doc-create.sh $(BIN)/opam-doc-create
+	cp opam-doc-index $(BIN)/opam-doc-index
+	cp scripts/opam-doc-serve.sh $(BIN)/opam-doc-serve
+	cp scripts/opam-doc.sh $(BIN)/opam-doc
 
-data: opam scripts/collect-data.sh packages
-	scripts/collect-data.sh
-
-doc: data opam-doc scripts/create-docs.sh url
-	scripts/create-docs.sh "doc" `cat url | grep -v '^#'`
-
-serve-doc: data opam-doc scripts/create-docs.sh
-	scripts/create-docs.sh "serve-doc" "http://127.0.0.1:8000"
-
-serve: serve-doc
-	-cd serve-doc; python -m SimpleHTTPServer
+uninstall:
+	opam switch remove doc
+	rm -f $(BIN)/opam-doc-collect \
+	  $(BIN)/opam-doc-create \
+	  $(BIN)/opam-doc-serve \
+	  $(BIN)/opam-doc
 
 clean:
 	$(OCAMLBUILD) -j $(J) -use-ocamlfind -clean
-	-rm -fr opam
-	-rm -fr data
-	-rm -fr doc
-	-rm -fr serve-doc

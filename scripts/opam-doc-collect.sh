@@ -1,18 +1,17 @@
-#!/usr/bin/env bash
+#!/bin/sh -e
 # Rebuild the cmd/cmt archive. Installs the package list and
 # copies all the cmt/cmti/cmd files found in the OPAM build
 # dir into a single directory structure, separated by MD5
 # to keep files distinct.
 
-OPAM_DIR=opam
-DATA_DIR=data
-PACKAGES_FILE=packages
+BUILD_DIR=$(opam config var root)/doc/build
+DATA_DIR=$(opam config var root)/doc/data-doc
 
-function calc_md5_for_file()
+calc_md5_for_file()
 {
-  if builtin command -v md5 > /dev/null; then
+  if command -v md5 > /dev/null; then
     md5=$(cat $1 | md5)
-  elif builtin command -v md5sum > /dev/null ; then
+  elif command -v md5sum > /dev/null ; then
     md5=$(cat $1 | md5sum | awk '{print $1}')
   else
     echo "Neither md5 nor md5sum were found in the PATH"
@@ -20,17 +19,12 @@ function calc_md5_for_file()
   fi
 }
 
-IMPORTS=`cat ${PACKAGES_FILE} | grep -v '^#' | awk '{print $1}'`
-
-for imp in ${IMPORTS}; do 
-  echo "Building $imp .."
-  opam install -y -b --root=${OPAM_DIR} $imp
-done
+IMPORTS=$(opam list -s)
 
 rm -rf ${DATA_DIR}
 mkdir ${DATA_DIR}
 
-PKGS=$(find ${OPAM_DIR}/system/build -mindepth 1 -maxdepth 1 -type d)
+PKGS=$(find ${BUILD_DIR} -mindepth 1 -maxdepth 1 -type d)
 
 for pkg in ${PKGS}; do
   pkgname=$(basename $pkg)

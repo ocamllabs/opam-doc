@@ -1,11 +1,13 @@
 #!/bin/sh -e
-OCAML=`(unset OPAMROOT; opam config exec "which ocamlc.opt")`
+
+OCAMLC=__OCAMLC__.opt
+
 case "$@" in
 -where)
-	${OCAML} "$@"
+	${OCAMLC} "$@"
 	;;
 *)
-	${OCAML} -bin-annot "$@"
+	${OCAMLC} -bin-annot "$@"
 	bin-doc "$@" >/dev/null 2>&1
 	;;
 esac
