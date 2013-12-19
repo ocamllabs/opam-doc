@@ -7,7 +7,7 @@
 BUILD_DIR=$(opam config var root)/doc/build
 DATA_DIR=$(opam config var root)/doc/data-doc
 
-function calc_md5_for_file()
+calc_md5_for_file()
 {
   if builtin command -v md5 > /dev/null; then
     md5=$(cat $1 | md5)
