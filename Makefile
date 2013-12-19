@@ -1,7 +1,6 @@
 OCAMLBUILD     ?= ocamlbuild
 OCAMLC         = $(shell which ocamlc)
 COMPILER      ?= system
-DOCBIN         = $(shell opam config var root)/doc/bin
 BIN            = $(shell opam config var bin)
 
 J?=4
@@ -20,12 +19,11 @@ bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
 	mv driver.native bin-doc
 
 install: scripts/ocamlc scripts/ocamlc.opt bin-doc opam-doc-index
-	opam switch doc -A $(COMPILER) --no-switch
-	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc > $(DOCBIN)/ocamlc
-	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc.opt > $(DOCBIN)/ocamlc.opt
-	chmod +x $(DOCBIN)/ocamlc
-	chmod +x $(DOCBIN)/ocamlc.opt
-	cp bin-doc $(DOCBIN)
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc > $(BIN)/opam-doc-ocamlc
+	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc.opt > $(BIN)/opam-doc-ocamlc.opt
+	chmod +x $(BIN)/opam-doc-ocamlc
+	chmod +x $(BIN)/opam-doc-ocamlc.opt
+	cp bin-doc $(BIN)
 	cp scripts/opam-doc-collect.sh $(BIN)/opam-doc-collect
 	cp scripts/opam-doc-create.sh $(BIN)/opam-doc-create
 	cp opam-doc-index $(BIN)/opam-doc-index
