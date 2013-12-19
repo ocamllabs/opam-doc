@@ -1,6 +1,15 @@
 #!/bin/sh -e
 # Create the documentation.
 
+# Dirty work-around to not start the documention server
+SERVE=opam-doc-serve
+case "$1" in
+    --no-server)
+	SERVE="echo To run the server, use: opam-doc-serve"
+	shift
+    ;;
+esac
+
 PACKAGES=$*
 DOC=$(opam config var root)/doc/doc
 
@@ -18,4 +27,4 @@ opam-doc-create
 
 # Serve the contents
 echo "[4/4] Serve the contents of ${DOC} at http://127.0.0.1:8000"
-opam-doc-serve ${DOC}
+${SERVE} ${DOC}
