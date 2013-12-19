@@ -9,9 +9,9 @@ DATA_DIR=$(opam config var root)/doc/data-doc
 
 calc_md5_for_file()
 {
-  if builtin command -v md5 > /dev/null; then
+  if command -v md5 > /dev/null; then
     md5=$(cat $1 | md5)
-  elif builtin command -v md5sum > /dev/null ; then
+  elif command -v md5sum > /dev/null ; then
     md5=$(cat $1 | md5sum | awk '{print $1}')
   else
     echo "Neither md5 nor md5sum were found in the PATH"
