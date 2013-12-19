@@ -15,7 +15,16 @@ case "$1" in
 esac
 
 PACKAGES=$*
+
 DOC=$(opam config var root)/doc/doc
+BIN=$(opam config var bin)
+BINDOC=$(opam config var root)/doc/bin
+
+# Creating a 'doc' switch if needed
+opam switch doc -A system
+cp ${BIN}/opam-doc-ocamlc ${BINDOC}/ocamlc
+cp ${BIN}/opam-doc-ocamlc.opt ${BINDOC}/ocamlc.opt
+cp ${BIN}/bin-doc ${BINDOC}/bin-doc
 
 # Install the packages and keep the build dirs
 echo "[1/4] Installing the packages"
