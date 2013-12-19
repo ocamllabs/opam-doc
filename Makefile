@@ -1,7 +1,6 @@
 OCAMLBUILD     ?= ocamlbuild
 OCAMLC         = $(shell which ocamlc)
 COMPILER      ?= system
-CURRENT_SWITCH = $(shell opam switch show)
 DOCBIN         = $(shell opam config var root)/doc/bin
 BIN            = $(shell opam config var bin)
 
