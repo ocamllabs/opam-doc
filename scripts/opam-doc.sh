@@ -6,7 +6,7 @@ set -e
 SERVE=opam-doc-serve
 case "$1" in
     --version)
-	echo "0.9.0"
+	echo "0.9.1"
 	exit 0
 	;;
     --no-server)
