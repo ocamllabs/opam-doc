@@ -1,22 +1,28 @@
-opam-doc
-=========
+## opam-doc
 
 Produce documentation for OPAM packages.
 
-Depending on : opam, cow, compiler-libs.common, unix, ocamlfind
+* Depending on : opam, cow, compiler-libs.common, unix, ocamlfind
+* Requires: system compiler version >= 4.01
 
-Requires compiler version >= 4.01
+### Usage
 
-====
+Compile the library and and install it by running:
 
-Usage :
+```
+make
+make install
+```
 
-1. Write the names of the packages for which you want to generate documentation into the `packages` file.
+This will create a new OPAM switch called `doc`, using a system
+compiler switch with two small wrappers scripts which will call
+`bin-doc` after each invocation of the compiler.
 
-2. Write the URL from which you intend to serve the documentation into the `url` file.
+Now you can generate the documentation for any package using:
 
-3. Write any additional OPAM repositories you need into the `repositories` file.
+```
+opam doc PKG1 ... PKGn
+```
 
-4. Run `make`.
-
-5. The documentation should now be in the `doc` folder.
+The packages will be installed in the `doc` switch, and their
+documentation will be served on `http:127.0.0.1:8000`.
