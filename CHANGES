@@ -1,6 +1,7 @@
-0.9.1 (trunk):
+0.9.1 (2013-12-20):
 * Explicitly invoke bash since some scripts use bash-isms.
 * Do not actually change the current compiler switch when using `opam doc`.
+* Make `opam-doc` more relaxed about errors.
 
 0.9.0 (2013-12-19):
 * Initial release
