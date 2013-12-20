@@ -16,7 +16,13 @@ mkdir ${DOC_DIR}
 
 cd ${DOC_DIR}
 for pkg in ${PKGS}; do
-  fs="$(find ${DATA_DIR}/$pkg -type f)"
+  fs=""
+  depth=0
+  while find "${DATA_DIR}/$pkg" -mindepth $depth -maxdepth $depth -type d | grep -q '.'
+  do
+    depth=$((depth + 1))
+    fs+="$(find ${DATA_DIR}/$pkg -mindepth $depth -maxdepth $depth -type f)"
+  done
   if [ "$fs" != "" ]; then
     name=$(echo $pkg | awk -F. '{print $1}')
     echo "Generating documentation for $name"
