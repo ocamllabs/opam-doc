@@ -49,7 +49,7 @@ let create_summary files =
     | Some s -> 
         if Sys.file_exists s then
           Unix.handle_unix_error (fun () -> copy_file s filename) ()
-        else raise (Failure (s ^ " does not exist"))
+        else Printf.eprintf "Summary file %s does not exist\n" s
 
 let create_index () = 
   let filename = 
@@ -80,25 +80,24 @@ let process_file global cmd cmt =
     (Filename.chop_extension (Filename.basename cmd)) in
   let doctree = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
-  match cmi, cmt with
-    | _, None -> raise (Failure "Not a cmt file")
-    | None, Some _ -> raise (Failure "I need the cmti")
-    | Some cmi, Some cmt ->
-      let imports = cmi.Cmi_format.cmi_crcs in
-      let local = create_local global imports in
-      Index.reset_internal_table ();
-      try
-	match cmt.Cmt_format.cmt_annots with
-          | Cmt_format.Interface intf ->
-	    Some (generate_file_from_interface local module_name doctree intf)
-          | Cmt_format.Implementation impl ->
-	    Some (generate_file_from_structure local module_name doctree impl)
-          | _ -> raise (Failure "Wrong kind of cmt file")
-      with
-	| Invalid_argument s ->
-	  Printf.eprintf "Error \"%s\" while processing module %s. File skipped\n%!" 
-	    s module_name;
-	  None
+  try
+    match cmi, cmt with
+      | _, None -> raise (Failure "Not a cmt file")
+      | None, Some _ -> raise (Failure "I need the cmti")
+      | Some cmi, Some cmt ->
+        let imports = cmi.Cmi_format.cmi_crcs in
+        let local = create_local global imports in
+        Index.reset_internal_table ();
+          match cmt.Cmt_format.cmt_annots with
+            | Cmt_format.Interface intf ->
+              Some (generate_file_from_interface local module_name doctree intf)
+            | Cmt_format.Implementation impl ->
+              Some (generate_file_from_structure local module_name doctree impl)
+            | _ -> raise (Failure "Wrong kind of cmt file")
+   with exn ->
+     Printf.eprintf "Error while processing module %s: \"%s\"\n" 
+	            module_name (Printexc.to_string exn);
+     None
 
 
 let _ =
@@ -152,7 +151,7 @@ let _ =
          match get_cmt cmd cmt_files with
          | Some cmt -> begin match process_file global cmd cmt with
            | Some o -> o :: l
-           | None -> assert false
+           | None -> l
          end
          | None ->
            prerr_endline ("Warning: missing cmt file: " ^ cmd);
