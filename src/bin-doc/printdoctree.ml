@@ -114,7 +114,22 @@ and class_field i ppf x =
 (* Type expressions for the module language *)
 
 and module_type i ppf x = 
-  line i ppf "MODULE_TYPE\n"
+  match x with
+    Dmty_ident -> 
+      line i ppf "Dmty_ident\n"
+  | Dmty_signature s ->
+      line i ppf "Dmty_signature\n";
+      signature (i+1) ppf s
+  | Dmty_functor(mt1, mt2) ->
+      line i ppf "Dmty_functor\n";
+      module_type (i+1) ppf mt1;
+      module_type (i+1) ppf mt2;
+  | Dmty_with mt ->
+      line i ppf "Dmty_with\n";
+      module_type (i+1) ppf mt
+  | Dmty_typeof me ->
+      line i ppf "Dmty_typeof\n";
+      module_expr (i+1) ppf me
 
 and signature i ppf x = list i signature_item ppf x
 
@@ -156,7 +171,26 @@ and signature_item i ppf x =
   | Dsig_stop -> line i ppf "Dsig_stop\n"
 
 and module_expr i ppf x = 
-  line i ppf "MODULE_EXPR\n"
+  match x with
+    Dmod_ident -> 
+      line i ppf "Dmod_ident\n"
+  | Dmod_structure s ->
+      line i ppf "Dmod_structure\n";
+      structure (i+1) ppf s
+  | Dmod_functor(mt, me) ->
+      line i ppf "Dmod_functor\n";
+      module_type (i+1) ppf mt;
+      module_expr (i+1) ppf me;
+  | Dmod_apply(me1, me2) ->
+      line i ppf "Dmod_apply\n";
+      module_expr (i+1) ppf me1;
+      module_expr (i+1) ppf me2;
+  | Dmod_constraint(me, mt) ->
+      line i ppf "Dmod_constraint\n";
+      module_expr (i+1) ppf me;
+      module_type (i+1) ppf mt;
+  | Dmod_unpack ->
+      line i ppf "Dmod_unpack\n"
 
 and structure i ppf x = list i structure_item ppf x
 

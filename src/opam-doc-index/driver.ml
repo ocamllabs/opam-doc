@@ -6,10 +6,22 @@ let create_package_directory () =
   if not Sys.(file_exists package_name && is_directory package_name) then
     Unix.mkdir package_name 0o755
 
+let moduleName f = 
+  String.capitalize (Filename.chop_extension (Filename.basename f))
+
 let pSameBase a = 
   let open Filename in
   let base = chop_extension (basename a) in
     (fun b -> (chop_extension (basename b)) = base)
+
+let filter_conflicts files = 
+  List.rev 
+    (List.fold_left 
+       (fun acc f -> 
+         if List.exists (pSameBase f) acc then begin
+           Printf.eprintf "Duplicate module name: \"%s\"\n" (moduleName f);
+           acc
+         end else f :: acc) [] files)
 
 let get_cmt cmd cmt_list =
   try
@@ -76,8 +88,7 @@ let rec check_package_name_conflict global =
      && not (Opam_doc_config.always_proceed ()) then loop ()
 
 let process_file global cmd cmt =
-  let module_name = String.capitalize
-    (Filename.chop_extension (Filename.basename cmd)) in
+  let module_name = moduleName cmd in
   let doctree = process_cmd cmd in
   let cmi, cmt = Cmt_format.read cmt in
   try
@@ -115,14 +126,15 @@ let _ =
   let global = add_global_package global
     (Opam_doc_config.current_package ())
     (Opam_doc_config.package_descr ()) in
+  let files = List.rev !files in
 
   let cmt_files = List.filter
     (fun file -> Filename.check_suffix file ".cmti"
-      || Filename.check_suffix file ".cmt") !files in
+      || Filename.check_suffix file ".cmt") files in
 
   let cmd_files = List.filter
     (fun file -> Filename.check_suffix file ".cmdi"
-      || Filename.check_suffix file ".cmd") !files in
+      || Filename.check_suffix file ".cmd") files in
 
   (* Remove the [ext] file when a [ext]i is found *)
   let filter_impl_files ext files =
@@ -144,6 +156,10 @@ let _ =
   let global = update_global global cmt_files in
 
   create_package_directory ();
+
+  (* filter module name conflicts *)
+  let cmt_files = filter_conflicts cmt_files in
+  let cmd_files = filter_conflicts cmd_files in
 
   let processed_files = 
     List.fold_left
