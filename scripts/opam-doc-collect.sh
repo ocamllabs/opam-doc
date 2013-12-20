@@ -1,8 +1,9 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
 # Rebuild the cmd/cmt archive. Installs the package list and
 # copies all the cmt/cmti/cmd files found in the OPAM build
 # dir into a single directory structure, separated by MD5
 # to keep files distinct.
+set -e
 
 BUILD_DIR=$(opam config var root)/doc/build
 DATA_DIR=$(opam config var root)/doc/data-doc

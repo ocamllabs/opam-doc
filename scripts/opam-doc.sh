@@ -1,11 +1,12 @@
-#!/bin/sh -e
+#!/usr/bin/env bash
 # Create the documentation.
+set -e
 
 # Dirty work-around to not start the documention server
 SERVE=opam-doc-serve
 case "$1" in
     --version)
-	echo "0.9.0"
+	echo "0.9.1"
 	exit 0
 	;;
     --no-server)
@@ -21,7 +22,7 @@ BIN=$(opam config var bin)
 BINDOC=$(opam config var root)/doc/bin
 
 # Creating a 'doc' switch if needed
-opam switch doc -A system
+opam switch doc -A system --no-switch
 cp ${BIN}/opam-doc-ocamlc ${BINDOC}/ocamlc
 cp ${BIN}/opam-doc-ocamlc.opt ${BINDOC}/ocamlc.opt
 cp ${BIN}/bin-doc ${BINDOC}/bin-doc
