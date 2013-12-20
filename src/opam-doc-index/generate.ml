@@ -1239,7 +1239,7 @@ and generate_module_expr local dmexpr tmexpr =
             Printf.eprintf "generate_module_expr: unpack mismatch\n%!";
             assert false
       end
-    | _, _ -> raise (Failure "generate_module_type: Mismatch")
+    | _, _ -> raise (Failure "generate_module_expr: Mismatch")
 
 (* Discards open, expands module_rec and process signature items  *)
 and generate_signature_item_list local dsig_items tsig_items =
