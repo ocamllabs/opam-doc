@@ -2,5 +2,5 @@
 * Explicitly invoke bash since some scripts use bash-isms.
 * Do not actually change the current compiler switch when using `opam doc`.
 
-0.9.0 (2012-19-12):
+0.9.0 (2013-12-19):
 * Initial release
