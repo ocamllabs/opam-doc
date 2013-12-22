@@ -48,159 +48,159 @@ let doctype = "<!DOCTYPE HTML>\n"
 let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 
-let default_stylesheet = String.concat "\n"
-  [ ".keyword { color: #f47421; font-weight: bold }";
-    ".keywordsign { color: #f47421 }";
-    ".superscript { font-size : 4 }";
-    ".subscript { font-size : 4 }";
-    ".comment { color: #747474; font-style: italic }";
-    ".constructor { color: #15c17a }";
-    ".type { color: #c746cc }";
-    ".string { color: #09a7e2 }";
-    ".warning { color : Red ; font-weight : bold }" ;
-    ".param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }" ;
-    ".code { color : #465F91 ; }" ;
-    ".typetable { border-style : hidden }" ;
-    ".paramstable { border-style : hidden ; padding: 5pt 5pt}" ;
-    "td.typefieldcomment { font-size: smaller ;}" ;
-    "div.sig_block {margin-left: 2em}" ;
-    "*:target { background: yellow; }" ;
-    "pre {
-        white-space: pre-wrap; /* css-3 */
-        white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
-        white-space: -pre-wrap; /* Opera 4-6 */
-        white-space: -o-pre-wrap; /* Opera 7 */
-        word-wrap: break-word; /* Internet Explorer 5.5+ */
-        }";
+let default_stylesheet_css =
+  let open Cow in
+  <:css<
+  .keyword { color: #f47421; font-weight: bold; }
+  .keywordsign { color: #f47421; }
+  .superscript { font-size: 4; }
+  .subscript { font-size: 4; }
+  .comment { color: #747474; font-style: italic; }
+  .constructor { color: #15c17a; }
+  .type { color: #c746cc; }
+  .string { color: #09a7e2; }
+  .warning { color: Red ; font-weight: bold; }
+  .param_info { margin-top: 4px; margin-left: 3em; margin-right: 3em; }
+  .code { color: #465F91 ; }
+  .typetable { border-style: hidden; }
+  .paramstable { border-style: hidden ; padding: 5pt 5pt; }
+  td.typefieldcomment { font-size: smaller ;}
+  div.sig_block {margin-left: 2em; }
+  *:target { background: yellow; }
+  pre {
+     white-space: pre-wrap;
+     white-space: -moz-pre-wrap !important;
+     white-space: -pre-wrap;
+     white-space: -o-pre-wrap;
+     word-wrap: break-word;
+  }
 
-    "body {font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0}";
+  body { font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0; }
 
-    ".info h1 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h2 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h3 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h4 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h5 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h6 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h7 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h8 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h9 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+  .info h1 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h2 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h3 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h4 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h5 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h6 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h7 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h8 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+  .info h9 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
 
-    "a {color: #416DFF; text-decoration: none}";
-    "a:hover {background-color: #ddd; text-decoration: underline}";
-    "pre { margin-bottom: 4px; font-family: monospace; }" ;
-    "pre.verbatim, pre.codepre { }";
+  a {color: #416DFF; text-decoration: none; }
+  a:hover {background-color: #ddd; text-decoration: underline; }
+  pre { margin-bottom: 4px; font-family: monospace; }
 
-    ".indextable {border: 1px #ddd solid; border-collapse: collapse}";
-    ".indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px}";
-    ".indextable td.module {background-color: #eee ;  padding-left: 2px; padding-right: 2px}";
-    ".indextable td.module a {text-decoration: none; display: block; width: 100%}";
-    ".indextable td.module a:hover {text-decoration: underline; background-color: transparent}";
-    ".deprecated {color: #888; font-style: italic}" ;
+  .indextable {border: 1px #ddd solid; border-collapse: collapse; }
+  .indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px; }
+  .indextable td.module {background-color: #eee; padding-left: 2px; padding-right: 2px; }
+  .indextable td.module a {text-decoration: none; display: block; width: 100%; }
+  .indextable td.module a:hover {text-decoration: underline; background-color: transparent; }
+  .deprecated {color: #888; font-style: italic; }
 
-    ".indextable tr td div.info { margin-left: 2px; margin-right: 2px }" ;
+  .indextable tr td div.info { margin-left: 2px; margin-right: 2px; }
 
-    "ul.indexlist { margin-left: 0; padding-left: 0;}";
-    "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
+  ul.indexlist { margin-left: 0; padding-left: 0; }
+  ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }
 
-    (* My stuff *)
-    ".ocaml_page { width: 1200px }";
-    ".ocaml_head .ocaml_summary { margin-left: 300px; width: 800px }";
-    ".ocaml_title { margin-left: 300px; font-size : 20px; text-align: left; }";
-    ".ocaml_body { margin-left: 350px; width: 800px }";
-    ".ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    ".ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
-    ".ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
-    ".ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
-    ".ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
-    ".ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
-    ".ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    "pre.ocaml_include_handle { display: inline; }";
-    ".ocaml_body .info { margin-left : 3em; margin-right: 3em }" ;
+  .ocaml_page { width: 1200px; }
+  .ocaml_head .ocaml_summary { margin-left: 300px; width: 800px; }
+  .ocaml_title { margin-left: 300px; font-size: 20px; text-align: left; }
+  .ocaml_body { margin-left: 350px; width: 800px; }
+  .ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
+  .ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}
+  .ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}
+  .ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}
+  .ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}
+  .ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}
+  .ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
+  pre.ocaml_include_handle { display: inline; }
+  .ocaml_body .info { margin-left: 3em; margin-right: 3em; }
 
-    ".ocaml_expander_plus {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_plus:hover {
-        background: grey;
-    }";
-    ".ocaml_expander_plus::before {
-        content: '';
-        position: absolute;
-        left: 3px;
-        top: 1px;
-        width: 1px;
-        height: 5px;
-        background: black;
-    }";
-    ".ocaml_expander_plus::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: black;
-    }";
-    ".ocaml_expander_minus {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_minus:hover {
-        background: grey;
-    }";
-    ".ocaml_expander_minus::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: black;
-    }";
-    ".ocaml_expander_disabled {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-color: grey;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_disabled::before {
-        content: '';
-        position: absolute;
-        left: 3px;
-        top: 1px;
-        width: 1px;
-        height: 5px;
-        background: grey;
-    }";
-    ".ocaml_expander_disabled::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: grey;
-    }";
-  ]
-
+  .ocaml_expander_plus {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_plus:hover {
+     background: grey;
+  }
+  .ocaml_expander_plus::before {
+     content: '';
+     position: absolute;
+     left: 3px;
+     top: 1px;
+     width: 1px;
+     height: 5px;
+     background: black;
+  }
+  .ocaml_expander_plus::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: black;
+  }
+  .ocaml_expander_minus {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_minus:hover {
+     background: grey;
+  }
+  .ocaml_expander_minus::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: black;
+  }
+  .ocaml_expander_disabled {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-color: grey;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_disabled::before {
+     content: '';
+     position: absolute;
+     left: 3px;
+     top: 1px;
+     width: 1px;
+     height: 5px;
+     background: grey;
+  }
+  .ocaml_expander_disabled::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: grey;
+  }
+   >>
+let default_stylesheet = Cow.Css.to_string default_stylesheet_css
 
 (** Marks used to generate id attributes *)
 type mark = Attribute | Type | Type_elt | Function | Exception | Value | Method | Title
