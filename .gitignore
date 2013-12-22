@@ -2,3 +2,6 @@
 _build
 bin-doc
 opam-doc
+.*.swp
+data/
+opam/
