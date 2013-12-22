@@ -4,6 +4,7 @@ set -e
 
 OPAMDOC_INDEX=opam-doc-index
 BUILD_DIR=$(opam config var root)/doc/build
+STATIC_DIR=$(opam config var root)/doc-static
 DATA_DIR=$(opam config var root)/doc/data-doc
 DOC_DIR=$(opam config var root)/doc/doc
 
@@ -13,6 +14,7 @@ PKGS=$(ls -1tr ${BUILD_DIR})
 
 rm -rf ${DOC_DIR}
 mkdir ${DOC_DIR}
+cp -r ${STATIC_DIR}/* ${DOC_DIR}/
 
 cd ${DOC_DIR}
 for pkg in ${PKGS}; do

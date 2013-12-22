@@ -2,6 +2,7 @@ OCAMLBUILD     ?= ocamlbuild
 OCAMLC         = $(shell which ocamlc)
 COMPILER      ?= system
 BIN            = $(shell opam config var bin)
+OPAMROOT       = $(shell opam config var root)
 
 J?=4
 
@@ -29,6 +30,9 @@ install: scripts/ocamlc scripts/ocamlc.opt bin-doc opam-doc-index
 	cp opam-doc-index $(BIN)/opam-doc-index
 	cp scripts/opam-doc-serve.sh $(BIN)/opam-doc-serve
 	cp scripts/opam-doc.sh $(BIN)/opam-doc
+	rm -rf $(OPAMROOT)/doc-static
+	mkdir -p $(OPAMROOT)/doc-static
+	cp -r static/* $(OPAMROOT)/doc-static/
 
 uninstall:
 	rm -f $(BIN)/opam-doc-collect \
