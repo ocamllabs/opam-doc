@@ -22,6 +22,6 @@ for pkg in ${PKGS}; do
   cd $pkg
   FILES=$(find . -type f \( -name \*.cmd -o -name \*.cmdi -o -name \*.cmt -o -name \*.cmti \) )
   for f in ${FILES}; do
-    cp --parents $f ${DATA_DIR}/$pkgname
+    rsync -r $f ${DATA_DIR}/$pkgname
   done
 done
