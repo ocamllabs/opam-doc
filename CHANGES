@@ -1,3 +1,7 @@
+0.9.2 (2013-12-22):
+* Handle duplicate module names more gracefully.
+* Use `cohttp-server` from `opam install async cohttp` if available.
+
 0.9.1 (2013-12-20):
 * Explicitly invoke bash since some scripts use bash-isms.
 * Do not actually change the current compiler switch when using `opam doc`.
