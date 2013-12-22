@@ -199,25 +199,53 @@ let generate_package_summary filename = function
     output_string oc (Html.string_of_html html_content);
     close_out oc
 
+let page ~title ~headers ~content =
+  (* Cannot be inlined below as the $ is interpreted as an antiquotation *)
+  let js_init = [`Data "$(document).foundation(); hljs.initHighlightingOnLoad();"] in
+  let body =
+  <:html<
+    <head>
+      <meta charset="utf-8" />
+      <meta name="viewport" content="width=device-width"/>
+      <title>$str:title$</title>
+      <link rel="stylesheet" href="/css/foundation.min.css"> </link>
+      <link rel="stylesheet" href="/css/magula.css"> </link>
+      <link rel="stylesheet" href="/css/site.css"> </link>
+      <script src="/js/vendor/custom.modernizr.js"> </script>
+      $headers$
+    </head>
+    <body>
+      $content$
+      <script src="/js/vendor/jquery.js"> </script>
+      <script src="/js/foundation.js"> </script>
+      <script src="/js/foundation/foundation.topbar.js"> </script>
+      <script src="/js/vendor/highlight.pack.js"> </script>
+      <script> $js_init$ </script>
+    </body>
+  >> in
+  Printf.sprintf "\
+  <!DOCTYPE html>
+  <!--[if IE 8]><html class=\"no-js lt-ie9\" lang=\"en\" ><![endif]-->
+  <!--[if gt IE 8]><!--><html class=\"no-js\" lang=\"en\" ><!--<![endif]-->
+  %s
+</html>" (Cow.Html.to_string body)
+
 let generate_package_index filename =
   let open Opam_doc_config in
-  let page =
-    <:html<<html>
-<head>
-<title>$str:current_package ()$</title>
-$character_encoding$
-$style_tag ()$
-$config_tag ()$
-$script_tag ()$
-</head>
-<body>
-</body>
-</html>&>> in
+  let title = current_package () in
+  let headers =
+    <:html<
+      $character_encoding$
+      $style_tag ()$
+      $config_tag ()$
+      $script_tag ()$
+    >> in
+  let content = [] in
+  let page = page ~title ~headers ~content in
   let oc = open_out filename in
     output_string oc doctype;
-    output_string oc (Html.string_of_html page);
+    output_string oc page;
     close_out oc
-
 
 let generate_global_packages_index global = 
   let packages = Index.get_global_packages global in
@@ -228,26 +256,20 @@ let generate_global_packages_index global =
   let oc = open_out (Opam_doc_config.default_index_name ()) in
   let content = Html.concat (List.map generate_package_entry packages) in
   let open Opam_doc_config in
-  let html_content = 
-    <:html<<html>
-<head>
-<title>Packages</title>
-$character_encoding$
-$style_tag ()$
-</head>
-<body>
-<div class="ocaml_head">
-<h1 class="ocaml_title">Packages list</h1>
-</div>
-<hr/>
-<div class="ocaml_body">
-<table class="indextable">
-$content$
-</table>
-</div>
-</body>
-</html>&>> in
-  output_string oc (Html.string_of_html html_content);
+  let title = "Packages" in
+  let headers = <:html< $character_encoding$ $style_tag ()$ >> in
+  let content = <:html< 
+    <div class="ocaml_head">
+    <h1 class="ocaml_title">Packages list</h1>
+    </div>
+    <hr/>
+   <div class="ocaml_body">
+   <table class="indextable">
+    $content$
+   </table>
+</div> >> in
+  page ~title ~headers ~content
+  |> output_string oc;
   close_out oc
 
 (* Module description shortener *)
