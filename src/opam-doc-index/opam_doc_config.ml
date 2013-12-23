@@ -68,7 +68,7 @@ let default_stylesheet_css =
     padding: 0px;
     font-size: 0.875rem;
     color: #222222; }
-  table.typetable tr.even, table tr.alt, table tr:nth-of-type(even) {
+  table.typetable tr.even, table.typetable tr.alt, table.typetable tr:nth-of-type(even) {
     background: white; }
   table.typetable thead tr th,
   table.typetable tfoot tr th,
@@ -78,10 +78,37 @@ let default_stylesheet_css =
     display: table-cell;
   } 
 
+  table.indextable { background: white; border: none; }
+  table.indextable thead,
+  table.indextable tfoot {
+    background: white; font-weight: bold; }
+  table.indextable thead tr th,
+  table.indextable thead tr td,
+  table.indextable tfoot tr th,
+  table.indextable tfoot tr td {
+    font-size: 0.875rem;
+    color: #222222;
+    text-align: left; }
+  table.indextable tr th,
+  table.indextable tr td {
+    padding: 0.2625rem 0.225rem;
+    font-size: 1rem;
+    color: black; }
+  table.indextable tr.even, table.indextable tr.alt, table.indextable tr:nth-of-type(even) {
+    background: whitegrey; }
+  table.indextable thead tr th,
+  table.indextable tfoot tr th,
+  table.indextable tbody tr td,
+  table.indextable tr td,
+  table.indextable tfoot tr td {
+    display: table-cell;
+  } 
+
+
   #opamdocroot .panel.callout { 
     padding: 0.5rem;
-    background: #faffea;
-    border-color: #cccccc; 
+    background: #fdfdfd;
+    border: none;
   }
 
   p { line-height: 1.1rem; margin-bottom: 0.8rem; }
@@ -114,6 +141,7 @@ let default_stylesheet_css =
     padding: 5px;
     margin-top: 10px;
   }
+  .top-bar input { height: 2.1em; }
   .keyword { color: #f47421; font-weight: bold; }
   .keywordsign { color: #f47421; }
   .superscript { font-size: 4; }

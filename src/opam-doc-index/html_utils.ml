@@ -211,21 +211,20 @@ let page ~title ~headers ~content =
       <title>$str:title$</title>
       <link rel="stylesheet" href="/css/foundation.min.css"> </link>
       <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700" rel="stylesheet" type="text/css"> </link>
-      <link rel="stylesheet" href="/css/magula.css"> </link>
-      <link rel="stylesheet" href="/css/site.css"> </link>
       <script src="/js/vendor/custom.modernizr.js"> </script>
       $headers$
     </head>
     <body>
-    <nav class="top-bar" data-topbar="">
+    <div class="contain-to-grid sticky">
+    <nav class="top-bar " data-topbar="">
     <ul class="title-area">
       <li class="name">
-        <h1><a href="#">OPAM Documentation</a></h1>
+        <h1><a href="/">OPAM Documentation</a></h1>
       </li>
       <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
     </ul>
     <section class="top-bar-section">
-      <ul class="right">
+      <ul class="left">
       <li class="has-dropdown">
         <a href="#">Online Resources</a>
         <ul class="dropdown">
@@ -234,7 +233,7 @@ let page ~title ~headers ~content =
         </ul>
       </li>
       </ul>
-      <ul class="left">
+      <ul class="right">
         <li class="has-form">
          <div class="row collapse">
           <div class="large-8 small-9 columns">
@@ -247,14 +246,14 @@ let page ~title ~headers ~content =
         </li>
       </ul>
     </section>
-    </nav>
+    </nav></div>
     <br />
     <div class="row">
       <div class="small-12 medium-6 large-6 column">
       <ul class="breadcrumbs">
         <li id="bcpkglist"><a href="/">Package List</a></li>
-        <li id="bccurpkg"> </li>
-        <li id="bccurpkgmod"> </li>
+        <li id="bccurpkg" class="hide"> </li>
+        <li id="bccurpkgmod" class="hide"> </li>
       </ul>
       </div>
     </div>
@@ -308,9 +307,7 @@ let generate_global_packages_index global =
   let headers = <:html< $character_encoding$ $style_tag ()$ >> in
   let content = <:html< 
     <div class="row">
-     <div class="small-12 column">
-      <h1>Package List</h1>
-      <hr/>
+     <div class="small-12 column" id="opamdocroot">
       <div class="ocaml_body">
       <table class="indextable">
         $content$
