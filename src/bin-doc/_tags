@@ -1,1 +1,2 @@
 true: package(compiler-libs.bytecomp)
+true: debug, bin_annot, annot
