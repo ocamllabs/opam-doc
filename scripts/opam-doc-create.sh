@@ -8,6 +8,8 @@ STATIC_DIR=$(opam config var root)/doc-static
 DATA_DIR=$(opam config var root)/doc/data-doc
 DOC_DIR=$(opam config var root)/doc/doc
 
+OPAMDOC_BASE_URI=${OPAMDOC_BASE_URI:-http://127.0.0.1:8000}
+
 # Grab the build dir in reverse mtime order to get the
 # ordering of generation "correct".
 PKGS=$(ls -1tr ${BUILD_DIR})
@@ -29,6 +31,6 @@ for pkg in ${PKGS}; do
     name=$(echo $pkg | awk -F. '{print $1}')
     echo "Generating documentation for $name"
     descr=`opam info "$name" -f description | head -1`
-    ${OPAMDOC_INDEX} --filter-pervasives -p "$name" -descr "$descr" --base "http://127.0.0.1:8000" $fs
+    ${OPAMDOC_INDEX} --filter-pervasives -p "$name" -descr "$descr" --base "${OPAMDOC_BASE_URI}" $fs
   fi
 done

@@ -25,6 +25,10 @@ opam doc PKG1 ... PKGn
 ```
 
 The packages will be installed in the `doc` switch, and their
-documentation will be served on `http:127.0.0.1:8000`.  You will
+documentation will be served on `http://127.0.0.1:8000`.  You will
 need to either `opam install async cohttp` or have Python
 installed for the local webserver to work.
+
+Set the `OPAMDOC_BASE_URI` environment variable to the URI
+that you wish to replace `http://127.0.0.1:8000` by in the
+generated HTML.
