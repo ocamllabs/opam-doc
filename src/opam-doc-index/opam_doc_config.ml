@@ -56,11 +56,16 @@ let default_stylesheet_css =
     font-family: 'Source Sans Pro', sans-serif;
     color: black;
   }
-  h1 h2 h3 h4 h5 h6 {
-    font-family: 'Source Sans Pro', sans-serif;
-    color: red;
+  #opamdocroot h1 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 2rem;
   }
-
+  #opamdocroot h2 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.5rem;
+  }
   .keyword { color: #f47421; font-weight: bold; }
   .keywordsign { color: #f47421; }
   .superscript { font-size: 4; }
