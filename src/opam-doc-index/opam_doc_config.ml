@@ -87,7 +87,6 @@ let default_stylesheet_css =
   ul.indexlist { margin-left: 0; padding-left: 0; }
   ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }
 
-  .ocaml_page { width: 1200px; }
   .ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
   .ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}
   .ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}
@@ -213,7 +212,7 @@ let script_tag () =
 <script type="text/javascript" src="$str:script_url ()$"> </script>&>>
 
 let default_script = 
-"var opamdoc_contents = 'body'
+"var opamdoc_contents = '#opamdocroot'
 
 // utility - Fetch HTML from URL using ajax
 function ajax(url, cont){
