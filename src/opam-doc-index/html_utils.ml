@@ -199,6 +199,7 @@ let generate_package_summary filename = function
     output_string oc (Html.string_of_html html_content);
     close_out oc
 
+(* Generate a Zurb page *)
 let page ~title ~headers ~content =
   (* Cannot be inlined below as the $ is interpreted as an antiquotation *)
   let js_init = [`Data "$(document).foundation(); hljs.initHighlightingOnLoad();"] in
@@ -209,6 +210,7 @@ let page ~title ~headers ~content =
       <meta name="viewport" content="width=device-width"/>
       <title>$str:title$</title>
       <link rel="stylesheet" href="/css/foundation.min.css"> </link>
+      <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700" rel="stylesheet" type="text/css"> </link>
       <link rel="stylesheet" href="/css/magula.css"> </link>
       <link rel="stylesheet" href="/css/site.css"> </link>
       <script src="/js/vendor/custom.modernizr.js"> </script>

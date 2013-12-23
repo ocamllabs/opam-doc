@@ -51,6 +51,16 @@ let character_encoding =
 let default_stylesheet_css =
   let open Cow in
   <:css<
+  p { line-height: 1.1rem; }
+  body { 
+    font-family: 'Source Sans Pro', sans-serif;
+    color: black;
+  }
+  h1 h2 h3 h4 h5 h6 {
+    font-family: 'Source Sans Pro', sans-serif;
+    color: red;
+  }
+
   .keyword { color: #f47421; font-weight: bold; }
   .keywordsign { color: #f47421; }
   .superscript { font-size: 4; }
@@ -64,49 +74,20 @@ let default_stylesheet_css =
   .code { color: #465F91 ; }
   .typetable { border-style: hidden; }
   .paramstable { border-style: hidden ; padding: 5pt 5pt; }
-  td.typefieldcomment { font-size: smaller ;}
-  div.sig_block {margin-left: 2em; }
-  *:target { background: yellow; }
-  pre {
-     white-space: pre-wrap;
-     white-space: -moz-pre-wrap !important;
-     white-space: -pre-wrap;
-     white-space: -o-pre-wrap;
-     word-wrap: break-word;
-  }
-
-  body { font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0; }
-
-  .info h1 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h2 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h3 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h4 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h5 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h6 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h7 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h8 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
-  .info h9 { font-size: 16px ; text-align: left; margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left: -4em; }
+   td.typefieldcomment { font-size: smaller ;}
+   div.sig_block {margin-left: 2em; }
+   *:target { background: yellow; }
 
   a {color: #416DFF; text-decoration: none; }
   a:hover {background-color: #ddd; text-decoration: underline; }
   pre { margin-bottom: 4px; font-family: monospace; }
 
-  .indextable {border: 1px #ddd solid; border-collapse: collapse; }
-  .indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px; }
-  .indextable td.module {background-color: #eee; padding-left: 2px; padding-right: 2px; }
-  .indextable td.module a {text-decoration: none; display: block; width: 100%; }
-  .indextable td.module a:hover {text-decoration: underline; background-color: transparent; }
   .deprecated {color: #888; font-style: italic; }
-
-  .indextable tr td div.info { margin-left: 2px; margin-right: 2px; }
 
   ul.indexlist { margin-left: 0; padding-left: 0; }
   ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }
 
   .ocaml_page { width: 1200px; }
-  .ocaml_head .ocaml_summary { margin-left: 300px; width: 800px; }
-  .ocaml_title { margin-left: 300px; font-size: 20px; text-align: left; }
-  .ocaml_body { margin-left: 350px; width: 800px; }
   .ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
   .ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}
   .ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}
@@ -115,7 +96,6 @@ let default_stylesheet_css =
   .ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}
   .ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
   pre.ocaml_include_handle { display: inline; }
-  .ocaml_body .info { margin-left: 3em; margin-right: 3em; }
 
   .ocaml_expander_plus {
      position: relative;
@@ -834,6 +814,7 @@ function IncludeGroup(parent, node, label, idx) {
     this.summary = null;
     this.content_added = false;
     var indent = 250 - (10 * this.depth);
+    var indent = 0; /* TODO anil */
     this.pindent = '+=' + indent.toString() + 'px';
     this.nindent = '-=' + indent.toString() + 'px';
     var exdent = 40 - (2 * this.depth);
