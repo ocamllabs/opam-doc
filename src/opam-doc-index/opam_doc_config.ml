@@ -58,7 +58,7 @@ let default_stylesheet_css =
     font-size: 0.8rem;
     font-style: italic;
     padding-top: 0.4rem;
-    margin-top: 0.4rem;
+    margin-top: 1rem;
   }
 
   table.typetable { background: white; border: none; }
@@ -112,7 +112,6 @@ let default_stylesheet_css =
   table.indextable tfoot tr td {
     display: table-cell;
   } 
-
 
   #opamdocroot .panel.callout { 
     padding: 0.5rem;
@@ -624,6 +623,10 @@ function display_page(page){
         .append(summary);
     var rule = $('<hr/>').attr('width','100%');
     var body = $('<div>')
+        .addClass('column')
+        .addClass('small-12')
+        .addClass('medium-11')
+        .addClass('large-9')
         .addClass('ocaml_body')
         .append(page.body);
 
