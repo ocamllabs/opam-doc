@@ -186,13 +186,12 @@ let generate_package_summary filename = function
   | l ->
     let make_content (m_name, info) = 
       let uri = Uris.uri [m_name, Uris.Module] in
-      <:html<<tr><td class="module"><a href="$uri:uri$">$str:m_name$</a></td><td>$info$</td></tr>&>> 
+      <:html<<tr><td class="module"><a href="$uri:uri$"><b>$str:m_name$</b></a></td><td>$info$</td></tr>&>> 
     in
     let oc = open_out filename in
     let content = Html.concat (List.map make_content l) in
     let html_content =
       <:html<
-        <h2>Modules</h2>
         <table class="indextable">
           $content$
         </table>&>> in

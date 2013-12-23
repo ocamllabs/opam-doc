@@ -52,6 +52,15 @@ let default_stylesheet_css =
   let open Cow in
   <:css<
 
+  .footer {
+    color: #555555;
+    border-top: 1px solid #eeeeee;
+    font-size: 0.8rem;
+    font-style: italic;
+    padding-top: 0.4rem;
+    margin-top: 0.4rem;
+  }
+
   table.typetable { background: white; border: none; }
   table.typetable thead,
   table.typetable tfoot {
@@ -128,11 +137,23 @@ let default_stylesheet_css =
   }
   #opamdocroot h3 {
     font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
     font-size: 1.2rem;
   }
   #opamdocroot h4 {
     font-family: "Source Sans Pro", sans-serif;
-    font-size: 1.1rem;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  #opamdocroot h5 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  #opamdocroot h6 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
   }
 
   pre.odoccode {
