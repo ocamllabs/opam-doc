@@ -51,7 +51,11 @@ let character_encoding =
 let default_stylesheet_css =
   let open Cow in
   <:css<
-  .panel { padding: 0.5rem; }
+  #opamdocroot .panel.callout { 
+    padding: 0.5rem;
+    background: #fff3d8;
+    border-color: #999895; 
+  }
   p { line-height: 1.1rem; margin-bottom: 0.8rem; }
   body { 
     font-family: 'Source Sans Pro', sans-serif;
@@ -65,8 +69,18 @@ let default_stylesheet_css =
   #opamdocroot h2 {
     font-family: "Source Sans Pro", sans-serif;
     font-weight: bold;
-    font-size: 1.5rem;
+    font-size: 1.2rem;
   }
+  #opamdocroot h3 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 1.2rem;
+  }
+  #opamdocroot h4 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-size: 1.1rem;
+  }
+
+
   .keyword { color: #f47421; font-weight: bold; }
   .keywordsign { color: #f47421; }
   .superscript { font-size: 4; }
