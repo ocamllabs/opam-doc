@@ -262,7 +262,6 @@ let page ~title ~headers ~content =
       <script src="/js/vendor/jquery.js"> </script>
       <script src="/js/foundation.js"> </script>
       <script src="/js/foundation/foundation.topbar.js"> </script>
-      <script src="/js/vendor/highlight.pack.js"> </script>
       <script> $js_init$ </script>
     </body>
   >> in

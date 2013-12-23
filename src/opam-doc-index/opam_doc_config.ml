@@ -51,7 +51,8 @@ let character_encoding =
 let default_stylesheet_css =
   let open Cow in
   <:css<
-  p { line-height: 1.1rem; }
+  .panel { padding: 0.5rem; }
+  p { line-height: 1.1rem; margin-bottom: 0.8rem; }
   body { 
     font-family: 'Source Sans Pro', sans-serif;
     color: black;
@@ -59,7 +60,7 @@ let default_stylesheet_css =
   #opamdocroot h1 {
     font-family: "Source Sans Pro", sans-serif;
     font-weight: bold;
-    font-size: 2rem;
+    font-size: 1.6rem;
   }
   #opamdocroot h2 {
     font-family: "Source Sans Pro", sans-serif;
@@ -83,7 +84,23 @@ let default_stylesheet_css =
    div.sig_block {margin-left: 2em; }
    *:target { background: yellow; }
 
-  pre { margin-bottom: 4px; font-family: monospace; }
+  pre { font-family: monospace; margin-bottom: 0.8rem; }
+  #opamdocroot pre {
+    white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    font-weight: normal;
+    color: #333333;
+    font-family: monospace;
+  }
+
+  #opamdocroot code {
+    font-weight: normal;
+    color: #333333;
+    font-family: monospace;
+  }
 
   .deprecated {color: #888; font-style: italic; }
 
@@ -505,7 +522,8 @@ function display_page(page){
     var title = page.title();
     var summary = page.summary;
     var head = $('<div>')
-        .addClass('ocaml_head')
+        .addClass('panel')
+        .addClass('callout')
         .append(title)
         .append(summary);
     var rule = $('<hr/>').attr('width','100%');
@@ -516,7 +534,6 @@ function display_page(page){
     var content = $('<div>')
         .addClass('ocaml_page')
         .append(head)
-        .append(rule)
         .append(body);
 
     $(opamdoc_contents).html(content);
