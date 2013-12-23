@@ -61,10 +61,10 @@ let default_stylesheet_css =
     margin-top: 1rem;
   }
 
-  table.typetable { background: white; border: none; }
+  table.typetable { background: none; border: none; }
   table.typetable thead,
   table.typetable tfoot {
-    background: white; font-weight: bold; }
+    background: none; font-weight: bold; }
   table.typetable thead tr th,
   table.typetable thead tr td,
   table.typetable tfoot tr th,
@@ -78,7 +78,7 @@ let default_stylesheet_css =
     font-size: 0.875rem;
     color: #222222; }
   table.typetable tr.even, table.typetable tr.alt, table.typetable tr:nth-of-type(even) {
-    background: white; }
+    background: none; }
   table.typetable thead tr th,
   table.typetable tfoot tr th,
   table.typetable tbody tr td,
