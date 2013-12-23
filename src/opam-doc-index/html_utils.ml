@@ -31,7 +31,7 @@ let make_type_table l =
        Cow.Html.nil 
        l)
 
-(* Cannot lookup by #id, another type with the same id  could be found in submodules *)
+(* Cannot lookup by #id, another type with the same id could be found in submodules *)
 let generate_mark mark name html =
   let open Opam_doc_config in
       let mark_id = match mark with
@@ -202,7 +202,7 @@ let generate_package_summary filename = function
 (* Generate a Zurb page *)
 let page ~title ~headers ~content =
   (* Cannot be inlined below as the $ is interpreted as an antiquotation *)
-  let js_init = [`Data "$(document).foundation(); hljs.initHighlightingOnLoad();"] in
+  let js_init = [`Data "$(document).foundation();"] in
   let body =
   <:html<
     <head>
@@ -253,8 +253,8 @@ let page ~title ~headers ~content =
       <div class="small-12 medium-6 large-6 column">
       <ul class="breadcrumbs">
         <li id="bcpkglist"><a href="/">Package List</a></li>
-        <li id="bccurpkg"><a href="">Current Package</a></li>
-        <li id="bccurpkgmod"><a href="#">Module</a></li>
+        <li id="bccurpkg"> </li>
+        <li id="bccurpkgmod"> </li>
       </ul>
       </div>
     </div>
