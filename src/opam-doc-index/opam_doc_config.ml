@@ -984,7 +984,7 @@ IncludeGroup.prototype.show_unexpanded = function(animate){
                 this.block.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
                 this.inner_block.animate({minWidth: '0'}, {duration: 'fast', queue: false});
                 this.content.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
-                this.handle.animate({fontSize : '13px'}, {duration: 'fast', queue: false});
+                //this.handle.animate({fontSize : '13px'}, {duration: 'fast', queue: false});
             }
         }
     } else {
@@ -997,7 +997,7 @@ IncludeGroup.prototype.show_unexpanded = function(animate){
                 this.inner_block.css('min-width', '');
                 this.content.css('margin-left', '');
                 this.content.css('margin-right', '');
-                this.handle.css('font-size', '13px');
+                //this.handle.css('font-size', '13px');
             }
         }
     }
@@ -1017,7 +1017,7 @@ IncludeGroup.prototype.show_expanded = function(animate){
             this.block.animate({marginLeft: this.nindent, marginRight: this.nexdent}, {duration: 'fast', queue: false});
             this.inner_block.animate({minWidth: '100%'}, {duration: 'fast', queue: false});
             this.content.animate({marginLeft: this.pindent, marginRight: this.pexdent}, {duration: 'fast', queue: false});
-            this.handle.animate({fontSize : '11px'}, {duration: 'fast', queue: false});
+            //this.handle.animate({fontSize : '11px'}, {duration: 'fast', queue: false});
         }
     } else {
         if(this.content !== null) {
@@ -1025,10 +1025,11 @@ IncludeGroup.prototype.show_expanded = function(animate){
             this.summary.hide();
             this.block.css('margin-left', this.nindent);
             this.block.css('margin-right', this.nexdent);
+            this.block.css('margin-top', '1rem');
             this.inner_block.css('min-width', '100%');
             this.content.css('margin-left', this.pindent);
             this.content.css('margin-right', this.pexdent);
-            this.handle.css('font-size', '11px');
+            //this.handle.css('font-size', '11px');
         }
     }
     this.expanded = true;
