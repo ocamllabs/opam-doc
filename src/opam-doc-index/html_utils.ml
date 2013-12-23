@@ -191,11 +191,11 @@ let generate_package_summary filename = function
     let oc = open_out filename in
     let content = Html.concat (List.map make_content l) in
     let html_content =
-      <:html<<h2>Modules</h2>
-<table class="indextable">
-    $content$
-</table>&>>
-    in
+      <:html<
+        <h2>Modules</h2>
+        <table class="indextable">
+          $content$
+        </table>&>> in
     output_string oc (Html.string_of_html html_content);
     close_out oc
 

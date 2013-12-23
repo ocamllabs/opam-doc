@@ -14,8 +14,8 @@ let code ?cls data =
 
 let pre ?cls data =
   match cls with
-    None -> <:html<<pre>$data$</pre>&>>
-  | Some css -> <:html<<pre class="$str:css$">$data$</pre>&>>
+    None -> <:html<<pre class="odoccode">$data$</pre>&>>
+  | Some css -> <:html<<pre class="odoccode $str:css$">$data$</pre>&>>
 
 let div data =
   <:html<<div>$data$</div>&>>

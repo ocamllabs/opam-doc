@@ -51,11 +51,39 @@ let character_encoding =
 let default_stylesheet_css =
   let open Cow in
   <:css<
+
+  table.typetable { background: white; border: none; }
+  table.typetable thead,
+  table.typetable tfoot {
+    background: white; font-weight: bold; }
+  table.typetable thead tr th,
+  table.typetable thead tr td,
+  table.typetable tfoot tr th,
+  table.typetable tfoot tr td {
+    font-size: 0.875rem;
+    color: #222222;
+    text-align: left; }
+  table.typetable tr th,
+  table.typetable tr td {
+    padding: 0px;
+    font-size: 0.875rem;
+    color: #222222; }
+  table.typetable tr.even, table tr.alt, table tr:nth-of-type(even) {
+    background: white; }
+  table.typetable thead tr th,
+  table.typetable tfoot tr th,
+  table.typetable tbody tr td,
+  table.typetable tr td,
+  table.typetable tfoot tr td {
+    display: table-cell;
+  } 
+
   #opamdocroot .panel.callout { 
     padding: 0.5rem;
-    background: #fff3d8;
-    border-color: #999895; 
+    background: #faffea;
+    border-color: #cccccc; 
   }
+
   p { line-height: 1.1rem; margin-bottom: 0.8rem; }
   body { 
     font-family: 'Source Sans Pro', sans-serif;
@@ -69,7 +97,7 @@ let default_stylesheet_css =
   #opamdocroot h2 {
     font-family: "Source Sans Pro", sans-serif;
     font-weight: bold;
-    font-size: 1.2rem;
+    font-size: 1.4rem;
   }
   #opamdocroot h3 {
     font-family: "Source Sans Pro", sans-serif;
@@ -80,7 +108,12 @@ let default_stylesheet_css =
     font-size: 1.1rem;
   }
 
-
+  pre.odoccode {
+    background: #eeeeee;
+    border-top: 1px solid #cccccc;
+    padding: 5px;
+    margin-top: 10px;
+  }
   .keyword { color: #f47421; font-weight: bold; }
   .keywordsign { color: #f47421; }
   .superscript { font-size: 4; }
