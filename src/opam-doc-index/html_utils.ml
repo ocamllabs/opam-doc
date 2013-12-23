@@ -217,6 +217,47 @@ let page ~title ~headers ~content =
       $headers$
     </head>
     <body>
+    <nav class="top-bar" data-topbar="">
+    <ul class="title-area">
+      <li class="name">
+        <h1><a href="#">OPAM Documentation</a></h1>
+      </li>
+      <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
+    </ul>
+    <section class="top-bar-section">
+      <ul class="right">
+      <li class="has-dropdown">
+        <a href="#">Online Resources</a>
+        <ul class="dropdown">
+          <li><a href="http://ocaml.org">OCaml</a></li>
+          <li><a href="http://opam.ocaml.org">OPAM</a></li>
+        </ul>
+      </li>
+      </ul>
+      <ul class="left">
+        <li class="has-form">
+         <div class="row collapse">
+          <div class="large-8 small-9 columns">
+           <input type="text" placeholder="Find Functions" />
+          </div>
+         <div class="large-4 small-3 columns">
+           <a href="#" class="button expand">Search</a>
+         </div>
+         </div>
+        </li>
+      </ul>
+    </section>
+    </nav>
+    <br />
+    <div class="row">
+      <div class="small-12 medium-6 large-6 column">
+      <ul class="breadcrumbs">
+        <li id="bcpkglist"><a href="/">Package List</a></li>
+        <li id="bccurpkg"><a href="">Current Package</a></li>
+        <li id="bccurpkgmod"><a href="#">Module</a></li>
+      </ul>
+      </div>
+    </div>
       $content$
       <script src="/js/vendor/jquery.js"> </script>
       <script src="/js/foundation.js"> </script>
@@ -243,33 +284,11 @@ let generate_package_index filename =
       $script_tag ()$
     >> in
   let content = <:html<
-    <body>
-    <nav class="top-bar" data-topbar="">
-    <ul class="title-area">
-      <li class="name">
-        <h1><a href="#">OPAM Documentation</a></h1>
-      </li>
-      <li class="toggle-topbar menu-icon"><a href="#"><span>Menu</span></a></li>
-    </ul>
-    <section class="top-bar-section">
-      <!-- Right Nav Section -->
-      <ul class="right">
-      <li class="has-dropdown">
-        <a href="#">Online Resources</a>
-        <ul class="dropdown">
-          <li><a href="http://ocaml.org">OCaml</a></li>
-          <li><a href="http://opam.ocaml.org">OPAM</a></li>
-        </ul>
-      </li>
-      </ul>
-    </section>
-    </nav>
-    <div class="row">
+   <div class="row">
       <div class="small-12 column">
-        <span id="opamdocroot"> </span>
+      <span id="opamdocroot"> </span>
       </div>
     </div>
-    </body>
   >> in
   let page = page ~title ~headers ~content in
   let oc = open_out filename in
@@ -289,15 +308,18 @@ let generate_global_packages_index global =
   let title = "Packages" in
   let headers = <:html< $character_encoding$ $style_tag ()$ >> in
   let content = <:html< 
-    <div class="ocaml_head">
-    <h1 class="ocaml_title">Packages list</h1>
+    <div class="row">
+     <div class="small-12 column">
+      <h1>Package List</h1>
+      <hr/>
+      <div class="ocaml_body">
+      <table class="indextable">
+        $content$
+      </table>
+      </div> 
+     </div>
     </div>
-    <hr/>
-   <div class="ocaml_body">
-   <table class="indextable">
-    $content$
-   </table>
-</div> >> in
+  >> in
   page ~title ~headers ~content
   |> output_string oc;
   close_out oc

@@ -78,8 +78,6 @@ let default_stylesheet_css =
    div.sig_block {margin-left: 2em; }
    *:target { background: yellow; }
 
-  a {color: #416DFF; text-decoration: none; }
-  a:hover {background-color: #ddd; text-decoration: underline; }
   pre { margin-bottom: 4px; font-family: monospace; }
 
   .deprecated {color: #888; font-style: italic; }
@@ -105,9 +103,6 @@ let default_stylesheet_css =
      border-style: solid;
      border-width: 1px;
      margin: 3px;
-  }
-  .ocaml_expander_plus:hover {
-     background: grey;
   }
   .ocaml_expander_plus::before {
      content: '';
@@ -451,19 +446,22 @@ function Page(path, kind){
     this.typ = null;
 }
 
-Page.prototype.parent_link = function(){
+Page.prototype.parent_link = function() {
     var parent = this.path.parent();
     var title = parent.name();
     var url = parent.url();
-    if(title === null || url === null) {
-        title = 'Packages List';
+    if (title === null || url === null) {
+        title = this.path.name();
         url = ocaml_base + '/';
+        $('#bccurpkg').attr('class','current').html(this.path.name());
+        $('#bccurpkgmod').attr('class','hide');
+    } else {
+        $('#bccurpkg').attr('class','').html(
+          $('<a>', {title: title, href: url, text: title }));
+        $('#bccurpkg').attr('class','');
+        $('#bccurpkgmod').attr('class','current');
+        $('#bccurpkgmod').html(this.path.name ());
     }
-    return $('<a>', 
-             {'class' : 'up', 
-              title   : title,
-              href    : url,
-              text    : 'Up' });
 }
 
 Page.prototype.title = function(){
@@ -498,12 +496,11 @@ Page.prototype.title = function(){
 }
 
 function display_page(page){
-    var plink = page.parent_link();
+    page.parent_link();
     var title = page.title();
     var summary = page.summary;
     var head = $('<div>')
         .addClass('ocaml_head')
-        .append(plink)
         .append(title)
         .append(summary);
     var rule = $('<hr/>').attr('width','100%');
