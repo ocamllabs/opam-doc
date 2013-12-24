@@ -69,13 +69,13 @@ let default_stylesheet_css =
   table.typetable thead tr td,
   table.typetable tfoot tr th,
   table.typetable tfoot tr td {
-    font-size: 0.875rem;
+    font-size: 1rem;
     color: #222222;
     text-align: left; }
   table.typetable tr th,
   table.typetable tr td {
     padding: 0px;
-    font-size: 0.875rem;
+    font-size: 1rem;
     color: #222222; }
   table.typetable tr.even, table.typetable tr.alt, table.typetable tr:nth-of-type(even) {
     background: none; }
@@ -95,7 +95,7 @@ let default_stylesheet_css =
   table.indextable thead tr td,
   table.indextable tfoot tr th,
   table.indextable tfoot tr td {
-    font-size: 0.875rem;
+    font-size: 1rem;
     color: #222222;
     text-align: left; }
   table.indextable tr th,
