@@ -209,6 +209,7 @@ let page ~title ~headers ~content =
       <meta name="viewport" content="width=device-width"/>
       <title>$str:title$</title>
       <link rel="stylesheet" href="/css/foundation.min.css"> </link>
+      <link rel="stylesheet" href="/css/font-awesome.css"> </link>
       <link href="http://fonts.googleapis.com/css?family=Source+Sans+Pro:400,700" rel="stylesheet" type="text/css"> </link>
       <script src="/js/vendor/custom.modernizr.js"> </script>
       $headers$
