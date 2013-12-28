@@ -48,159 +48,250 @@ let doctype = "<!DOCTYPE HTML>\n"
 let character_encoding =
   <:html<<meta content="text/html; charset=iso-8859-1" http-equiv="Content-Type" />&>>
 
-let default_stylesheet = String.concat "\n"
-  [ ".keyword { color: #f47421; font-weight: bold }";
-    ".keywordsign { color: #f47421 }";
-    ".superscript { font-size : 4 }";
-    ".subscript { font-size : 4 }";
-    ".comment { color: #747474; font-style: italic }";
-    ".constructor { color: #15c17a }";
-    ".type { color: #c746cc }";
-    ".string { color: #09a7e2 }";
-    ".warning { color : Red ; font-weight : bold }" ;
-    ".param_info { margin-top: 4px; margin-left : 3em; margin-right : 3em }" ;
-    ".code { color : #465F91 ; }" ;
-    ".typetable { border-style : hidden }" ;
-    ".paramstable { border-style : hidden ; padding: 5pt 5pt}" ;
-    "td.typefieldcomment { font-size: smaller ;}" ;
-    "div.sig_block {margin-left: 2em}" ;
-    "*:target { background: yellow; }" ;
-    "pre {
-        white-space: pre-wrap; /* css-3 */
-        white-space: -moz-pre-wrap !important; /* Mozilla, since 1999 */
-        white-space: -pre-wrap; /* Opera 4-6 */
-        white-space: -o-pre-wrap; /* Opera 7 */
-        word-wrap: break-word; /* Internet Explorer 5.5+ */
-        }";
+let default_stylesheet_css =
+  let open Cow in
+  <:css<
 
-    "body {font: 13px sans-serif; color: black; text-align: left; padding: 5px; margin: 0}";
+  .footer {
+    color: #555555;
+    border-top: 1px solid #eeeeee;
+    font-size: 0.8rem;
+    font-style: italic;
+    padding-top: 0.4rem;
+    margin-top: 1rem;
+  }
 
-    ".info h1 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h2 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h3 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h4 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h5 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h6 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h7 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h8 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
-    ".info h9 { font-size : 16px ; text-align: left ;margin-top: 10px; margin-bottom: 5px; padding: 2px; margin-left : -4em}" ;
+  table.typetable { background: none; border: none; }
+  table.typetable thead,
+  table.typetable tfoot {
+    background: none; font-weight: bold; }
+  table.typetable thead tr th,
+  table.typetable thead tr td,
+  table.typetable tfoot tr th,
+  table.typetable tfoot tr td {
+    font-size: 1rem;
+    color: #222222;
+    text-align: left; }
+  table.typetable tr th,
+  table.typetable tr td {
+    padding: 0px;
+    font-size: 1rem;
+    color: #222222; }
+  table.typetable tr.even, table.typetable tr.alt, table.typetable tr:nth-of-type(even) {
+    background: none; }
+  table.typetable thead tr th,
+  table.typetable tfoot tr th,
+  table.typetable tbody tr td,
+  table.typetable tr td,
+  table.typetable tfoot tr td {
+    display: table-cell;
+  } 
 
-    "a {color: #416DFF; text-decoration: none}";
-    "a:hover {background-color: #ddd; text-decoration: underline}";
-    "pre { margin-bottom: 4px; font-family: monospace; }" ;
-    "pre.verbatim, pre.codepre { }";
+  table.indextable { background: white; border: none; }
+  table.indextable thead,
+  table.indextable tfoot {
+    background: white; font-weight: bold; }
+  table.indextable thead tr th,
+  table.indextable thead tr td,
+  table.indextable tfoot tr th,
+  table.indextable tfoot tr td {
+    font-size: 1rem;
+    color: #222222;
+    text-align: left; }
+  table.indextable tr th,
+  table.indextable tr td {
+    padding: 0.2625rem 0.225rem;
+    font-size: 1rem;
+    color: black; }
+  table.indextable tr.even, table.indextable tr.alt, table.indextable tr:nth-of-type(even) {
+    background: whitegrey; }
+  table.indextable thead tr th,
+  table.indextable tfoot tr th,
+  table.indextable tbody tr td,
+  table.indextable tr td,
+  table.indextable tfoot tr td {
+    display: table-cell;
+  } 
 
-    ".indextable {border: 1px #ddd solid; border-collapse: collapse}";
-    ".indextable td, .indextable th {border: 1px #ddd solid; min-width: 80px}";
-    ".indextable td.module {background-color: #eee ;  padding-left: 2px; padding-right: 2px}";
-    ".indextable td.module a {text-decoration: none; display: block; width: 100%}";
-    ".indextable td.module a:hover {text-decoration: underline; background-color: transparent}";
-    ".deprecated {color: #888; font-style: italic}" ;
+  #opamdocroot .panel.callout { 
+    padding: 0.5rem;
+    background: #fdfdfd;
+    border: none;
+  }
 
-    ".indextable tr td div.info { margin-left: 2px; margin-right: 2px }" ;
+  p { line-height: 1.1rem; margin-bottom: 0.8rem; }
+  body { 
+    font-family: 'Source Sans Pro', sans-serif;
+    color: black;
+  }
+  #opamdocroot h1 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.6rem;
+  }
+  #opamdocroot h2 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.4rem;
+  }
+  #opamdocroot h3 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  #opamdocroot h4 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  #opamdocroot h5 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
+  #opamdocroot h6 {
+    font-family: "Source Sans Pro", sans-serif;
+    font-weight: bold;
+    font-size: 1.2rem;
+  }
 
-    "ul.indexlist { margin-left: 0; padding-left: 0;}";
-    "ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }";
+  pre.odoccode {
+    background: #eeeeee;
+    border-top: 1px solid #cccccc;
+    padding: 5px;
+    margin-top: 10px;
+  }
+  .top-bar input { height: 2.1em; }
+  .keyword { color: #f47421; font-weight: bold; }
+  .keywordsign { color: #f47421; }
+  .superscript { font-size: 4; }
+  .subscript { font-size: 4; }
+  .comment { color: #747474; font-style: italic; }
+  .constructor { color: #15c17a; }
+  .type { color: #c746cc; }
+  .string { color: #09a7e2; }
+  .warning { color: Red ; font-weight: bold; }
+  .param_info { margin-top: 4px; margin-left: 3em; margin-right: 3em; }
+  .code { color: #465F91 ; }
+  .typetable { border-style: hidden; }
+  .paramstable { border-style: hidden ; padding: 5pt 5pt; }
+   td.typefieldcomment { font-size: smaller ;}
+   div.sig_block {margin-left: 2em; }
+   *:target { background: yellow; }
 
-    (* My stuff *)
-    ".ocaml_page { width: 1200px }";
-    ".ocaml_head .ocaml_summary { margin-left: 300px; width: 800px }";
-    ".ocaml_title { margin-left: 300px; font-size : 20px; text-align: left; }";
-    ".ocaml_body { margin-left: 350px; width: 800px }";
-    ".ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    ".ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}"; 
-    ".ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}"; 
-    ".ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}"; 
-    ".ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}"; 
-    ".ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}"; 
-    ".ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}"; 
-    "pre.ocaml_include_handle { display: inline; }";
-    ".ocaml_body .info { margin-left : 3em; margin-right: 3em }" ;
+  pre { font-family: monospace; margin-bottom: 0.8rem; }
+  #opamdocroot pre {
+    white-space: pre-wrap;       /* css-3 */
+    white-space: -moz-pre-wrap;  /* Mozilla, since 1999 */
+    white-space: -pre-wrap;      /* Opera 4-6 */
+    white-space: -o-pre-wrap;    /* Opera 7 */
+    word-wrap: break-word;       /* Internet Explorer 5.5+ */
+    font-weight: normal;
+    color: #333333;
+    font-family: monospace;
+  }
 
-    ".ocaml_expander_plus {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_plus:hover {
-        background: grey;
-    }";
-    ".ocaml_expander_plus::before {
-        content: '';
-        position: absolute;
-        left: 3px;
-        top: 1px;
-        width: 1px;
-        height: 5px;
-        background: black;
-    }";
-    ".ocaml_expander_plus::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: black;
-    }";
-    ".ocaml_expander_minus {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_minus:hover {
-        background: grey;
-    }";
-    ".ocaml_expander_minus::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: black;
-    }";
-    ".ocaml_expander_disabled {
-        position: relative;
-        float: left;
-        width: 7px;
-        height: 7px;
-        background: silver;
-        border-style: solid;
-        border-color: grey;
-        border-width: 1px;
-        margin: 3px;
-    }";
-    ".ocaml_expander_disabled::before {
-        content: '';
-        position: absolute;
-        left: 3px;
-        top: 1px;
-        width: 1px;
-        height: 5px;
-        background: grey;
-    }";
-    ".ocaml_expander_disabled::after {
-        content: '';
-        position: absolute;
-        left: 1px;
-        top: 3px;
-        width: 5px;
-        height: 1px;
-        background: grey;
-    }";
-  ]
+  #opamdocroot code {
+    font-weight: normal;
+    color: #333333;
+    font-family: monospace;
+  }
 
+  .deprecated {color: #888; font-style: italic; }
+
+  ul.indexlist { margin-left: 0; padding-left: 0; }
+  ul.indexlist li { list-style-type: none ; margin-left: 0; padding-left: 0; }
+
+  .ocaml_expanded_include_0 { background-color: #FFF0F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
+  .ocaml_expanded_include_1 { background-color: #F0F0FF; border-width: thin; border-style: solid; border-color: #E0E0E5;}
+  .ocaml_expanded_include_2 { background-color: #F0FFF0; border-width: thin; border-style: solid; border-color: #E0E5E0;}
+  .ocaml_expanded_include_3 { background-color: #FFF0FF; border-width: thin; border-style: solid; border-color: #E5E0E5;}
+  .ocaml_expanded_include_4 { background-color: #FFFFF0; border-width: thin; border-style: solid; border-color: #E5E5E0;}
+  .ocaml_expanded_include_5 { background-color: #F0FFFF; border-width: thin; border-style: solid; border-color: #E0E5E5;}
+  .ocaml_expanded_include_6 { background-color: #F0F5F0; border-width: thin; border-style: solid; border-color: #E5E0E0;}
+  pre.ocaml_include_handle { display: inline; }
+
+  .ocaml_expander_plus {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_plus::before {
+     content: '';
+     position: absolute;
+     left: 3px;
+     top: 1px;
+     width: 1px;
+     height: 5px;
+     background: black;
+  }
+  .ocaml_expander_plus::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: black;
+  }
+  .ocaml_expander_minus {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_minus:hover {
+     background: grey;
+  }
+  .ocaml_expander_minus::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: black;
+  }
+  .ocaml_expander_disabled {
+     position: relative;
+     float: left;
+     width: 7px;
+     height: 7px;
+     background: silver;
+     border-style: solid;
+     border-color: grey;
+     border-width: 1px;
+     margin: 3px;
+  }
+  .ocaml_expander_disabled::before {
+     content: '';
+     position: absolute;
+     left: 3px;
+     top: 1px;
+     width: 1px;
+     height: 5px;
+     background: grey;
+  }
+  .ocaml_expander_disabled::after {
+     content: '';
+     position: absolute;
+     left: 1px;
+     top: 3px;
+     width: 5px;
+     height: 1px;
+     background: grey;
+  }
+   >>
+let default_stylesheet = Cow.Css.to_string default_stylesheet_css
 
 (** Marks used to generate id attributes *)
 type mark = Attribute | Type | Type_elt | Function | Exception | Value | Method | Title
@@ -233,7 +324,7 @@ let script_tag () =
 <script type="text/javascript" src="$str:script_url ()$"> </script>&>>
 
 let default_script = 
-"var opamdoc_contents = 'body'
+"var opamdoc_contents = '#opamdocroot'
 
 // utility - Fetch HTML from URL using ajax
 function ajax(url, cont){
@@ -472,19 +563,22 @@ function Page(path, kind){
     this.typ = null;
 }
 
-Page.prototype.parent_link = function(){
+Page.prototype.parent_link = function() {
     var parent = this.path.parent();
     var title = parent.name();
     var url = parent.url();
-    if(title === null || url === null) {
-        title = 'Packages List';
+    if (title === null || url === null) {
+        title = this.path.name();
         url = ocaml_base + '/';
+        $('#bccurpkg').attr('class','current').html(this.path.name());
+        $('#bccurpkgmod').attr('class','hide');
+    } else {
+        $('#bccurpkg').attr('class','').html(
+          $('<a>', {title: title, href: url, text: title }));
+        $('#bccurpkg').attr('class','');
+        $('#bccurpkgmod').attr('class','current');
+        $('#bccurpkgmod').html(this.path.name ());
     }
-    return $('<a>', 
-             {'class' : 'up', 
-              title   : title,
-              href    : url,
-              text    : 'Up' });
 }
 
 Page.prototype.title = function(){
@@ -519,23 +613,26 @@ Page.prototype.title = function(){
 }
 
 function display_page(page){
-    var plink = page.parent_link();
+    page.parent_link();
     var title = page.title();
     var summary = page.summary;
     var head = $('<div>')
-        .addClass('ocaml_head')
-        .append(plink)
+        .addClass('panel')
+        .addClass('callout')
         .append(title)
         .append(summary);
     var rule = $('<hr/>').attr('width','100%');
     var body = $('<div>')
+        .addClass('column')
+        .addClass('small-12')
+        .addClass('medium-11')
+        .addClass('large-9')
         .addClass('ocaml_body')
         .append(page.body);
 
     var content = $('<div>')
         .addClass('ocaml_page')
         .append(head)
-        .append(rule)
         .append(body);
 
     $(opamdoc_contents).html(content);
@@ -834,6 +931,7 @@ function IncludeGroup(parent, node, label, idx) {
     this.summary = null;
     this.content_added = false;
     var indent = 250 - (10 * this.depth);
+    var indent = 0; /* TODO anil */
     this.pindent = '+=' + indent.toString() + 'px';
     this.nindent = '-=' + indent.toString() + 'px';
     var exdent = 40 - (2 * this.depth);
@@ -886,7 +984,7 @@ IncludeGroup.prototype.show_unexpanded = function(animate){
                 this.block.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
                 this.inner_block.animate({minWidth: '0'}, {duration: 'fast', queue: false});
                 this.content.animate({marginLeft: '0', marginRight: '0'}, {duration: 'fast', queue: false});
-                this.handle.animate({fontSize : '13px'}, {duration: 'fast', queue: false});
+                //this.handle.animate({fontSize : '13px'}, {duration: 'fast', queue: false});
             }
         }
     } else {
@@ -899,7 +997,7 @@ IncludeGroup.prototype.show_unexpanded = function(animate){
                 this.inner_block.css('min-width', '');
                 this.content.css('margin-left', '');
                 this.content.css('margin-right', '');
-                this.handle.css('font-size', '13px');
+                //this.handle.css('font-size', '13px');
             }
         }
     }
@@ -919,7 +1017,7 @@ IncludeGroup.prototype.show_expanded = function(animate){
             this.block.animate({marginLeft: this.nindent, marginRight: this.nexdent}, {duration: 'fast', queue: false});
             this.inner_block.animate({minWidth: '100%'}, {duration: 'fast', queue: false});
             this.content.animate({marginLeft: this.pindent, marginRight: this.pexdent}, {duration: 'fast', queue: false});
-            this.handle.animate({fontSize : '11px'}, {duration: 'fast', queue: false});
+            //this.handle.animate({fontSize : '11px'}, {duration: 'fast', queue: false});
         }
     } else {
         if(this.content !== null) {
@@ -927,10 +1025,11 @@ IncludeGroup.prototype.show_expanded = function(animate){
             this.summary.hide();
             this.block.css('margin-left', this.nindent);
             this.block.css('margin-right', this.nexdent);
+            this.block.css('margin-top', '1rem');
             this.inner_block.css('min-width', '100%');
             this.content.css('margin-left', this.pindent);
             this.content.css('margin-right', this.pexdent);
-            this.handle.css('font-size', '11px');
+            //this.handle.css('font-size', '11px');
         }
     }
     this.expanded = true;

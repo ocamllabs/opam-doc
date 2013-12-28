@@ -12,9 +12,12 @@ let code ?cls data =
     None -> <:html<<code>$data$</code>&>>
   | Some css -> <:html<<code class="$str:css$">$data$</code>&>>
 
+(* TODO: we default to adding odoccode here because it would require
+   changing all the invocations in generate.ml to include it.  We
+   should do that properly there and then remove this override. *)
 let pre ?cls data =
   match cls with
-    None -> <:html<<pre>$data$</pre>&>>
+    None -> <:html<<pre class="odoccode">$data$</pre>&>>
   | Some css -> <:html<<pre class="$str:css$">$data$</pre>&>>
 
 let div data =

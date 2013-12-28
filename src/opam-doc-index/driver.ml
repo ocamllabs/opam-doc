@@ -1,6 +1,8 @@
 open Index
 open Generate
 
+let () = Printexc.record_backtrace true;;
+
 let create_package_directory () =
   let package_name = Opam_doc_config.current_package () in
   if not Sys.(file_exists package_name && is_directory package_name) then
@@ -108,6 +110,7 @@ let process_file global cmd cmt =
    with exn ->
      Printf.eprintf "Error while processing module %s: \"%s\"\n" 
 	            module_name (Printexc.to_string exn);
+     Printexc.print_backtrace stderr;
      None
 
 
