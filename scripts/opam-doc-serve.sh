@@ -3,7 +3,7 @@
 
 DOC="$1"
 
-if [ $DOC = "" ]; then
+if [ "$DOC" = "" ]; then
   DOC=$(opam config var root)/doc/doc
 fi
 
