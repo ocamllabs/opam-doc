@@ -1,4 +1,4 @@
-0.9.3 (trunk):
+0.9.3 (2014-01-02):
 * Use Zurb Foundation to control the layout of the generated pages.
 * `opam doc -n <pkgs>` runs without a server now (instead of `--no-server`).
 * `opam doc-serve` will default to the OPAM root now.
