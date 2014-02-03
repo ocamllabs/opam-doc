@@ -20,8 +20,8 @@ bin-doc: src/bin-doc/*.mli src/bin-doc/*.ml
 	mv driver.native bin-doc
 
 install: scripts/ocamlc scripts/ocamlc.opt bin-doc opam-doc-index
-	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc > $(BIN)/opam-doc-ocamlc
-	sed -e "s+__OCAMLC__+${OCAMLC}+" < scripts/ocamlc.opt > $(BIN)/opam-doc-ocamlc.opt
+	sed -e "s|__OCAMLC__|${OCAMLC}|" < scripts/ocamlc > $(BIN)/opam-doc-ocamlc
+	sed -e "s|__OCAMLC__|${OCAMLC}|" < scripts/ocamlc.opt > $(BIN)/opam-doc-ocamlc.opt
 	chmod +x $(BIN)/opam-doc-ocamlc
 	chmod +x $(BIN)/opam-doc-ocamlc.opt
 	cp bin-doc $(BIN)
