@@ -16,6 +16,10 @@ if installed cohttp-server-async; then
   SERVER="cohttp-server-async -p 8000"
 elif installed cohttp-server; then
   SERVER="cohttp-server -p 8000"
+elif installed python2; then
+  SERVER="python2 -m SimpleHTTPServer"
+elif installed python3; then
+  SERVER="python3 -m http.server"
 elif installed python; then
   SERVER="python -m SimpleHTTPServer"
 else
